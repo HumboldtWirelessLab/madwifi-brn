@@ -571,7 +571,9 @@ ieee80211_input_monitor(struct ieee80211com *ic, struct sk_buff *skb,
 			skb_reset_mac_header(skb1);
 
 			skb1->ip_summed = CHECKSUM_NONE;
-			skb1->pkt_type = pkttype;
+                        //skb1->pkt_type = pkttype;
+                        if (!tx) skb1->pkt_type = pkttype;
+                        else skb1->pkt_type = PACKET_OTHERHOST;
 			skb1->protocol = 
 				__constant_htons(0x0019); /* ETH_P_80211_RAW */
 
