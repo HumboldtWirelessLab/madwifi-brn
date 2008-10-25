@@ -41,7 +41,12 @@
 #define ARPHRD_IEEE80211_ATHDESC	804 /* IEEE 802.11 + atheros descriptor */
 #endif /* ARPHRD_IEEE80211_RADIOTAP */
 
+#ifndef ARPHRD_IEEE80211_ATHDESC2
+#define ARPHRD_IEEE80211_ATHDESC2  805 /* IEEE 802.11 + atheros (long) descriptor */
+#endif /* ARPHRD_IEEE80211_ATHDESC2 */
+
 #define ATHDESC_HEADER_SIZE	32
+#define ATHDESC2_HEADER_SIZE	43  // 32 + (12 == ceil(11))
 
 #define IEEE80211_MON_MAXHDROOM ((unsigned int)			\
 	A_MAX(sizeof(struct ath_tx_radiotap_header),		\

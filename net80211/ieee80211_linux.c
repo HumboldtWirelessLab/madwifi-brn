@@ -572,7 +572,8 @@ IEEE80211_SYSCTL_DECL(ieee80211_sysctl_dev_type, ctl, write, filp, buffer,
 			if (val == ARPHRD_IEEE80211_RADIOTAP ||
 			    val == ARPHRD_IEEE80211 ||
 			    val == ARPHRD_IEEE80211_PRISM ||
-			    val == ARPHRD_IEEE80211_ATHDESC) {
+			    val == ARPHRD_IEEE80211_ATHDESC ||
+			    val == ARPHRD_IEEE80211_ATHDESC2) {
 				vap->iv_dev->type = val;
 			}
 		}

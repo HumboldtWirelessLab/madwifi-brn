@@ -262,7 +262,8 @@ ieee80211_monitor_encap(struct ieee80211vap *vap, struct sk_buff *skb)
 			ph->try[0] = 1;
 		break;
 	}
-	case ARPHRD_IEEE80211_ATHDESC: {
+	case ARPHRD_IEEE80211_ATHDESC:
+	case ARPHRD_IEEE80211_ATHDESC2: {
 		if (skb->len > ATHDESC_HEADER_SIZE) {
 			struct ar5212_openbsd_desc *desc =
 				(struct ar5212_openbsd_desc *)(skb->data + 8);
@@ -554,6 +555,17 @@ ieee80211_input_monitor(struct ieee80211com *ic, struct sk_buff *skb,
 			}
 			memcpy(skb_push(skb1, ATHDESC_HEADER_SIZE), 
 					ds, ATHDESC_HEADER_SIZE);
+			break;
+		}
+		case ARPHRD_IEEE80211_ATHDESC2: {
+			if (skb_headroom(skb1) < ATHDESC2_HEADER_SIZE) {
+				printk("%s:%d %s\n", __FILE__, 
+						__LINE__, __func__);
+				ieee80211_dev_kfree_skb(&skb1);
+				break;
+			}
+			memcpy(skb_push(skb1, ATHDESC2_HEADER_SIZE), 
+					ds, ATHDESC2_HEADER_SIZE);
 			break;
 		}
 		default:
