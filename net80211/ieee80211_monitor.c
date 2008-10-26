@@ -303,6 +303,8 @@ ieee80211_input_monitor(struct ieee80211com *ic, struct sk_buff *skb,
 	int noise = 0, antenna = 0, ieeerate = 0;
 	u_int32_t rssi = 0;
 	u_int8_t pkttype = 0;
+	u_int8_t phycrcerror = 0;
+	u_int8_t *skb1_data;
 
 	if (tx) {
 		rssi = bf->bf_dsstatus.ds_txstat.ts_rssi;
@@ -344,7 +346,9 @@ ieee80211_input_monitor(struct ieee80211com *ic, struct sk_buff *skb,
 				continue;
 
 			/* We can't use addr1 to determine direction at this point */
-			pkttype = PACKET_HOST;
+			//pkttype = PACKET_HOST;
+			pkttype = PACKET_OTHERHOST;
+			phycrcerror = 1;
 		} else {
 			/* 
 			 * The frame passed its CRC, so we can rely
@@ -564,8 +568,12 @@ ieee80211_input_monitor(struct ieee80211com *ic, struct sk_buff *skb,
 				ieee80211_dev_kfree_skb(&skb1);
 				break;
 			}
-			memcpy(skb_push(skb1, ATHDESC2_HEADER_SIZE), 
-					ds, ATHDESC2_HEADER_SIZE);
+			
+			skb1_data = skb_push(skb1, ATHDESC2_HEADER_SIZE);
+			memcpy(skb1_data, 
+					ds, ATHDESC_HEADER_SIZE);
+			memcpy(&(skb1_data[ATHDESC_HEADER_SIZE]),&(bf->bf_dsstatus), ATHDESC2_EXTRA_HEADER_SIZE);
+			/*Copy the hole rx/tx-status*/
 			break;
 		}
 		default:

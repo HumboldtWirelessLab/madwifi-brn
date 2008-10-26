@@ -46,7 +46,8 @@
 #endif /* ARPHRD_IEEE80211_ATHDESC2 */
 
 #define ATHDESC_HEADER_SIZE	32
-#define ATHDESC2_HEADER_SIZE	43  // 32 + (12 == ceil(11))
+#define ATHDESC2_EXTRA_HEADER_SIZE sizeof(struct ath_desc_status)
+#define ATHDESC2_HEADER_SIZE	( ATHDESC_HEADER_SIZE + ATHDESC2_EXTRA_HEADER_SIZE ) 
 
 #define IEEE80211_MON_MAXHDROOM ((unsigned int)			\
 	A_MAX(sizeof(struct ath_tx_radiotap_header),		\
