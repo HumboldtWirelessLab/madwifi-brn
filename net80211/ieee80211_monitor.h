@@ -41,7 +41,7 @@
 #define ARPHRD_IEEE80211_ATHDESC	804 /* IEEE 802.11 + atheros descriptor */
 #endif /* ARPHRD_IEEE80211_RADIOTAP */
 
-#define ATHDESC_HEADER_SIZE     32
+#define ATHDESC_HEADER_SIZE	32
 
 #include <net80211/ieee80211_monitor_brn.h>
 
