@@ -262,7 +262,27 @@ ieee80211_monitor_encap(struct ieee80211vap *vap, struct sk_buff *skb)
 			ph->try[0] = 1;
 		break;
 	}
-	case ARPHRD_IEEE80211_ATHDESC:
+	case ARPHRD_IEEE80211_ATHDESC: {
+		if (skb->len > ATHDESC_HEADER_SIZE) {
+			struct ar5212_openbsd_desc *desc =
+				(struct ar5212_openbsd_desc *)(skb->data + 8);
+			ph->power = desc->xmit_power;
+			ph->rate[0] = ratecode_to_dot11(desc->xmit_rate0);
+			ph->rate[1] = ratecode_to_dot11(desc->xmit_rate1);
+			ph->rate[2] = ratecode_to_dot11(desc->xmit_rate2);
+			ph->rate[3] = ratecode_to_dot11(desc->xmit_rate3);
+			ph->try[0] = desc->xmit_tries0;
+			ph->try[1] = desc->xmit_tries1;
+			ph->try[2] = desc->xmit_tries2;
+			ph->try[3] = desc->xmit_tries3;
+			
+//			struct ieee80211_channel chan;
+//			ath_chan_set(struct ath_softc *sc, struct ieee80211_channel *chan)
+			
+			skb_pull(skb, ATHDESC_HEADER_SIZE);
+		}
+		break;
+	}
 	case ARPHRD_IEEE80211_ATHDESC2: {
 		if (skb->len > ATHDESC_HEADER_SIZE) {
 			struct ar5212_openbsd_desc *desc =
