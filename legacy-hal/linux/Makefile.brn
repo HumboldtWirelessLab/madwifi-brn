@@ -1,6 +1,7 @@
 all: clean
 	mkdir obj/i386-elf
 	make TARGET=i386-elf BOARD_TYPE=localPC AH_SUPPORT_XR=1 release
+	mv obj/i386-elf/opt_ah.h obj/i386-elf/i386-elf.opt_ah.h
 
 clean:
 	make TARGET=i386-elf BOARD_TYPE=localPC AH_SUPPORT_XR=1 clean
