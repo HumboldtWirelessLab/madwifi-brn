@@ -303,8 +303,8 @@ ieee80211_input_monitor(struct ieee80211com *ic, struct sk_buff *skb,
 	int noise = 0, antenna = 0, ieeerate = 0;
 	u_int32_t rssi = 0;
 	u_int8_t pkttype = 0;
-	u_int8_t phycrcerror = 0;
 	u_int8_t *skb1_data;
+	struct ath_brn_info brn_info;
 
 	if (tx) {
 		rssi = bf->bf_dsstatus.ds_txstat.ts_rssi;
@@ -348,14 +348,14 @@ ieee80211_input_monitor(struct ieee80211com *ic, struct sk_buff *skb,
 			/* We can't use addr1 to determine direction at this point */
 			//pkttype = PACKET_HOST;
 			pkttype = PACKET_OTHERHOST;
-			phycrcerror = 1;
 		} else {
 			/* 
 			 * The frame passed its CRC, so we can rely
 			 * on the contents of the frame to set pkttype.
 			 */
 			if (tx)
-				pkttype = PACKET_OUTGOING;
+				//pkttype = PACKET_OUTGOING;
+				pkttype = PACKET_OTHERHOST;
 			else if (IEEE80211_IS_MULTICAST(wh->i_addr1)) {
 				if (IEEE80211_ADDR_EQ(wh->i_addr1, dev->broadcast))
 					pkttype = PACKET_BROADCAST;
@@ -569,11 +569,16 @@ ieee80211_input_monitor(struct ieee80211com *ic, struct sk_buff *skb,
 				break;
 			}
 			
+			brn_info.noise = (int8_t) noise;
+			brn_info.hosttime = jiffies;
+			brn_info.mactime = mactime;
+			
 			skb1_data = skb_push(skb1, ATHDESC2_HEADER_SIZE);
-			memcpy(skb1_data, 
-					ds, ATHDESC_HEADER_SIZE);
-			memcpy(&(skb1_data[ATHDESC_HEADER_SIZE]),&(bf->bf_dsstatus), ATHDESC2_EXTRA_HEADER_SIZE);
-			/*Copy the hole rx/tx-status*/
+			
+			memcpy(skb1_data, ds, ATHDESC_HEADER_SIZE);
+			memcpy(&(skb1_data[ATHDESC_HEADER_SIZE]), &(bf->bf_dsstatus), ATHDESC2_EXTRA_HEADER_SIZE);
+			memcpy(&(skb1_data[ATHDESC_HEADER_SIZE + ATHDESC2_EXTRA_HEADER_SIZE]), &(brn_info), ATHDESC2_BRN_HEADER_SIZE);
+			/*Copy the hole rx/tx-status and brn extra*/
 			break;
 		}
 		default:
@@ -591,9 +596,7 @@ ieee80211_input_monitor(struct ieee80211com *ic, struct sk_buff *skb,
 			skb_reset_mac_header(skb1);
 
 			skb1->ip_summed = CHECKSUM_NONE;
-                        //skb1->pkt_type = pkttype;
-                        if (!tx) skb1->pkt_type = pkttype;
-                        else skb1->pkt_type = PACKET_OTHERHOST;
+                        skb1->pkt_type = pkttype;
 			skb1->protocol = 
 				__constant_htons(0x0019); /* ETH_P_80211_RAW */
 
