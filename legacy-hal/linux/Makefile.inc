@@ -75,7 +75,7 @@ AH_SUPPORT_5413?=1		# 5413 RF support
 AH_SUPPORT_2316?=1		# 2316 RF support
 AH_SUPPORT_2317?=1		# 2317 RF support
 AH_SUPPORT_2425?=1		# 2425 RF support
-AH_SUPPORT_2133?=1              # 2133 RF Support    
+AH_SUPPORT_2133?=0              # 2133 RF Support    
 
 AH_DEBUG?=0			# debugging (e.g. hw.ath.hal.debug)
 AH_ASSERT?=0			# assertions (pretty lame)
@@ -302,8 +302,8 @@ release: ${OBJDIR}/hal-release.o
 	rm -f ${PUBLIC}/${TARGET}.hal.o.uu
 	(${SED} -e '1,/^$$/d' ${HAL}/COPYRIGHT; \
 	 ${SED} -n -e '/ATH_HAL_VERSION/p' ${HAL}/version.h; \
-	 ${UUENCODE} ${OBJDIR}/hal-release.o hal.o) > ${PUBLIC}/${TARGET}.hal.o.uu
-	cp ${OBJDIR}/opt_ah.h ${PUBLIC}/${TARGET}.opt_ah.h
+	 ${UUENCODE} ${OBJDIR}/hal-release.o hal.o) > ${OBJDIR}/${TARGET}.hal.o.uu
+#	cp ${OBJDIR}/opt_ah.h ${PUBLIC}/${TARGET}.opt_ah.h
 
 symrelease: ${OBJDIR}/hal-symrelease.o
 	rm -f ${PUBLIC}/${TARGET}.hal.o.uu
@@ -471,9 +471,9 @@ endif
 ifneq ($(strip ${BOARD_TYPE}), localPC)
 ifneq ($(strip ${BOARD_TYPE}), EeePC)
 ifeq ($(strip ${ENDIAN}),AH_LITTLE_ENDIAN)
-	echo "#define AH_BYTE_ORDER AH_LITTLE_ENDIAN"	>> ${OBJDIR}/opt_ah.h
+#	echo "#define AH_BYTE_ORDER AH_LITTLE_ENDIAN"	>> ${OBJDIR}/opt_ah.h
 else
-	echo "#define AH_BYTE_ORDER AH_BIG_ENDIAN" >> ${OBJDIR}/opt_ah.h
+#	echo "#define AH_BYTE_ORDER AH_BIG_ENDIAN" >> ${OBJDIR}/opt_ah.h
 endif
 endif
 endif
@@ -634,7 +634,8 @@ ${OBJDIR}/hal.o: ${HAL_OBJS} Makefile
 
 clean:
 	rm -f ${ALL} ${OBJS} ${CLEANFILES}
-	-rmdir -p ${OBJDIR}
+#	-rmdir -p ${OBJDIR}
+	rm -rf ${OBJDIR}
 
 depend: beforedepend .depend afterdepend
 ${OBJDIR}/.depend: ${SRCS} ${OBJDIR}/opt_ah.h
