@@ -9,7 +9,6 @@ struct ath_brn_rx_info {
     int8_t noise;
     u_int64_t hosttime;
     u_int64_t mactime;
-     
 };
 
 struct ath_brn_tx_info {
