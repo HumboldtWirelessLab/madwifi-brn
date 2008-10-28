@@ -606,7 +606,7 @@ ieee80211_input_monitor(struct ieee80211com *ic, struct sk_buff *skb,
 			skb1_data = skb_push(skb1, ATHDESC2_HEADER_SIZE);
 			
 			memcpy(skb1_data, ds, ATHDESC_HEADER_SIZE);
-			memcpy(&(skb1_data[ATHDESC_HEADER_SIZE]), &(ath2_h), ATHDESC2_HEADER_SIZE);
+			memcpy(&(skb1_data[ATHDESC_HEADER_SIZE]), &(ath2_h), ATHDESC2_BRN_HEADER_SIZE );
 			/*Copy the hole rx/tx-status and brn extra*/
 			break;
 		}
