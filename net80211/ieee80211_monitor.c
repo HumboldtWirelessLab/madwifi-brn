@@ -570,15 +570,43 @@ ieee80211_input_monitor(struct ieee80211com *ic, struct sk_buff *skb,
 			}
 			
 			brn_info.id = ATHDESC2_BRN_ID;
-			brn_info.anno.rx.noise = (int8_t) noise;
-			brn_info.anno.rx.hosttime = jiffies;
-			brn_info.anno.rx.mactime = mactime;
-			
+
+			if (tx)
+			{
+				brn_info.anno.tx.ts_seqnum = bf->bf_dsstatus.ds_txstat.ts_seqnum;
+				brn_info.anno.tx.ts_tstamp = bf->bf_dsstatus.ds_txstat.ts_tstamp;
+				brn_info.anno.tx.ts_status = bf->bf_dsstatus.ds_txstat.ts_status;
+				brn_info.anno.tx.ts_rate = bf->bf_dsstatus.ds_txstat.ts_rate;
+				brn_info.anno.tx.ts_rssi = bf->bf_dsstatus.ds_txstat.ts_rssi;
+				brn_info.anno.tx.ts_shortretry = bf->bf_dsstatus.ds_txstat.ts_shortretry;
+				brn_info.anno.tx.ts_longretry = bf->bf_dsstatus.ds_txstat.ts_longretry;
+				brn_info.anno.tx.ts_virtcol = bf->bf_dsstatus.ds_txstat.ts_virtcol;
+				brn_info.anno.tx.ts_antenna = bf->bf_dsstatus.ds_txstat.ts_antenna;
+				brn_info.anno.tx.ts_finaltsi = bf->bf_dsstatus.ds_txstat.ts_finaltsi;
+
+				brn_info.anno.tx.noise = (int8_t) noise;
+				brn_info.anno.tx.hosttime = jiffies;
+				brn_info.anno.tx.mactime = mactime;
+			}
+			else
+			{
+				brn_info.anno.rx.rs_datalen = bf->bf_dsstatus.ds_rxstat.rs_datalen;
+				brn_info.anno.rx.rs_status = bf->bf_dsstatus.ds_rxstat.rs_status;
+				brn_info.anno.rx.rs_phyerr = bf->bf_dsstatus.ds_rxstat.rs_phyerr;
+				brn_info.anno.rx.rs_rssi = bf->bf_dsstatus.ds_rxstat.rs_rssi;
+				brn_info.anno.rx.rs_rate = bf->bf_dsstatus.ds_rxstat.rs_rate;
+				brn_info.anno.rx.rs_tstamp = bf->bf_dsstatus.ds_rxstat.rs_tstamp;
+				brn_info.anno.rx.rs_antenna = bf->bf_dsstatus.ds_rxstat.rs_antenna;
+
+				brn_info.anno.rx.noise = (int8_t) noise;
+				brn_info.anno.rx.hosttime = jiffies;
+				brn_info.anno.rx.mactime = mactime;
+			}
+
 			skb1_data = skb_push(skb1, ATHDESC2_HEADER_SIZE);
 			
 			memcpy(skb1_data, ds, ATHDESC_HEADER_SIZE);
-			memcpy(&(skb1_data[ATHDESC_HEADER_SIZE]), &(bf->bf_dsstatus), ATHDESC2_EXTRA_HEADER_SIZE);
-			memcpy(&(skb1_data[ATHDESC_HEADER_SIZE + ATHDESC2_EXTRA_HEADER_SIZE]), &(brn_info), ATHDESC2_BRN_HEADER_SIZE);
+			memcpy(&(skb1_data[ATHDESC_HEADER_SIZE]), &(brn_info), ATHDESC2_HEADER_SIZE);
 			/*Copy the hole rx/tx-status and brn extra*/
 			break;
 		}
