@@ -569,9 +569,10 @@ ieee80211_input_monitor(struct ieee80211com *ic, struct sk_buff *skb,
 				break;
 			}
 			
-			brn_info.noise = (int8_t) noise;
-			brn_info.hosttime = jiffies;
-			brn_info.mactime = mactime;
+			brn_info.id = ATHDESC2_BRN_ID;
+			brn_info.anno.rx.noise = (int8_t) noise;
+			brn_info.anno.rx.hosttime = jiffies;
+			brn_info.anno.rx.mactime = mactime;
 			
 			skb1_data = skb_push(skb1, ATHDESC2_HEADER_SIZE);
 			
