@@ -1,7 +1,7 @@
 #ifndef _NET80211_IEEE80211_MONITOR_ATH2_H_
 #define _NET80211_IEEE80211_MONITOR_ATH2_H_
 
-struct ath_brn_rx_status {
+struct ath2_rx_status {
     u_int16_t	rs_datalen; /* rx frame length */
     u_int8_t	rs_status;  /* rx status, 0 => recv ok */
     u_int8_t	rs_phyerr;  /* phy error code */
@@ -15,7 +15,7 @@ struct ath_brn_rx_status {
     u_int64_t	mactime;
 };
 
-struct ath_brn_tx_status {
+struct ath2_tx_status {
     u_int16_t	ts_seqnum;    /* h/w assigned sequence number */
     u_int16_t	ts_tstamp;    /* h/w assigned timestamp */
     u_int8_t	ts_status;    /* frame status, 0 => xmit ok */
@@ -32,19 +32,19 @@ struct ath_brn_tx_status {
     u_int64_t mactime;
 };
 
-struct ath_brn_tx_anno {
+struct ath2_tx_anno {
     int8_t channel;
     u_int8_t mac[6];
 };
 
 
-struct ath_brn_info {
+struct ath2_header {
     u_int16_t id;
 
     union {
-      struct ath_brn_rx_status rx;
-      struct ath_brn_tx_status tx;
-      struct ath_brn_tx_anno tx_anno;
+      struct ath2_rx_status rx;
+      struct ath2_tx_status tx;
+      struct ath2_tx_anno tx_anno;
     } anno; 
 
 };

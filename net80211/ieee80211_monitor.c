@@ -304,7 +304,7 @@ ieee80211_input_monitor(struct ieee80211com *ic, struct sk_buff *skb,
 	u_int32_t rssi = 0;
 	u_int8_t pkttype = 0;
 	u_int8_t *skb1_data;
-	struct ath_brn_info brn_info;
+	struct ath2_header ath2_h;
 
 	if (tx) {
 		rssi = bf->bf_dsstatus.ds_txstat.ts_rssi;
@@ -569,44 +569,44 @@ ieee80211_input_monitor(struct ieee80211com *ic, struct sk_buff *skb,
 				break;
 			}
 			
-			brn_info.id = ATHDESC2_BRN_ID;
+			ath2_h.id = ATHDESC2_BRN_ID;
 
 			if (tx)
 			{
-				brn_info.anno.tx.ts_seqnum = bf->bf_dsstatus.ds_txstat.ts_seqnum;
-				brn_info.anno.tx.ts_tstamp = bf->bf_dsstatus.ds_txstat.ts_tstamp;
-				brn_info.anno.tx.ts_status = bf->bf_dsstatus.ds_txstat.ts_status;
-				brn_info.anno.tx.ts_rate = bf->bf_dsstatus.ds_txstat.ts_rate;
-				brn_info.anno.tx.ts_rssi = bf->bf_dsstatus.ds_txstat.ts_rssi;
-				brn_info.anno.tx.ts_shortretry = bf->bf_dsstatus.ds_txstat.ts_shortretry;
-				brn_info.anno.tx.ts_longretry = bf->bf_dsstatus.ds_txstat.ts_longretry;
-				brn_info.anno.tx.ts_virtcol = bf->bf_dsstatus.ds_txstat.ts_virtcol;
-				brn_info.anno.tx.ts_antenna = bf->bf_dsstatus.ds_txstat.ts_antenna;
-				brn_info.anno.tx.ts_finaltsi = bf->bf_dsstatus.ds_txstat.ts_finaltsi;
+				ath2_h.anno.tx.ts_seqnum = bf->bf_dsstatus.ds_txstat.ts_seqnum;
+				ath2_h.anno.tx.ts_tstamp = bf->bf_dsstatus.ds_txstat.ts_tstamp;
+				ath2_h.anno.tx.ts_status = bf->bf_dsstatus.ds_txstat.ts_status;
+				ath2_h.anno.tx.ts_rate = bf->bf_dsstatus.ds_txstat.ts_rate;
+				ath2_h.anno.tx.ts_rssi = bf->bf_dsstatus.ds_txstat.ts_rssi;
+				ath2_h.anno.tx.ts_shortretry = bf->bf_dsstatus.ds_txstat.ts_shortretry;
+				ath2_h.anno.tx.ts_longretry = bf->bf_dsstatus.ds_txstat.ts_longretry;
+				ath2_h.anno.tx.ts_virtcol = bf->bf_dsstatus.ds_txstat.ts_virtcol;
+				ath2_h.anno.tx.ts_antenna = bf->bf_dsstatus.ds_txstat.ts_antenna;
+				ath2_h.anno.tx.ts_finaltsi = bf->bf_dsstatus.ds_txstat.ts_finaltsi;
 
-				brn_info.anno.tx.noise = (int8_t) noise;
-				brn_info.anno.tx.hosttime = jiffies;
-				brn_info.anno.tx.mactime = mactime;
+				ath2_h.anno.tx.noise = (int8_t) noise;
+				ath2_h.anno.tx.hosttime = jiffies;
+				ath2_h.anno.tx.mactime = mactime;
 			}
 			else
 			{
-				brn_info.anno.rx.rs_datalen = bf->bf_dsstatus.ds_rxstat.rs_datalen;
-				brn_info.anno.rx.rs_status = bf->bf_dsstatus.ds_rxstat.rs_status;
-				brn_info.anno.rx.rs_phyerr = bf->bf_dsstatus.ds_rxstat.rs_phyerr;
-				brn_info.anno.rx.rs_rssi = bf->bf_dsstatus.ds_rxstat.rs_rssi;
-				brn_info.anno.rx.rs_rate = bf->bf_dsstatus.ds_rxstat.rs_rate;
-				brn_info.anno.rx.rs_tstamp = bf->bf_dsstatus.ds_rxstat.rs_tstamp;
-				brn_info.anno.rx.rs_antenna = bf->bf_dsstatus.ds_rxstat.rs_antenna;
+				ath2_h.anno.rx.rs_datalen = bf->bf_dsstatus.ds_rxstat.rs_datalen;
+				ath2_h.anno.rx.rs_status = bf->bf_dsstatus.ds_rxstat.rs_status;
+				ath2_h.anno.rx.rs_phyerr = bf->bf_dsstatus.ds_rxstat.rs_phyerr;
+				ath2_h.anno.rx.rs_rssi = bf->bf_dsstatus.ds_rxstat.rs_rssi;
+				ath2_h.anno.rx.rs_rate = bf->bf_dsstatus.ds_rxstat.rs_rate;
+				ath2_h.anno.rx.rs_tstamp = bf->bf_dsstatus.ds_rxstat.rs_tstamp;
+				ath2_h.anno.rx.rs_antenna = bf->bf_dsstatus.ds_rxstat.rs_antenna;
 
-				brn_info.anno.rx.noise = (int8_t) noise;
-				brn_info.anno.rx.hosttime = jiffies;
-				brn_info.anno.rx.mactime = mactime;
+				ath2_h.anno.rx.noise = (int8_t) noise;
+				ath2_h.anno.rx.hosttime = jiffies;
+				ath2_h.anno.rx.mactime = mactime;
 			}
 
 			skb1_data = skb_push(skb1, ATHDESC2_HEADER_SIZE);
 			
 			memcpy(skb1_data, ds, ATHDESC_HEADER_SIZE);
-			memcpy(&(skb1_data[ATHDESC_HEADER_SIZE]), &(brn_info), ATHDESC2_HEADER_SIZE);
+			memcpy(&(skb1_data[ATHDESC_HEADER_SIZE]), &(ath2_h), ATHDESC2_HEADER_SIZE);
 			/*Copy the hole rx/tx-status and brn extra*/
 			break;
 		}
