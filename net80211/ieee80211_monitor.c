@@ -569,7 +569,8 @@ ieee80211_input_monitor(struct ieee80211com *ic, struct sk_buff *skb,
 				break;
 			}
 			
-			ath2_h.id = ATHDESC2_BRN_ID;
+			ath2_h.ath2_version = ATHDESC2_VERSION;
+			ath2_h.madwifi_version = MADWIFI_TRUNK;
 
 			if (tx)
 			{
@@ -584,9 +585,9 @@ ieee80211_input_monitor(struct ieee80211com *ic, struct sk_buff *skb,
 				ath2_h.anno.tx.ts_antenna = bf->bf_dsstatus.ds_txstat.ts_antenna;
 				ath2_h.anno.tx.ts_finaltsi = bf->bf_dsstatus.ds_txstat.ts_finaltsi;
 
-				ath2_h.anno.tx.noise = (int8_t) noise;
-				ath2_h.anno.tx.hosttime = jiffies;
-				ath2_h.anno.tx.mactime = mactime;
+				ath2_h.anno.tx.ts_hosttime = jiffies;
+				ath2_h.anno.tx.ts_mactime = mactime;
+				ath2_h.anno.tx.ts_noise = (int8_t) noise;
 			}
 			else
 			{
@@ -594,13 +595,15 @@ ieee80211_input_monitor(struct ieee80211com *ic, struct sk_buff *skb,
 				ath2_h.anno.rx.rs_status = bf->bf_dsstatus.ds_rxstat.rs_status;
 				ath2_h.anno.rx.rs_phyerr = bf->bf_dsstatus.ds_rxstat.rs_phyerr;
 				ath2_h.anno.rx.rs_rssi = bf->bf_dsstatus.ds_rxstat.rs_rssi;
+				ath2_h.anno.rx.rs_keyix = bf->bf_dsstatus.ds_rxstat.rs_keyix;
 				ath2_h.anno.rx.rs_rate = bf->bf_dsstatus.ds_rxstat.rs_rate;
+				ath2_h.anno.rx.rs_more = bf->bf_dsstatus.ds_rxstat.rs_more;
 				ath2_h.anno.rx.rs_tstamp = bf->bf_dsstatus.ds_rxstat.rs_tstamp;
 				ath2_h.anno.rx.rs_antenna = bf->bf_dsstatus.ds_rxstat.rs_antenna;
 
-				ath2_h.anno.rx.noise = (int8_t) noise;
-				ath2_h.anno.rx.hosttime = jiffies;
-				ath2_h.anno.rx.mactime = mactime;
+				ath2_h.anno.rx.rs_hosttime = jiffies;
+				ath2_h.anno.rx.rs_mactime = mactime;
+				ath2_h.anno.rx.rs_noise = (int8_t) noise;
 			}
 
 			skb1_data = skb_push(skb1, ATHDESC2_HEADER_SIZE);
