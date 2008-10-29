@@ -346,8 +346,7 @@ ieee80211_input_monitor(struct ieee80211com *ic, struct sk_buff *skb,
 				continue;
 
 			/* We can't use addr1 to determine direction at this point */
-			//pkttype = PACKET_HOST;
-			pkttype = PACKET_OTHERHOST;
+			pkttype = PACKET_HOST;
 		} else {
 			/* 
 			 * The frame passed its CRC, so we can rely
