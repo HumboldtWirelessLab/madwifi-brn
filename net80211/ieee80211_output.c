@@ -86,7 +86,8 @@ ieee80211_setup_macclone(struct ieee80211vap *vap, const char* addr) {
 		if (!memcmp(dev->dev_addr, addr, dev->addr_len))
 			break;
 
-	if (!dev) {
+//	if (!dev) {
+		printk("setmac now");
 		ATH_LOCK(sc);
 		IEEE80211_ADDR_COPY(ic->ic_myaddr, addr);
 		IEEE80211_ADDR_COPY(ic->ic_dev->dev_addr, ic->ic_myaddr);
@@ -96,9 +97,9 @@ ieee80211_setup_macclone(struct ieee80211vap *vap, const char* addr) {
 		ic->ic_reset(ic->ic_dev);
 		ATH_UNLOCK(sc);
 
-		return 1;
-	}
-	return 0;
+		return 0;
+//	}
+//	return 1;
 }
 
 /*
@@ -260,12 +261,20 @@ ieee80211_hardstart(struct sk_buff *skb, struct net_device *dev)
 	if (vap->iv_opmode == IEEE80211_M_MONITOR) {
 		eh = (struct ether_header *)skb->data;
 	    
-		if ((vap->iv_flags_ext & IEEE80211_FEXT_MACCLONE) != 0 &&
-				 vap->iv_opmode == IEEE80211_M_STA &&
-				 memcmp(eh->ether_shost, vap->iv_myaddr, ETH_ALEN) != 0) {
+		if ((vap->iv_flags_ext & IEEE80211_FEXT_MACCLONE) != 0 && 
+		     vap->iv_opmode == IEEE80211_M_MONITOR && 
+		     memcmp(eh->ether_shost, vap->iv_myaddr, ETH_ALEN) != 0)
+	        {
 			 if (ieee80211_setup_macclone(vap, eh->ether_shost) != 0) {
-				 goto bad;
+				printk("Setmac failed");
+				goto bad;
 			 }
+			 else
+				printk("Setmac ok");
+		}
+		else
+		{
+		    printk("vap has mac");
 		}
 
 		ieee80211_monitor_encap(vap, skb);
