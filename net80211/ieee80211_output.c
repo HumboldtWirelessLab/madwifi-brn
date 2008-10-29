@@ -57,6 +57,8 @@
 #include <net80211/ieee80211_monitor.h>
 #include <net80211/if_athproto.h>
 
+#include <ath/if_ath_hal.h>
+
 #ifdef IEEE80211_DEBUG
 /*
  * Decide if an outbound management frame should be
@@ -73,6 +75,31 @@ doprint(struct ieee80211vap *vap, int subtype)
 }
 #endif
 
+static int
+ieee80211_setup_macclone(struct ieee80211vap *vap, const char* addr) {
+	struct net_device *dev = NULL;
+	struct ieee80211com *ic = vap->iv_ic;
+	struct ath_softc *sc = ic->ic_dev->priv;
+	struct ath_hal *ah = sc->sc_ah;
+
+	for (dev=dev_base; dev; dev=dev->next)
+		if (!memcmp(dev->dev_addr, addr, dev->addr_len))
+			break;
+
+	if (!dev) {
+		ATH_LOCK(sc);
+		IEEE80211_ADDR_COPY(ic->ic_myaddr, addr);
+		IEEE80211_ADDR_COPY(ic->ic_dev->dev_addr, ic->ic_myaddr);
+		IEEE80211_ADDR_COPY(vap->iv_myaddr, ic->ic_myaddr);
+		/* XXX not right for multiple vap's */
+		ath_hal_setmac(ah, ic->ic_dev->dev_addr);
+		ic->ic_reset(ic->ic_dev);
+		ATH_UNLOCK(sc);
+
+		return 1;
+	}
+	return 0;
+}
 
 /*
  * Determine the priority based on VLAN and/or IP TOS. Priority is
@@ -231,6 +258,16 @@ ieee80211_hardstart(struct sk_buff *skb, struct net_device *dev)
 	}
 	
 	if (vap->iv_opmode == IEEE80211_M_MONITOR) {
+		eh = (struct ether_header *)skb->data;
+	    
+		if ((vap->iv_flags_ext & IEEE80211_FEXT_MACCLONE) != 0 &&
+				 vap->iv_opmode == IEEE80211_M_STA &&
+				 memcmp(eh->ether_shost, vap->iv_myaddr, ETH_ALEN) != 0) {
+			 if (ieee80211_setup_macclone(vap, eh->ether_shost) != 0) {
+				 goto bad;
+			 }
+		}
+
 		ieee80211_monitor_encap(vap, skb);
 		ieee80211_parent_queue_xmit(skb);
 		return NETDEV_TX_OK;
@@ -244,8 +281,16 @@ ieee80211_hardstart(struct sk_buff *skb, struct net_device *dev)
 	eh = (struct ether_header *)skb->data;
 	if (vap->iv_opmode == IEEE80211_M_WDS)
 		ni = ieee80211_find_txnode(vap, vap->wds_mac);
-	else
+	else {
+		if ((vap->iv_flags_ext & IEEE80211_FEXT_MACCLONE) != 0 &&
+				 vap->iv_opmode == IEEE80211_M_STA &&
+				 memcmp(eh->ether_shost, vap->iv_myaddr, ETH_ALEN) != 0) {
+			 if (ieee80211_setup_macclone(vap, eh->ether_shost) != 0) {
+				 goto bad;
+			 }
+		}
 		ni = ieee80211_find_txnode(vap, eh->ether_dhost);
+	}
 	if (ni == NULL) {
 		/* NB: ieee80211_find_txnode does stat+msg */
 		goto bad;

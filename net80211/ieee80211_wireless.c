@@ -64,6 +64,8 @@
 
 #include <net80211/ieee80211_var.h>
 #include <net80211/ieee80211_linux.h>
+#include <ath/if_athvar.h>
+#include <ath/if_ath_hal.h>
 #include "ah.h"
 
 #define	IS_UP(_dev) \
@@ -2872,6 +2874,23 @@ ieee80211_ioctl_setparam(struct net_device *dev, struct iw_request_info *info,
 		else
 			ic->ic_flags_ext &= ~IEEE80211_FEXT_MARKDFS;
 		break;
+	case IEEE80211_PARAM_MACCLONE:
+		if (value)
+			vap->iv_flags_ext |= IEEE80211_FEXT_MACCLONE;
+		else {
+			struct ath_softc *sc = ic->ic_dev->priv;
+			struct ath_hal *ah = sc->sc_ah;
+			vap->iv_flags_ext &= ~IEEE80211_FEXT_MACCLONE;
+			ATH_LOCK(sc);
+			IEEE80211_ADDR_COPY(ic->ic_myaddr, dev->dev_addr);
+			IEEE80211_ADDR_COPY(ic->ic_dev->dev_addr, ic->ic_myaddr);
+			IEEE80211_ADDR_COPY(vap->iv_myaddr, ic->ic_myaddr);
+			/* XXX not right for multiple vap's */
+			ath_hal_setmac(ah, ic->ic_dev->dev_addr);
+			ic->ic_reset(ic->ic_dev);
+			ATH_UNLOCK(sc);
+		}
+		break;
 #ifdef ATH_REVERSE_ENGINEERING
 	case IEEE80211_PARAM_DUMPREGS:
 		ieee80211_dump_registers(dev, info, w, extra);
@@ -3209,6 +3228,9 @@ ieee80211_ioctl_getparam(struct net_device *dev, struct iw_request_info *info,
 			param[0] = 1;
 		else
 			param[0] = 0;
+		break;
+	case IEEE80211_PARAM_MACCLONE:
+		param[0] = (vap->iv_flags_ext & IEEE80211_FEXT_MACCLONE) != 0;
 		break;
 	default:
 		return -EOPNOTSUPP;
@@ -5662,6 +5684,10 @@ static const struct iw_priv_args ieee80211_priv_args[] = {
 	  IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 1, 0, "debug_scanbufs" },
 	{ IEEE80211_PARAM_LEAKTXBUFS,
 	  IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 1, 0, "debug_leaktxbufs" },
+	{ IEEE80211_PARAM_MACCLONE,
+	  IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 1, 0, "macclone" },
+	{ IEEE80211_PARAM_MACCLONE,
+	  0, IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 1, "get_macclone" },
 	
 #ifdef ATH_REVERSE_ENGINEERING
 	/*
