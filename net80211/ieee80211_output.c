@@ -87,7 +87,7 @@ ieee80211_setup_macclone(struct ieee80211vap *vap, const char* addr) {
 			break;
 
 //	if (!dev) {
-		printk("setmac now");
+//		printk("setmac now");
 		ATH_LOCK(sc);
 		IEEE80211_ADDR_COPY(ic->ic_myaddr, addr);
 		IEEE80211_ADDR_COPY(ic->ic_dev->dev_addr, ic->ic_myaddr);
@@ -233,7 +233,8 @@ ieee80211_hardstart(struct sk_buff *skb, struct net_device *dev)
 	struct ieee80211com *ic = vap->iv_ic;
 	struct net_device *parent = ic->ic_dev;
 	struct ieee80211_node *ni = NULL;
-	struct ether_header *eh;
+	struct ether_header *eh = NULL;
+	struct ieee80211_frame *wf = NULL;
 
 	/* Reset the SKB of new frames reaching this layer BEFORE
 	 * we invoke ieee80211_skb_track. */
@@ -259,22 +260,30 @@ ieee80211_hardstart(struct sk_buff *skb, struct net_device *dev)
 	}
 	
 	if (vap->iv_opmode == IEEE80211_M_MONITOR) {
-		eh = (struct ether_header *)skb->data;
+		
+	//	printk("Version: %d\n",(int)skb->dev->type);
+	
+		if ( ( skb->dev->type == ARPHRD_IEEE80211_ATHDESC ) || ( skb->dev->type == ARPHRD_IEEE80211_ATHDESC2 ) ) {
+		
+		    wf = (struct ieee80211_frame *)&(skb->data[ATHDESC_HEADER_SIZE]);
+		
+		//    printk("SrcAddr:%02x%02x%02x%02x%02x%02x\n",wf->i_addr2[0],wf->i_addr2[1],wf->i_addr2[2],wf->i_addr2[3],wf->i_addr2[4],wf->i_addr2[5]);
 	    
-		if ((vap->iv_flags_ext & IEEE80211_FEXT_MACCLONE) != 0 && 
-		     vap->iv_opmode == IEEE80211_M_MONITOR && 
-		     memcmp(eh->ether_shost, vap->iv_myaddr, ETH_ALEN) != 0)
-	        {
-			 if (ieee80211_setup_macclone(vap, eh->ether_shost) != 0) {
-				printk("Setmac failed");
-				goto bad;
-			 }
-			 else
-				printk("Setmac ok");
-		}
-		else
-		{
-		    printk("vap has mac");
+		    if ((vap->iv_flags_ext & IEEE80211_FEXT_MACCLONE) != 0 && 
+			vap->iv_opmode == IEEE80211_M_MONITOR && 
+			memcmp(wf->i_addr2, vap->iv_myaddr, ETH_ALEN) != 0) {
+			
+			if (ieee80211_setup_macclone(vap, wf->i_addr2) != 0) {
+		//	    printk("Setmac failed\n");
+			    goto bad;
+			}
+		//	else
+		//	    printk("Setmac ok\n");
+
+		    }
+/*		    else {
+			printk("vap has mac\n");
+		    }*/
 		}
 
 		ieee80211_monitor_encap(vap, skb);
