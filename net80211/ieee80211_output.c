@@ -86,8 +86,7 @@ ieee80211_setup_macclone(struct ieee80211vap *vap, const char* addr) {
 		if (!memcmp(dev->dev_addr, addr, dev->addr_len))
 			break;
 
-//	if (!dev) {
-//		printk("setmac now");
+	if (!dev) {
 		ATH_LOCK(sc);
 		IEEE80211_ADDR_COPY(ic->ic_myaddr, addr);
 		IEEE80211_ADDR_COPY(ic->ic_dev->dev_addr, ic->ic_myaddr);
@@ -98,8 +97,9 @@ ieee80211_setup_macclone(struct ieee80211vap *vap, const char* addr) {
 		ATH_UNLOCK(sc);
 
 		return 0;
-//	}
-//	return 1;
+	}
+
+	return 1;
 }
 
 /*
@@ -261,29 +261,18 @@ ieee80211_hardstart(struct sk_buff *skb, struct net_device *dev)
 	
 	if (vap->iv_opmode == IEEE80211_M_MONITOR) {
 		
-	//	printk("Version: %d\n",(int)skb->dev->type);
-	
 		if ( ( skb->dev->type == ARPHRD_IEEE80211_ATHDESC ) || ( skb->dev->type == ARPHRD_IEEE80211_ATHDESC2 ) ) {
 		
 		    wf = (struct ieee80211_frame *)&(skb->data[ATHDESC_HEADER_SIZE]);
-		
-		//    printk("SrcAddr:%02x%02x%02x%02x%02x%02x\n",wf->i_addr2[0],wf->i_addr2[1],wf->i_addr2[2],wf->i_addr2[3],wf->i_addr2[4],wf->i_addr2[5]);
 	    
 		    if ((vap->iv_flags_ext & IEEE80211_FEXT_MACCLONE) != 0 && 
-			vap->iv_opmode == IEEE80211_M_MONITOR && 
-			memcmp(wf->i_addr2, vap->iv_myaddr, ETH_ALEN) != 0) {
-			
-			if (ieee80211_setup_macclone(vap, wf->i_addr2) != 0) {
-		//	    printk("Setmac failed\n");
-			    goto bad;
-			}
-		//	else
-		//	    printk("Setmac ok\n");
-
+				    vap->iv_opmode == IEEE80211_M_MONITOR && 
+				    memcmp(wf->i_addr2, vap->iv_myaddr, ETH_ALEN) != 0) {
+				    
+			    if (ieee80211_setup_macclone(vap, wf->i_addr2) != 0) {
+				goto bad;
+			    }
 		    }
-/*		    else {
-			printk("vap has mac\n");
-		    }*/
 		}
 
 		ieee80211_monitor_encap(vap, skb);
