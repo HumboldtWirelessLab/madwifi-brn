@@ -1,0 +1,179 @@
+diff --git a/net80211/ieee80211_ioctl.h b/net80211/ieee80211_ioctl.h
+index 200bb59..3a09b6c 100644
+--- a/net80211/ieee80211_ioctl.h
++++ b/net80211/ieee80211_ioctl.h
+@@ -649,6 +649,8 @@ enum {
+ 	IEEE80211_PARAM_RESETTXBUFS		= 80,   /* Reset transmit DMA */
+ 	IEEE80211_PARAM_SCANBUFS		= 81,	/* Heap analysis for TX DMA */
+ 	IEEE80211_PARAM_LEAKTXBUFS		= 82,	/* Leak tx buffers */
++
++	IEEE80211_PARAM_MACCLONE                = 83,   /* MAC cloning */
+ };
+ 
+ #define	SIOCG80211STATS			(SIOCDEVPRIVATE+2)
+diff --git a/net80211/ieee80211_output.c b/net80211/ieee80211_output.c
+index 1bd46e7..b4bd9c6 100644
+--- a/net80211/ieee80211_output.c
++++ b/net80211/ieee80211_output.c
+@@ -57,6 +57,8 @@
+ #include <net80211/ieee80211_monitor.h>
+ #include <net80211/if_athproto.h>
+ 
++#include <ath/if_ath_hal.h>
++
+ #ifdef IEEE80211_DEBUG
+ /*
+  * Decide if an outbound management frame should be
+@@ -73,6 +75,32 @@ doprint(struct ieee80211vap *vap, int subtype)
+ }
+ #endif
+ 
++static int
++ieee80211_setup_macclone(struct ieee80211vap *vap, const char* addr) {
++	struct net_device *dev = NULL;
++	struct ieee80211com *ic = vap->iv_ic;
++	struct ath_softc *sc = ic->ic_dev->priv;
++	struct ath_hal *ah = sc->sc_ah;
++
++	for (dev=dev_base; dev; dev=dev->next)
++		if (!memcmp(dev->dev_addr, addr, dev->addr_len))
++			break;
++
++	if (!dev) {
++		ATH_LOCK(sc);
++		IEEE80211_ADDR_COPY(ic->ic_myaddr, addr);
++		IEEE80211_ADDR_COPY(ic->ic_dev->dev_addr, ic->ic_myaddr);
++		IEEE80211_ADDR_COPY(vap->iv_myaddr, ic->ic_myaddr);
++		/* XXX not right for multiple vap's */
++		ath_hal_setmac(ah, ic->ic_dev->dev_addr);
++		ic->ic_reset(ic->ic_dev);
++		ATH_UNLOCK(sc);
++
++		return 0;
++	}
++
++	return 1;
++}
+ 
+ /*
+  * Determine the priority based on VLAN and/or IP TOS. Priority is
+@@ -205,7 +233,8 @@ ieee80211_hardstart(struct sk_buff *skb, struct net_device *dev)
+ 	struct ieee80211com *ic = vap->iv_ic;
+ 	struct net_device *parent = ic->ic_dev;
+ 	struct ieee80211_node *ni = NULL;
+-	struct ether_header *eh;
++	struct ether_header *eh = NULL;
++	struct ieee80211_frame *wf = NULL;
+ 
+ 	/* Reset the SKB of new frames reaching this layer BEFORE
+ 	 * we invoke ieee80211_skb_track. */
+@@ -231,6 +260,21 @@ ieee80211_hardstart(struct sk_buff *skb, struct net_device *dev)
+ 	}
+ 	
+ 	if (vap->iv_opmode == IEEE80211_M_MONITOR) {
++		
++		if ( ( skb->dev->type == ARPHRD_IEEE80211_ATHDESC ) || ( skb->dev->type == ARPHRD_IEEE80211_ATHDESC2 ) ) {
++		
++		    wf = (struct ieee80211_frame *)&(skb->data[ATHDESC_HEADER_SIZE]);
++	    
++		    if ((vap->iv_flags_ext & IEEE80211_FEXT_MACCLONE) != 0 && 
++				    vap->iv_opmode == IEEE80211_M_MONITOR && 
++				    memcmp(wf->i_addr2, vap->iv_myaddr, ETH_ALEN) != 0) {
++				    
++			    if (ieee80211_setup_macclone(vap, wf->i_addr2) != 0) {
++				goto bad;
++			    }
++		    }
++		}
++
+ 		ieee80211_monitor_encap(vap, skb);
+ 		ieee80211_parent_queue_xmit(skb);
+ 		return NETDEV_TX_OK;
+@@ -244,8 +288,16 @@ ieee80211_hardstart(struct sk_buff *skb, struct net_device *dev)
+ 	eh = (struct ether_header *)skb->data;
+ 	if (vap->iv_opmode == IEEE80211_M_WDS)
+ 		ni = ieee80211_find_txnode(vap, vap->wds_mac);
+-	else
++	else {
++		if ((vap->iv_flags_ext & IEEE80211_FEXT_MACCLONE) != 0 &&
++				 vap->iv_opmode == IEEE80211_M_STA &&
++				 memcmp(eh->ether_shost, vap->iv_myaddr, ETH_ALEN) != 0) {
++			 if (ieee80211_setup_macclone(vap, eh->ether_shost) != 0) {
++				 goto bad;
++			 }
++		}
+ 		ni = ieee80211_find_txnode(vap, eh->ether_dhost);
++	}
+ 	if (ni == NULL) {
+ 		/* NB: ieee80211_find_txnode does stat+msg */
+ 		goto bad;
+diff --git a/net80211/ieee80211_var.h b/net80211/ieee80211_var.h
+index 2f4801a..72dc232 100644
+--- a/net80211/ieee80211_var.h
++++ b/net80211/ieee80211_var.h
+@@ -603,6 +603,7 @@ MALLOC_DECLARE(M_80211_VAP);
+ #define IEEE80211_FEXT_SWBMISS		0x00000400	/* CONF: use software beacon timer */
+ #define IEEE80211_FEXT_DROPUNENC_EAPOL	0x00000800	/* CONF: drop unencrypted eapol frames */
+ #define IEEE80211_FEXT_APPIE_UPDATE	0x00001000	/* STATE: beacon APP IE updated */
++#define IEEE80211_FEXT_MACCLONE         0x40000000      /* STATUS: mac cloning */
+ 
+ #define IEEE80211_COM_UAPSD_ENABLE(_ic)		((_ic)->ic_flags_ext |= IEEE80211_FEXT_UAPSD)
+ #define IEEE80211_COM_UAPSD_DISABLE(_ic)	((_ic)->ic_flags_ext &= ~IEEE80211_FEXT_UAPSD)
+diff --git a/net80211/ieee80211_wireless.c b/net80211/ieee80211_wireless.c
+index 11069ca..dae07f6 100644
+--- a/net80211/ieee80211_wireless.c
++++ b/net80211/ieee80211_wireless.c
+@@ -64,6 +64,8 @@
+ 
+ #include <net80211/ieee80211_var.h>
+ #include <net80211/ieee80211_linux.h>
++#include <ath/if_athvar.h>
++#include <ath/if_ath_hal.h>
+ #include "ah.h"
+ 
+ #define	IS_UP(_dev) \
+@@ -2872,6 +2874,23 @@ ieee80211_ioctl_setparam(struct net_device *dev, struct iw_request_info *info,
+ 		else
+ 			ic->ic_flags_ext &= ~IEEE80211_FEXT_MARKDFS;
+ 		break;
++	case IEEE80211_PARAM_MACCLONE:
++		if (value)
++			vap->iv_flags_ext |= IEEE80211_FEXT_MACCLONE;
++		else {
++			struct ath_softc *sc = ic->ic_dev->priv;
++			struct ath_hal *ah = sc->sc_ah;
++			vap->iv_flags_ext &= ~IEEE80211_FEXT_MACCLONE;
++			ATH_LOCK(sc);
++			IEEE80211_ADDR_COPY(ic->ic_myaddr, dev->dev_addr);
++			IEEE80211_ADDR_COPY(ic->ic_dev->dev_addr, ic->ic_myaddr);
++			IEEE80211_ADDR_COPY(vap->iv_myaddr, ic->ic_myaddr);
++			/* XXX not right for multiple vap's */
++			ath_hal_setmac(ah, ic->ic_dev->dev_addr);
++			ic->ic_reset(ic->ic_dev);
++			ATH_UNLOCK(sc);
++		}
++		break;
+ #ifdef ATH_REVERSE_ENGINEERING
+ 	case IEEE80211_PARAM_DUMPREGS:
+ 		ieee80211_dump_registers(dev, info, w, extra);
+@@ -3210,6 +3229,9 @@ ieee80211_ioctl_getparam(struct net_device *dev, struct iw_request_info *info,
+ 		else
+ 			param[0] = 0;
+ 		break;
++	case IEEE80211_PARAM_MACCLONE:
++		param[0] = (vap->iv_flags_ext & IEEE80211_FEXT_MACCLONE) != 0;
++		break;
+ 	default:
+ 		return -EOPNOTSUPP;
+ 	}
+@@ -5662,6 +5684,10 @@ static const struct iw_priv_args ieee80211_priv_args[] = {
+ 	  IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 1, 0, "debug_scanbufs" },
+ 	{ IEEE80211_PARAM_LEAKTXBUFS,
+ 	  IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 1, 0, "debug_leaktxbufs" },
++	{ IEEE80211_PARAM_MACCLONE,
++	  IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 1, 0, "macclone" },
++	{ IEEE80211_PARAM_MACCLONE,
++	  0, IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 1, "get_macclone" },
+ 	
+ #ifdef ATH_REVERSE_ENGINEERING
+ 	/*
