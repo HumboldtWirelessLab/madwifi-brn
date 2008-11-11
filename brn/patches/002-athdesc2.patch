@@ -1,620 +1,213 @@
-diff -Nur release-0.9.1/ath/if_ath.c brn-madwifi-0.9.1/ath/if_ath.c
---- release-0.9.1/ath/if_ath.c	2008-05-15 18:22:48.000000000 +0200
-+++ brn-madwifi-0.9.1/ath/if_ath.c	2008-05-30 16:25:43.000000000 +0200
-@@ -72,6 +72,9 @@
- #include <net80211/if_llc.h>
- #endif
- 
-+#define MSR_PRINT(...)
-+//#define MSR_PRINT printk
-+
- #define	AR_DEBUG
- 
- #include "if_athrate.h"
-@@ -163,6 +166,9 @@
- static void ath_rx_tasklet(TQUEUE_ARG);
- static int ath_hardstart(struct sk_buff *, struct net_device *);
- static int ath_mgtstart(struct ieee80211com *, struct sk_buff *);
-+//  //
-+u_int8_t code_to_Mbps(u_int8_t code);
-+//  //
- #ifdef ATH_SUPERG_COMP
- static u_int32_t ath_get_icvlen(struct ieee80211_key *);
- static u_int32_t ath_get_ivlen(struct ieee80211_key *);
-@@ -380,6 +386,28 @@
-             		(bssid)[0] |= (((id) << 2) | 0x02); \
- 	} while(0)
- 
-+u_int8_t code_to_Mbps(u_int8_t code)
-+{
-+ u_int8_t rate = 0;
-+ switch(code){
-+ case 8: rate = 48;break;
-+ case 9: rate = 24;break;
-+ case 10:rate = 12;break;
-+ case 11:rate = 6;break;
-+ case 12:rate = 54;break;
-+ case 13:rate = 36;break;
-+ case 14:rate = 18;break;
-+ case 15:rate = 9;break;
-+ case 27:rate = 1;break;
-+ case 24:rate = 11;break;
-+ case 25:rate = 5;break;
-+ case 26:rate = 2;break;
-+ default:rate = code;break;
-+ }
-+
-+ return rate;
-+}
-+
- int
- ath_attach(u_int16_t devid, struct net_device *dev)
- {
-@@ -1619,6 +1647,9 @@
- 		ath_hal_intrset(ah, 0);		/* disable intr's until reset */
- 		ATH_SCHEDULE_TQUEUE(&sc->sc_fataltq, &needmark);
- 	} else if (status & HAL_INT_RXORN) {
-+  //  //
-+      printk(KERN_INFO "rx FIFO overrun\n");
-+     //  //
- 		sc->sc_stats.ast_rxorn++;
- 		ath_hal_intrset(ah, 0);		/* disable intr's until reset */
- 		ATH_SCHEDULE_TQUEUE(&sc->sc_rxorntq, &needmark);
-@@ -1638,9 +1669,15 @@
- 			 *     RXE bit is written, but it doesn't work at
- 			 *     least on older hardware revs.
- 			 */
-+   //  //
-+         printk(KERN_INFO "rx EOL\n");
-+        //  //
- 			sc->sc_stats.ast_rxeol++;
- 		}
- 		if (status & HAL_INT_TXURN) {
-+   //  //
-+         printk(KERN_INFO "tx underrun\n");
-+        //  //
- 			sc->sc_stats.ast_txurn++;
- 			/* bump tx trigger level */
- 			ath_hal_updatetxtriglevel(ah, AH_TRUE);
-@@ -1891,9 +1928,12 @@
- 	/*
- 	 * Enable interrupts.
- 	 */
-+   //  //
- 	sc->sc_imask = HAL_INT_RX | HAL_INT_TX
- 		  | HAL_INT_RXEOL | HAL_INT_RXORN
--		  | HAL_INT_FATAL | HAL_INT_GLOBAL;
-+    | HAL_INT_FATAL | HAL_INT_GLOBAL | HAL_INT_COMMON;
-+     //  //
-+    
- 	/*
- 	 * Enable MIB interrupts when there are hardware phy counters.
- 	 * Note we only do this (at the moment) for station mode.
-@@ -2785,6 +2825,9 @@
- 	if (STAILQ_EMPTY(&sc->sc_txbuf)) {
- 		DPRINTF(sc, ATH_DEBUG_XMIT, "%s: stop queue\n", __func__);
- 		sc->sc_stats.ast_tx_qstop++;
-+    //  //
-+    printk(KERN_INFO"measure netif_stop_queue\n");
-+    //  //
- 		netif_stop_queue(dev);
- 		sc->sc_devstopped=1;
- 		ATH_SCHEDULE_TQUEUE(&sc->sc_txtq, NULL);
-@@ -5357,6 +5400,12 @@
- 	int len, type;
- 	u_int phyerr;
- 
-+ //  //
-+  struct timeval tv;
-+  struct ieee80211_frame *wh;
-+  u_int8_t subtype;
-+ //  //
-+ 
- 	DPRINTF(sc, ATH_DEBUG_RX_PROC, "%s\n", __func__);
- 	do {
- 		bf = STAILQ_FIRST(&sc->sc_rxbuf);
-@@ -5411,15 +5460,65 @@
- #endif
- 			/* fall thru for monitor mode handling... */
- 		} else if (ds->ds_rxstat.rs_status != 0) {
-+   //  //
-+     do_gettimeofday(&tv);
-+      //  //
- 			if (ds->ds_rxstat.rs_status & HAL_RXERR_CRC)
-+    //  //
-+       {
-+        //  //
- 				sc->sc_stats.ast_rx_crcerr++;
-+   //  //
-+      MSR_PRINT(KERN_INFO "MSR R,error:crc32,SNR:%2u,time:%lu.%06lu\n",
-+       ds->ds_rxstat.rs_rssi,
-+       tv.tv_sec,
-+       tv.tv_usec);
-+       
-+     if(ds->ds_rxstat.rs_status & HAL_RXERR_CRC){   struct ieee80211_frame *wh;
-+            wh = (struct ieee80211_frame *)bf->bf_skb->data;
-+	    type = wh->i_fc[0] & IEEE80211_FC0_TYPE_MASK;
-+            MSR_PRINT(KERN_INFO 
-+         "MSR R,SrcAddr:%02x%02x%02x%02x%02x%02x,DstAddr:%02x%02x%02x%02x%02x%02x,HW_SN:%4u,%7s,   SNR:%2u,       rate:%2uMbps,len:%4d,time:%lu.%06lu,crc32\n",
-+         wh->i_addr2[0], wh->i_addr2[1], wh->i_addr2[2], wh->i_addr2[3], wh->i_addr2[4], wh->i_addr2[5],
-+         wh->i_addr1[0], wh->i_addr1[1], wh->i_addr1[2], wh->i_addr1[3], wh->i_addr1[4], wh->i_addr1[5],
-+         le16toh((*(u_int16_t *)wh->i_seq)>>4), (type==IEEE80211_FC0_TYPE_DATA)?"data":
-+   (type==IEEE80211_FC0_TYPE_MGT)?("mgt"):
-+   (type==IEEE80211_FC0_TYPE_CTL)?"ctl":"impossible to be here!",
-+       ds->ds_rxstat.rs_rssi,
-+       code_to_Mbps((ds->ds_rxstat.rs_rate)&IEEE80211_RATE_VAL),
-+      ds->ds_rxstat.rs_datalen,
-+       tv.tv_sec,
-+       tv.tv_usec);
-+      }
-+      
-+       }
-+       //  //
- 			if (ds->ds_rxstat.rs_status & HAL_RXERR_FIFO)
-+    //  //
-+           {
-+            //  //
- 				sc->sc_stats.ast_rx_fifoerr++;
-+     //  //
-+        MSR_PRINT(KERN_INFO "MSR R,error: fifo,SNR:%2u,time:%lu.%06lu\n",
-+         ds->ds_rxstat.rs_rssi,
-+         tv.tv_sec,
-+         tv.tv_usec);
-+        }
-+        //  //
- 			if (ds->ds_rxstat.rs_status & HAL_RXERR_PHY) {
- 				sc->sc_stats.ast_rx_phyerr++;
- 				phyerr = ds->ds_rxstat.rs_phyerr & 0x1f;
- 				sc->sc_stats.ast_rx_phy[phyerr]++;
--				goto rx_next;
-+     //  //
-+        MSR_PRINT(KERN_INFO "MSR R,error: phy: %d,SNR:%2u,time:%lu.%06lu\n",
-+         phyerr,
-+         ds->ds_rxstat.rs_rssi,
-+         tv.tv_sec,
-+         tv.tv_usec);
-+        //  //
-+        // hugo
-+				//goto rx_next;
-+        // hugo
- 			}
- 			if (ds->ds_rxstat.rs_status & HAL_RXERR_DECRYPT) {
- 				/*
-@@ -5464,12 +5563,17 @@
- 			 * to see them in monitor mode (in monitor mode
- 			 * allow through packets that have crypto problems).
- 			 */
--			if ((ds->ds_rxstat.rs_status &~
--				(HAL_RXERR_DECRYPT|HAL_RXERR_MIC)) ||
--			    sc->sc_ic.ic_opmode != IEEE80211_M_MONITOR)
--				goto rx_next;
-+     // hugo
-+//			if ((ds->ds_rxstat.rs_status &~
-+//				(HAL_RXERR_DECRYPT|HAL_RXERR_MIC)) ||
-+//			    sc->sc_ic.ic_opmode != IEEE80211_M_MONITOR)
-+//				goto rx_next;
-+     // hugo
- 		}
- rx_accept:
-+  //  //
-+    do_gettimeofday(&tv);
-+    //  //
- 		/*
- 		 * Sync and unmap the frame.  At this point we're
- 		 * committed to passing the sk_buff somewhere so
-@@ -5482,6 +5586,31 @@
- 			bf->bf_skbaddr, len, BUS_DMA_FROMDEVICE);
- 		bus_unmap_single(sc->sc_bdev, bf->bf_skbaddr,
- 			sc->sc_rxbufsize, BUS_DMA_FROMDEVICE);
-+   
-+     //  //
-+      wh = (struct ieee80211_frame *)bf->bf_skb->data;
-+     type = wh->i_fc[0] & IEEE80211_FC0_TYPE_MASK;
-+     subtype = wh->i_fc[0] & IEEE80211_FC0_SUBTYPE_MASK;
-+       if ((type==IEEE80211_FC0_TYPE_DATA) ||(type==IEEE80211_FC0_TYPE_MGT)){
-+  MSR_PRINT(KERN_INFO "MSR R,SrcAddr:%02x%02x%02x%02x%02x%02x,DstAddr:%02x%02x%02x%02x%02x%02x,HW_SN:%4u,    %7s,   SNR:%2u,       rate:%2uMbps,len:%4d,time:%lu.%06lu\n",
-+    wh->i_addr2[0], wh->i_addr2[1], wh->i_addr2[2], wh->i_addr2[3], wh->i_addr2[4], wh->i_addr2[5],
-+    wh->i_addr1[0], wh->i_addr1[1], wh->i_addr1[2], wh->i_addr1[3], wh->i_addr1[4], wh->i_addr1[5],
-+    le16toh((*(u_int16_t *)wh->i_seq)>>4), 
-+    (type==IEEE80211_FC0_TYPE_DATA)?"data":
-+   (type==IEEE80211_FC0_TYPE_MGT)?("mgt"):
-+     (type==IEEE80211_FC0_TYPE_CTL)?(
-+       (subtype==IEEE80211_FC0_SUBTYPE_RTS)?"ctl/rts":
-+        (subtype==IEEE80211_FC0_SUBTYPE_CTS)?("ctl/cts"):
-+   (subtype==IEEE80211_FC0_SUBTYPE_ACK)?"ctl/ack":"ctl")
-+   :"impossible to be here!",
-+       ds->ds_rxstat.rs_rssi,
-+       code_to_Mbps((ds->ds_rxstat.rs_rate)&IEEE80211_RATE_VAL),
-+       ds->ds_rxstat.rs_datalen,
-+       tv.tv_sec,
-+       tv.tv_usec
-+   );                
-+     }    
-+     //
- 		bf->bf_skb = NULL;
- 
- 		sc->sc_stats.ast_ant_rx[ds->ds_rxstat.rs_antenna]++;
-@@ -5498,14 +5627,16 @@
- 			 * the skbuff, fabricate the Prism header
- 			 * existing tools expect, and dispatch.
- 			 */
--			if (len < IEEE80211_ACK_LEN) {
--				DPRINTF(sc, ATH_DEBUG_RECV,
--					"%s: runt packet %d\n", __func__, len);
--				sc->sc_stats.ast_rx_tooshort++;
--				dev_kfree_skb(skb);
--				skb = NULL;
--				goto rx_next;
--			}
-+       // hugo
-+//			if (len < IEEE80211_ACK_LEN) {
-+//				DPRINTF(sc, ATH_DEBUG_RECV,
-+//					"%s: runt packet %d\n", __func__, len);
-+//				sc->sc_stats.ast_rx_tooshort++;
-+//				dev_kfree_skb(skb);
-+//				skb = NULL;
-+//				goto rx_next;
-+//			}
-+       // hugo
- 			ath_rx_capture(dev, ds, skb);
- 			if (sc->sc_ic.ic_opmode == IEEE80211_M_MONITOR) {
- 				/* no other vaps need the packet */
-@@ -5558,6 +5689,8 @@
- 			ATH_RSSI_LPF(an->an_avgrssi, ds->ds_rxstat.rs_rssi);
- 			type = ieee80211_input(ni, skb,
- 				ds->ds_rxstat.rs_rssi, ds->ds_rxstat.rs_tstamp);
-+      
-+      //  //
- 			ieee80211_free_node(ni);
- 		} else {
- 			/*
-@@ -5575,6 +5708,7 @@
- 				type = ieee80211_input(ni, skb,
- 					ds->ds_rxstat.rs_rssi,
- 					ds->ds_rxstat.rs_tstamp);
-+     
- 				/*
- 				 * If the station has a key cache slot assigned
- 				 * update the key->node mapping table.
-@@ -5616,6 +5750,10 @@
- 				ath_led_event(sc, ATH_LED_POLL);
- 		}
- rx_next:
-+  //  //
-+    if(ds->ds_rxstat.rs_status & HAL_RXERR_CRC)
-+     MSR_PRINT(KERN_INFO "MSR R,error:crc32,end\n"); 
-+    //  //
- 		ATH_RXBUF_LOCK_IRQ(sc);
- 		STAILQ_REMOVE_HEAD(&sc->sc_rxbuf, bf_list);
- 		bf->bf_status &= ~ATH_BUFSTATUS_DONE;
-@@ -6091,7 +6229,9 @@
- 	if (qtype == HAL_TX_QUEUE_UAPSD)
- 		qi.tqi_qflags = HAL_TXQ_TXDESCINT_ENABLE;
- 	else
--		qi.tqi_qflags = HAL_TXQ_TXEOLINT_ENABLE | HAL_TXQ_TXDESCINT_ENABLE;
-+  //  //
-+   qi.tqi_qflags = HAL_TXQ_TXDESCINT_ENABLE | HAL_TXQ_TXEOLINT_ENABLE;
-+   //  //
- 	qnum = ath_hal_setuptxqueue(ah, qtype, &qi);
- 	if (qnum == -1) {
- 		/*
-@@ -6431,7 +6571,10 @@
- 	struct ath_desc *ds = NULL;
- 	struct ath_txq *txq = NULL;
- 	struct ieee80211_frame *wh;
--	u_int subtype, flags, ctsduration;
-+  //  //
-+  u_int subtype=0, flags, ctsduration;
-+ // u_int subtype, flags, ctsduration;
-+ //  //
- 	HAL_PKT_TYPE atype;
- 	const HAL_RATE_TABLE *rt;
- 	HAL_BOOL shortPreamble;
-@@ -6439,6 +6582,10 @@
- 	struct ath_vap *avp = ATH_VAP(vap);
- 	int istxfrag;
- 	u_int8_t antenna;
-+ //  //
-+  u_int8_t type;
-+  struct timeval tv;
-+ //  //
- 
- 	wh = (struct ieee80211_frame *) skb->data;
- 	isprot = wh->i_fc[1] & IEEE80211_FC1_PROT;
-@@ -6912,6 +7059,29 @@
- 	if (try0 != ATH_TXMAXTRY)
- 		ath_rate_setupxtxdesc(sc, an, ds, shortPreamble, skb->len, rix);
- 
-+ //  //
-+ do_gettimeofday(&tv);
-+  type= wh->i_fc[0] & IEEE80211_FC0_TYPE_MASK;
-+ // if((type==IEEE80211_FC0_TYPE_DATA) & (!ismcast)){
-+  MSR_PRINT(KERN_INFO 
-+   "MSR T,SrcAddr:%02x%02x%02x%02x%02x%02x,DstAddr:%02x%02x%02x%02x%02x%02x,SW_SN:%4u,%10s,%s,%s,%s rate:%2uMbps,len:%4d,time:%lu.%06lu\n",
-+   wh->i_addr2[0], wh->i_addr2[1], wh->i_addr2[2], wh->i_addr2[3], wh->i_addr2[4], wh->i_addr2[5],
-+   wh->i_addr1[0], wh->i_addr1[1], wh->i_addr1[2], wh->i_addr1[3], wh->i_addr1[4], wh->i_addr1[5],
-+   le16toh((*(u_int16_t *)wh->i_seq)>>4), (type==IEEE80211_FC0_TYPE_DATA)?"data":
-+   (type==IEEE80211_FC0_TYPE_MGT)?(
-+     (subtype==IEEE80211_FC0_SUBTYPE_BEACON)?"mgt/beacon":
-+     (subtype==IEEE80211_FC0_SUBTYPE_PROBE_RESP)?"mgt/proberesp":"mgt"):
-+   (type==IEEE80211_FC0_TYPE_CTL)?"ctl":"impossible to be here!",
-+   (ismcast)?"bcast":"ucast",
-+   (shortPreamble)?"short":" long",
-+   (vap->iv_fixed_rate  == -1)?"auto":"fix ",
-+   code_to_Mbps(txrate),
-+   pktlen,
-+   tv.tv_sec,
-+   tv.tv_usec);
-+ //  }
-+   //  //
-+
- #ifndef ATH_SUPERG_FF
- 	ds->ds_link = 0;
- 	ds->ds_data = bf->bf_skbaddr;
-@@ -7021,6 +7191,11 @@
- 	int uapsdq = 0;
- 	unsigned long uapsdq_lockflags = 0;
- 
-+ //  //
-+  struct ieee80211_frame *wh;
-+  struct timeval tv;
-+  //  //
-+
- 	DPRINTF(sc, ATH_DEBUG_TX_PROC, "%s: tx queue %d (0x%x), link %p\n", __func__,
- 		txq->axq_qnum, ath_hal_gettxbuf(sc->sc_ah, txq->axq_qnum),
- 		txq->axq_link);
-@@ -7074,6 +7249,10 @@
- 
- 		ni = bf->bf_node;
- 		if (ni != NULL) {
-+   //  //
-+      wh = (struct ieee80211_frame *) bf->bf_skb->data;
-+      do_gettimeofday(&tv);
-+      //  //
- 			an = ATH_NODE(ni);
- 			if (ds->ds_txstat.ts_status == 0) {
- 				u_int8_t txant = ds->ds_txstat.ts_antenna;
-@@ -7087,6 +7266,19 @@
- 					sc->sc_stats.ast_tx_altrate++;
- 				sc->sc_stats.ast_tx_rssi =
- 					ds->ds_txstat.ts_rssi;
-+    //  //
-+        MSR_PRINT(KERN_INFO 
-+        "MSR S,SrcAddr:%02x%02x%02x%02x%02x%02x,DstAddr:%02x%02x%02x%02x%02x%02x,SW_SN:%4u,HW_SN:%4u,ackSNR:%2u,       rate:%2uMbps,retr:%3d,time:%lu.%06lu\n",
-+        wh->i_addr2[0], wh->i_addr2[1], wh->i_addr2[2], wh->i_addr2[3], wh->i_addr2[4], wh->i_addr2 [5],
-+wh->i_addr1[0], wh->i_addr1[1], wh->i_addr1[2], wh->i_addr1[3], wh->i_addr1[4], wh->i_addr1[5],
-+        le16toh((*(u_int16_t *)wh->i_seq)>>4),
-+        ds->ds_txstat.ts_seqnum,
-+        ds->ds_txstat.ts_rssi,
-+        code_to_Mbps(ds->ds_txstat.ts_rate),
-+        ds->ds_txstat.ts_longretry,
-+        tv.tv_sec,
-+        tv.tv_usec);
-+        //  //
- 				ATH_RSSI_LPF(an->an_halstats.ns_avgtxrssi,
- 					ds->ds_txstat.ts_rssi);
- 				if (bf->bf_skb->priority == WME_AC_VO ||
-@@ -7100,6 +7292,13 @@
- #endif
- 				if (ds->ds_txstat.ts_status & HAL_TXERR_XRETRY) {
- 					sc->sc_stats.ast_tx_xretries++;
-+     //  //
-+          MSR_PRINT(KERN_INFO "MSR S,txerr_xretry,SW_SN:%4u,HW_SN:%4u,time:%lu.%06lu\n",
-+          le16toh((*(u_int16_t *)wh->i_seq)>>4),
-+          ds->ds_txstat.ts_seqnum,
-+          tv.tv_sec,
-+          tv.tv_usec);
-+          //  //
- 					if (ni->ni_flags & IEEE80211_NODE_UAPSD_TRIG) {
- 						ni->ni_stats.ns_tx_eosplost++;
- 						DPRINTF(sc, ATH_DEBUG_UAPSD,
-@@ -7108,9 +7307,31 @@
- 					}
- 				}
- 				if (ds->ds_txstat.ts_status & HAL_TXERR_FIFO)
-+    //  //
-+        {
-+        //  //
- 					sc->sc_stats.ast_tx_fifoerr++;
-+    //  // 
-+        MSR_PRINT(KERN_INFO "MSR S,txerr_fifo,SW_SN:%4u,HW_SN:%4u,time:%lu.%06lu\n",
-+       le16toh((*(u_int16_t *)wh->i_seq)>>4),
-+        ds->ds_txstat.ts_seqnum,
-+        tv.tv_sec,
-+        tv.tv_usec);
-+        }
-+        //  // 
- 				if (ds->ds_txstat.ts_status & HAL_TXERR_FILT)
-+    //  //
-+        {
-+        //  //
- 					sc->sc_stats.ast_tx_filtered++;
-+    //  //
-+         MSR_PRINT(KERN_INFO "MSR S,txerr_filt,SW_SN:%4u,HW_SN:%4u,time:%lu.%06lu\n",
-+         le16toh((*(u_int16_t *)wh->i_seq)>>4),
-+         ds->ds_txstat.ts_seqnum,
-+         tv.tv_sec,
-+         tv.tv_usec);
-+        }
-+        //  //
- 			}
- 			sr = ds->ds_txstat.ts_shortretry;
- 			lr = ds->ds_txstat.ts_longretry;
-diff -Nur release-0.9.1/ath/if_ath_pci.c brn-madwifi-0.9.1/ath/if_ath_pci.c
---- release-0.9.1/ath/if_ath_pci.c	2008-05-15 18:20:38.000000000 +0200
-+++ brn-madwifi-0.9.1/ath/if_ath_pci.c	2008-05-30 16:20:44.000000000 +0200
-@@ -204,7 +204,8 @@
- 
- 	pci_set_drvdata(pdev, dev);
- 
--	if (request_irq(dev->irq, ath_intr, /*IRQF_SHARED*/SA_SHIRQ, dev->name, dev)) {
-+        if (request_irq(dev->irq, ath_intr, /*IRQF_SHARED*/SA_SHIRQ, dev->name, dev)) {
-+	//if (request_irq(dev->irq, ath_intr, SA_SHIRQ, dev->name, dev)) {
- 		printk(KERN_WARNING "%s: request_irq failed\n", dev->name);
- 		goto bad3;
- 	}
-diff -Nur release-0.9.1/ath/if_athvar.h brn-madwifi-0.9.1/ath/if_athvar.h
---- release-0.9.1/ath/if_athvar.h	2008-05-15 18:23:27.000000000 +0200
-+++ brn-madwifi-0.9.1/ath/if_athvar.h	2008-05-30 16:23:15.000000000 +0200
-@@ -177,7 +177,10 @@
- #define	ATH_TXDESC	1		/* number of descriptors per buffer */
- #endif
- 
--#define	ATH_TXMAXTRY	11		/* max number of transmit attempts */
-+// START_MEASURE //
-+#define	ATH_TXMAXTRY	8		/* max number of transmit attempts */
-+//ATH_TXMAXTRY=1 emplies no retries
-+// STOP_MEASURE //
- 
- /* Compress settings */
- #define ATH_COMP_THRESHOLD  256         /* no compression for frames
-@@ -686,7 +689,7 @@
- void ath_resume(struct net_device *);
- void ath_suspend(struct net_device *);
- void ath_shutdown(struct net_device *);
--irqreturn_t ath_intr(int irq, void *dev_id);//ath_intr(int, void *, struct pt_regs *);
-+irqreturn_t ath_intr(int irq, void *dev_id);//irqreturn_t ath_intr(int, void *, struct pt_regs *);
- int ath_ioctl_ethtool(struct ath_softc *, int, void __user *);
- void bus_read_cachesize(struct ath_softc *, u_int8_t *);
- #ifdef CONFIG_SYSCTL
-diff -Nur release-0.9.1/hal/public/mips1-le-elf.inc brn-madwifi-0.9.1/hal/public/mips1-le-elf.inc
---- release-0.9.1/hal/public/mips1-le-elf.inc	2008-05-15 18:09:53.000000000 +0200
-+++ brn-madwifi-0.9.1/hal/public/mips1-le-elf.inc	2008-05-29 12:03:24.000000000 +0200
-@@ -68,5 +68,5 @@
- 
- LDOPTS=	-EL
- COPTS+=	-DAH_BYTE_ORDER=AH_LITTLE_ENDIAN
--COPTS+=	-G 0 -EL -mno-abicalls -fno-pic -mips1 -Wa,--trap \
-+COPTS+=	-G 0 -mno-abicalls -fno-pic -Wa,--trap \
- 	-fno-strict-aliasing -fno-common -fomit-frame-pointer -mlong-calls
-diff -Nur release-0.9.1/Makefile brn-madwifi-0.9.1/Makefile
---- release-0.9.1/Makefile	2008-05-15 18:10:55.000000000 +0200
-+++ brn-madwifi-0.9.1/Makefile	2008-05-29 12:12:11.000000000 +0200
-@@ -152,6 +152,14 @@
- configcheck: sanitycheck
- 	@echo -n "Checking kernel configuration... "
- 	
-+	@# check version of kernel
-+#	@echo $(KERNELRELEASE) | grep -q -i '^[2-9]\.[4-9]\.' || { \
-+#	    echo "FAILED"; \
-+#	    echo "Only kernel versions 2.4.x and above are supported."; \
-+#	    echo "You have $(KERNELRELEASE)."; \
-+#	    exit 1; \
-+#	}
-+	
- 	@# check kernel configuration
- 	@if [ -z "$(CONFIG_SYSCTL)" ]; then \
- 	    echo "FAILED"; \
-diff -Nur release-0.9.1/net80211/ieee80211_crypto_ccmp.c brn-madwifi-0.9.1/net80211/ieee80211_crypto_ccmp.c
---- release-0.9.1/net80211/ieee80211_crypto_ccmp.c	2008-05-15 18:40:23.000000000 +0200
-+++ brn-madwifi-0.9.1/net80211/ieee80211_crypto_ccmp.c	2008-05-30 16:32:26.000000000 +0200
-@@ -297,7 +297,18 @@
- static void
- rijndael_encrypt(struct crypto_tfm *tfm, const void *src, void *dst)
- {
--    crypto_cipher_encrypt_one(tfm, dst, src);
-+	/*struct scatterlist sg_src;
-+	struct scatterlist sg_dst;
-+
-+	sg_src.page = virt_to_page(src);
-+	sg_src.offset = offset_in_page(src);
-+	sg_src.length = AES_BLOCK_LEN;
-+
-+	sg_dst.page = virt_to_page(dst);
-+	sg_dst.offset = offset_in_page(dst);
-+	sg_dst.length = AES_BLOCK_LEN;
-+	crypto_cipher_encrypt(tfm, &sg_dst, &sg_src, AES_BLOCK_LEN);*/
-+	crypto_cipher_encrypt_one(tfm, dst, src);
- }
- 
- /*
-diff -Nur release-0.9.1/net80211/ieee80211_linux.c brn-madwifi-0.9.1/net80211/ieee80211_linux.c
---- release-0.9.1/net80211/ieee80211_linux.c	2008-05-15 18:37:21.000000000 +0200
-+++ brn-madwifi-0.9.1/net80211/ieee80211_linux.c	2008-05-30 16:28:11.000000000 +0200
-@@ -503,7 +503,8 @@
+diff --git a/net80211/ieee80211_linux.c b/net80211/ieee80211_linux.c
+index 3016c9b..ddbc993 100644
+--- a/net80211/ieee80211_linux.c
++++ b/net80211/ieee80211_linux.c
+@@ -572,7 +572,8 @@ IEEE80211_SYSCTL_DECL(ieee80211_sysctl_dev_type, ctl, write, filp, buffer,
  			if (val == ARPHRD_IEEE80211_RADIOTAP ||
  			    val == ARPHRD_IEEE80211 ||
  			    val == ARPHRD_IEEE80211_PRISM ||
 -			    val == ARPHRD_IEEE80211_ATHDESC) {
 +			    val == ARPHRD_IEEE80211_ATHDESC ||
-+          val == ARPHRD_IEEE80211_ATHDESC2) {
++			    val == ARPHRD_IEEE80211_ATHDESC2) {
  				vap->iv_dev->type = val;
  			}
  		}
-diff -Nur release-0.9.1/net80211/ieee80211_monitor.c brn-madwifi-0.9.1/net80211/ieee80211_monitor.c
---- release-0.9.1/net80211/ieee80211_monitor.c	2008-05-15 18:26:34.000000000 +0200
-+++ brn-madwifi-0.9.1/net80211/ieee80211_monitor.c	2008-05-30 16:16:23.000000000 +0200
-@@ -163,7 +163,8 @@
- 			ph->try0 = 1;
-                 break;
+diff --git a/net80211/ieee80211_monitor.c b/net80211/ieee80211_monitor.c
+index 3b3f65a..71dac5d 100644
+--- a/net80211/ieee80211_monitor.c
++++ b/net80211/ieee80211_monitor.c
+@@ -262,7 +262,8 @@ ieee80211_monitor_encap(struct ieee80211vap *vap, struct sk_buff *skb)
+ 			ph->try[0] = 1;
+ 		break;
  	}
 -	case ARPHRD_IEEE80211_ATHDESC: {
-+	case ARPHRD_IEEE80211_ATHDESC: 
-+  case ARPHRD_IEEE80211_ATHDESC2: {
++	case ARPHRD_IEEE80211_ATHDESC:
++	case ARPHRD_IEEE80211_ATHDESC2: {
  		if (skb->len > ATHDESC_HEADER_SIZE) {
  			struct ar5212_openbsd_desc *desc =
- 				(struct ar5212_openbsd_desc *) (skb->data + 8);
-@@ -384,6 +385,16 @@
- 			memcpy(skb_push(skb1, ATHDESC_HEADER_SIZE), ds, ATHDESC_HEADER_SIZE);
+ 				(struct ar5212_openbsd_desc *)(skb->data + 8);
+@@ -302,6 +303,8 @@ ieee80211_input_monitor(struct ieee80211com *ic, struct sk_buff *skb,
+ 	int noise = 0, antenna = 0, ieeerate = 0;
+ 	u_int32_t rssi = 0;
+ 	u_int8_t pkttype = 0;
++	u_int8_t *skb1_data;
++	struct ath2_header ath2_h;
+ 
+ 	if (tx) {
+ 		rssi = bf->bf_dsstatus.ds_txstat.ts_rssi;
+@@ -556,6 +560,58 @@ ieee80211_input_monitor(struct ieee80211com *ic, struct sk_buff *skb,
+ 					ds, ATHDESC_HEADER_SIZE);
  			break;
  		}
-+    case ARPHRD_IEEE80211_ATHDESC2: {
-+      if (skb_headroom(skb1) < ATHDESC2_HEADER_SIZE) {
-+        printk("%s:%d %s\n", __FILE__, __LINE__, __func__);
-+        dev_kfree_skb(skb1);
-+        skb1 = NULL;
-+        break;
-+      }
-+      memcpy(skb_push(skb1, ATHDESC2_HEADER_SIZE), ds, ATHDESC2_HEADER_SIZE);
-+      break;
-+    }
++		case ARPHRD_IEEE80211_ATHDESC2: {
++			if (skb_headroom(skb1) < ATHDESC2_HEADER_SIZE) {
++				printk("%s:%d %s\n", __FILE__, 
++						__LINE__, __func__);
++				ieee80211_dev_kfree_skb(&skb1);
++				break;
++			}
++			
++			ath2_h.ath2_version = ATHDESC2_VERSION;
++			ath2_h.madwifi_version = MADWIFI_TRUNK;
++
++			if (tx)
++			{
++				ath2_h.anno.tx.ts_seqnum = bf->bf_dsstatus.ds_txstat.ts_seqnum;
++				ath2_h.anno.tx.ts_tstamp = bf->bf_dsstatus.ds_txstat.ts_tstamp;
++				ath2_h.anno.tx.ts_status = bf->bf_dsstatus.ds_txstat.ts_status;
++				ath2_h.anno.tx.ts_rate = bf->bf_dsstatus.ds_txstat.ts_rate;
++				ath2_h.anno.tx.ts_rssi = bf->bf_dsstatus.ds_txstat.ts_rssi;
++				ath2_h.anno.tx.ts_shortretry = bf->bf_dsstatus.ds_txstat.ts_shortretry;
++				ath2_h.anno.tx.ts_longretry = bf->bf_dsstatus.ds_txstat.ts_longretry;
++				ath2_h.anno.tx.ts_virtcol = bf->bf_dsstatus.ds_txstat.ts_virtcol;
++				ath2_h.anno.tx.ts_antenna = bf->bf_dsstatus.ds_txstat.ts_antenna;
++				ath2_h.anno.tx.ts_finaltsi = bf->bf_dsstatus.ds_txstat.ts_finaltsi;
++
++				ath2_h.anno.tx.ts_hosttime = jiffies;
++				ath2_h.anno.tx.ts_mactime = mactime;
++				ath2_h.anno.tx.ts_noise = (int8_t) noise;
++			}
++			else
++			{
++				ath2_h.anno.rx.rs_datalen = bf->bf_dsstatus.ds_rxstat.rs_datalen;
++				ath2_h.anno.rx.rs_status = bf->bf_dsstatus.ds_rxstat.rs_status;
++				ath2_h.anno.rx.rs_phyerr = bf->bf_dsstatus.ds_rxstat.rs_phyerr;
++				ath2_h.anno.rx.rs_rssi = bf->bf_dsstatus.ds_rxstat.rs_rssi;
++				ath2_h.anno.rx.rs_keyix = bf->bf_dsstatus.ds_rxstat.rs_keyix;
++				ath2_h.anno.rx.rs_rate = bf->bf_dsstatus.ds_rxstat.rs_rate;
++				ath2_h.anno.rx.rs_more = bf->bf_dsstatus.ds_rxstat.rs_more;
++				ath2_h.anno.rx.rs_tstamp = bf->bf_dsstatus.ds_rxstat.rs_tstamp;
++				ath2_h.anno.rx.rs_antenna = bf->bf_dsstatus.ds_rxstat.rs_antenna;
++
++				ath2_h.anno.rx.rs_hosttime = jiffies;
++				ath2_h.anno.rx.rs_mactime = mactime;
++				ath2_h.anno.rx.rs_noise = (int8_t) noise;
++			}
++
++			skb1_data = skb_push(skb1, ATHDESC2_HEADER_SIZE);
++			
++			memcpy(skb1_data, ds, ATHDESC_HEADER_SIZE);
++			memcpy(&(skb1_data[ATHDESC_HEADER_SIZE]), &(ath2_h), ATHDESC2_BRN_HEADER_SIZE );
++			/*Copy the hole rx/tx-status and brn extra*/
++			break;
++		}
  		default:
  			break;
  		}
-diff -Nur release-0.9.1/net80211/ieee80211_monitor.h brn-madwifi-0.9.1/net80211/ieee80211_monitor.h
---- release-0.9.1/net80211/ieee80211_monitor.h	2008-05-15 18:09:48.000000000 +0200
-+++ brn-madwifi-0.9.1/net80211/ieee80211_monitor.h	2008-05-29 12:03:21.000000000 +0200
-@@ -38,7 +38,12 @@
- #define ARPHRD_IEEE80211_ATHDESC	804 /* IEEE 802.11 + atheros descriptor */
- #endif /* ARPHRD_IEEE80211_RADIOTAP */
+diff --git a/net80211/ieee80211_monitor.h b/net80211/ieee80211_monitor.h
+index 991b868..537d215 100644
+--- a/net80211/ieee80211_monitor.h
++++ b/net80211/ieee80211_monitor.h
+@@ -43,6 +43,8 @@
  
+ #define ATHDESC_HEADER_SIZE	32
+ 
++#include <net80211/ieee80211_monitor_brn.h>
++
+ #define IEEE80211_MON_MAXHDROOM ((unsigned int)			\
+ 	A_MAX(sizeof(struct ath_tx_radiotap_header),		\
+ 	      A_MAX(sizeof(struct wlan_ng_prism2_header),	\
+diff --git a/net80211/ieee80211_monitor_ath2.h b/net80211/ieee80211_monitor_ath2.h
+new file mode 100644
+index 0000000..09a67e0
+--- /dev/null
++++ b/net80211/ieee80211_monitor_ath2.h
+@@ -0,0 +1,75 @@
++#ifndef _NET80211_IEEE80211_MONITOR_ATH2_H_
++#define _NET80211_IEEE80211_MONITOR_ATH2_H_
++
++struct ath2_rx_status {
++    u_int16_t	rs_datalen; /* rx frame length */
++    u_int8_t	rs_status;  /* rx status, 0 => recv ok */
++    u_int8_t	rs_phyerr;  /* phy error code */
++
++    int8_t	rs_rssi;    /* rx frame RSSI (combined for 11n) */
++    u_int8_t	rs_keyix;   /* key cache index */
++    u_int8_t	rs_rate;    /* h/w receive rate index */
++    u_int8_t	rs_more;    /* more descriptors follow */
++
++    u_int32_t	rs_tstamp;  /* h/w assigned timestamp */
++    u_int32_t	rs_antenna; /* antenna information */
++
++    u_int64_t	rs_hosttime;
++    u_int64_t	rs_mactime;
++
++    int8_t	rs_noise;
++    int8_t	reserved[3];
++
++} __attribute__ ((packed));
++
++struct ath2_tx_status {
++    u_int16_t	ts_seqnum;    /* h/w assigned sequence number */
++    u_int16_t	ts_tstamp;    /* h/w assigned timestamp */
++
++    u_int8_t	ts_status;    /* frame status, 0 => xmit ok */
++    u_int8_t	ts_rate;      /* h/w transmit rate index */
++    int8_t	ts_rssi;      /* tx ack RSSI */
++    u_int8_t	ts_shortretry;/* # short retries */
++
++    u_int8_t	ts_longretry; /* # long retries */
++    u_int8_t	ts_virtcol;   /* virtual collision count */
++    u_int8_t	ts_antenna;   /* antenna information */
++    u_int8_t	ts_finaltsi;  /* final transmit series index */
++
++    u_int64_t	ts_hosttime;
++    u_int64_t	ts_mactime;
++
++    int8_t	ts_noise;
++    int8_t	reserved[3];
++
++} __attribute__ ((packed));
++
++struct ath2_tx_anno {
++
++    int8_t channel;
++
++    u_int8_t mac[6];
++
++} __attribute__ ((packed));
++
++
++struct ath2_header {
++    u_int16_t ath2_version;
++    u_int16_t madwifi_version;
++
++    union {
++      struct ath2_rx_status rx;
++      struct ath2_tx_status tx;
++      struct ath2_tx_anno tx_anno;
++    } anno; 
++
++} __attribute__ ((packed));
++
++#define ATHDESC2_VERSION 0xF2F2
++
++#define MADWIFI_0940	0x03ac
++#define MADWIFI_3869	0x0f1d
++
++#define MADWIFI_TRUNK MADWIFI_3869
++
++#endif
+diff --git a/net80211/ieee80211_monitor_brn.h b/net80211/ieee80211_monitor_brn.h
+new file mode 100644
+index 0000000..27c5379
+--- /dev/null
++++ b/net80211/ieee80211_monitor_brn.h
+@@ -0,0 +1,17 @@
++#ifndef _NET80211_IEEE80211_MONITOR_BRN_H_
++#define _NET80211_IEEE80211_MONITOR_BRN_H_
++
++#include <net80211/ieee80211_monitor.h>
++#include <ah_desc.h>
++#include <ath/if_athvar.h>
++
++#include <net80211/ieee80211_monitor_ath2.h>
++
 +#ifndef ARPHRD_IEEE80211_ATHDESC2
 +#define ARPHRD_IEEE80211_ATHDESC2  805 /* IEEE 802.11 + atheros (long) descriptor */
 +#endif /* ARPHRD_IEEE80211_ATHDESC2 */
 +
- #define ATHDESC_HEADER_SIZE	32
-+#define ATHDESC2_HEADER_SIZE 43  // 32 + (12 == ceil(11))
- 
- #include <net80211/ieee80211_radiotap.h>
- #include <hal/ah_desc.h>
-diff -Nur release-0.9.1/net80211/ieee80211_wireless.c brn-madwifi-0.9.1/net80211/ieee80211_wireless.c
---- release-0.9.1/net80211/ieee80211_wireless.c	2008-05-15 18:26:25.000000000 +0200
-+++ brn-madwifi-0.9.1/net80211/ieee80211_wireless.c	2008-05-30 16:16:14.000000000 +0200
-@@ -2879,14 +2879,24 @@
- 			ieee80211_scan_iterate(ic, mlmelookup, &lookup);
- 			if (lookup.se != NULL) {
- 				vap->iv_nsdone = 0;
--				vap->iv_nsparams.result = 0;
--				if (ieee80211_sta_join(vap, lookup.se))
-+				vap->iv_nsparams.result = -1;
-+				if (ieee80211_sta_join(vap, lookup.se)) {
- 					while (!vap->iv_nsdone)
- 						IEEE80211_RESCHEDULE();
--				if (vap->iv_nsparams.result)
-+        }
-+        else
-+          printk("ieee80211_ioctl_setmlme: ieee80211_sta_join failed\n");
-+				if (0 == vap->iv_nsparams.result)
- 					return 0;
-+        else
-+          printk("ieee80211_ioctl_setmlme: iv_nsparams.result failed\n");
- 			}
-+      else
-+        printk("ieee80211_ioctl_setmlme: ieee80211_scan_iterate failed\n");
- 		}
-+    else {
-+      printk("ieee80211_ioctl_setmlme: iv_opmode != IEEE80211_M_STA\n");
-+    }
- 		return -EINVAL;
- 	case IEEE80211_MLME_DISASSOC:
- 	case IEEE80211_MLME_DEAUTH:
++#define ATHDESC2_BRN_HEADER_SIZE sizeof(struct ath2_header)
++#define ATHDESC2_HEADER_SIZE	( ATHDESC_HEADER_SIZE + ATHDESC2_BRN_HEADER_SIZE ) 
++
++#endif
