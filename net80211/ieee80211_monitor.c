@@ -276,7 +276,10 @@ ieee80211_monitor_encap(struct ieee80211vap *vap, struct sk_buff *skb)
 			ph->try[1] = desc->xmit_tries1;
 			ph->try[2] = desc->xmit_tries2;
 			ph->try[3] = desc->xmit_tries3;
-			skb_pull(skb, ATHDESC_HEADER_SIZE);
+			if ( skb->dev->type == ARPHRD_IEEE80211_ATHDESC )
+				skb_pull(skb, ATHDESC_HEADER_SIZE);
+			else
+				skb_pull(skb, ATHDESC2_HEADER_SIZE);
 		}
 		break;
 	}
