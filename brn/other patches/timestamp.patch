@@ -1,0 +1,725 @@
+Index: Makefile.inc
+===================================================================
+--- Makefile.inc	(.../madwifi-scheduling)	(revision 337)
++++ Makefile.inc	(.../madwifi-timestamp)	(working copy)
+@@ -195,7 +195,10 @@
+ # conventions.
+ COPTS := $(filter-out -mshort-load-bytes,$(COPTS))
+ 
++# Enable packet-transmission timing features (EA)
++COPTS += -DEXTRA_TIME_ACCOUNTING
+ 
++
+ # The following variables will affect developers only, and are used in the
+ # make-release.bash script.
+ #
+Index: ath/pkt_timing.c
+===================================================================
+--- ath/pkt_timing.c	(.../madwifi-scheduling)	(revision 0)
++++ ath/pkt_timing.c	(.../madwifi-timestamp)	(revision 570)
+@@ -0,0 +1,390 @@
++/*
++ * Eric Anderson 2007. (C) Regents of the University of Colorado.
++ */
++
++#ifdef EXTRA_TIME_ACCOUNTING
++
++#include <linux/kernel.h>	/* We're doing kernel work */
++#include <linux/module.h>	/* Specifically, a module */
++#include <linux/init.h>		/* For __init and __exit */
++#include <linux/mm.h>
++#include <linux/proc_fs.h>
++#include <linux/seq_file.h>
++#include <linux/sysctl.h>
++
++#include "linux/if.h"
++#include "pkt_timing.h"
++
++static const char * svn_ver = "$Rev -- $Date";
++static int timing_buf_size = 100000;
++module_param(timing_buf_size, int, 0);
++MODULE_PARM_DESC(timing_buf_size, "Number of packet timing records to allocate");
++
++#define PROC_NAME "pkt_timing"
++
++struct pkt_record {
++      struct list_head list;
++      u_int32_t stamp1;			/* pkt. enters driver */
++      u_int32_t stamp2;			/* TX_BUF aquired; */
++      u_int32_t stamp3;		        /* immediately before calling bus_map_single() */
++      u_int32_t stamp4;			/* bus_map_single() completed */
++      u_int32_t stamp5;			/* ath_tx_txqaddbuff() completed */
++      u_int32_t stamp6;			/* HAL_INT_TX event time. (1st since
++					 * last stamp7, may or may not be
++					 * correct. */
++      u_int32_t stamp7;			/* ath_tx_capture gets to the buffer.
++					 * This is the time that appears in our
++					 * traces. */      
++};
++
++
++static int my_open(struct inode *inode, struct file *file);
++static void *my_seq_start(struct seq_file *s, loff_t *pos);
++static void *my_seq_next(struct seq_file *s, void *v, loff_t *pos);
++static void my_seq_stop(struct seq_file *s, void *v);
++static int my_seq_show(struct seq_file *s, void *v);
++static inline void print_node(struct list_head * node);
++
++static struct file_operations fops = {
++   .owner   = THIS_MODULE,
++   .open    = my_open,
++   .read    = seq_read,
++   .llseek  = seq_lseek,
++   .release = seq_release
++};
++			
++
++/**
++ * See http://tldp.org/LDP/lkmpg/2.6/html/x861.html
++ *
++ */
++static struct seq_operations my_seq_ops = {
++   .start = my_seq_start,
++   .next  = my_seq_next,
++   .stop  = my_seq_stop,
++   .show  = my_seq_show
++};
++
++
++static struct ctl_table_header * sysctl_ref;
++static int sysctl_logging_on = 0;		/* logging now? */
++#define CTL_LOG_ONOFF  7865654			/* Does this have to be globally
++						 * unique?  Is there some way to
++						 * ensure this, if so? */
++static struct ctl_table sysctl_tab[] = {
++   {
++      .ctl_name  = CTL_LOG_ONOFF,
++      .procname  = "on",
++      .maxlen    = sizeof(int),
++      .data      = &sysctl_logging_on,
++      .mode      = 0644,
++      .proc_handler = &proc_dointvec,
++   },
++   { .ctl_name = 0 }
++};
++
++/* /proc/sys/kernel/pkt_timing */
++static ctl_table pt_dir_table[] = {
++   {CTL_KERN, "pkt_timing", NULL, 0, 0555, 
++    sysctl_tab},
++   {0}
++};
++
++
++/* /proc/sys/kernel */
++static ctl_table root_table[] = {
++   {CTL_KERN, "kernel", NULL, 0, 0555, 
++    pt_dir_table},
++   {0}
++};
++   
++
++LIST_HEAD(free_nodes);
++LIST_HEAD(timing_recs);
++
++int __init init_module()
++{
++   struct proc_dir_entry *entry;
++   int i;
++
++   printk (KERN_INFO "pkt_timing logger v. %s\n", svn_ver);
++   printk (KERN_INFO "Log buffer size %d, access through file /proc/%s\n", timing_buf_size, PROC_NAME);
++   printk (KERN_INFO "Be careful, this will probably eat your children.\n");
++   if (sysctl_logging_on == 0){
++      printk (KERN_INFO "pkt_timing logging NOT active yet!  Set sysctl kernel.pkt_timing.on\n");
++   }
++   entry = create_proc_entry(PROC_NAME, 0, NULL);
++   if (entry) {
++      entry->proc_fops = &fops;
++   }
++   else{
++      goto proc_reg_fail;
++   }
++   
++   sysctl_ref = register_sysctl_table(root_table, 0);
++   if (!sysctl_ref){
++      goto sysctl_reg_fail;
++   }
++
++/*   printk(KERN_ALERT "In %s: timing_buf_size = %d.\n", __func__, timing_buf_size);                      */
++   
++   for (i = 0; i < timing_buf_size; i++){
++      struct pkt_record* tmp;
++      tmp = (struct pkt_record *) kmalloc(sizeof(struct pkt_record), GFP_KERNEL);
++      if (tmp == NULL)
++	 goto buff_alloc_fail;
++      tmp->stamp1 = i;
++      list_add_tail(&(tmp->list), &(free_nodes));
++   }   
++
++#if 0
++ {
++    struct ath_buf dummy_buf;
++    memset(&dummy_buf, 0, sizeof(struct ath_buf));
++    printk(KERN_ALERT "XXX DEBUGGING SHIT GOIN' ON IN %s!\b", __func__);
++    for (i = 0; i < 3200; i++){
++       dummy_buf.stamp1=i;
++       if(pkt_time_log(&dummy_buf) < 0){
++	  break;
++       }
++    }
++ }
++#endif
++   return 0;
++
++   
++  buff_alloc_fail:
++   printk(KERN_ALERT "Unable to allocate %d buffers in %s..\n", timing_buf_size, __func__);
++   unregister_sysctl_table(sysctl_ref);
++  sysctl_reg_fail:
++   printk(KERN_ALERT "Unable to allocate %d buffers in %s..\n", timing_buf_size, __func__);
++  proc_reg_fail:
++   remove_proc_entry(PROC_NAME, NULL);
++   return -1;
++}
++
++/* 
++ * Cleanup
++ */
++void __exit cleanup_module()
++{
++#if 0
++   struct pkt_record tmp;
++   struct pkt_record * p, * foo;
++   foo = &tmp;
++   p = &tmp;
++
++
++   list_for_each_entry_safe(p, foo, timing_recs.next, list){
++      list_del(&p->list);
++      kfree(p);      
++   }
++   list_for_each_entry_safe(p, foo, free_nodes.next, list) {
++      list_del(&p->list);
++      kfree(p);      
++   } 
++#endif  
++   unregister_sysctl_table(sysctl_ref); 
++
++   remove_proc_entry(PROC_NAME, NULL);
++
++   printk(KERN_ALERT "Note that pkt_timing doesn't free its memory on exit.  I know, I suck.\n");
++}
++
++
++/**
++ * This function is called when the /proc file is opened.
++ *
++ */
++static int my_open(struct inode *inode, struct file *file)
++{
++   return seq_open(file, &my_seq_ops);
++};
++
++
++/**
++ * This function is called at the beginning of a sequence.
++ * ie, when:
++ *	- the /proc file is read (first time)
++ *	- after the function stop (end of sequence)
++ *
++ */
++static void *my_seq_start(struct seq_file *s, loff_t *pos)
++{
++   loff_t offs = 0;
++   struct pkt_record * p, * foo;
++   struct pkt_record tmp;
++
++   foo = &tmp;
++
++/*   printk(KERN_ALERT "%s *pos = %u\n", __func__, (u32) *pos);*/
++   /* beginning a new sequence ? */	
++   if ( *pos == 0 )
++   {
++#if 0
++      print_node(&timing_recs);
++      print_node(timing_recs.next);
++#endif
++      if (list_empty_careful(&timing_recs)){
++	 return NULL;
++      }
++      else {	 
++	 return timing_recs.next;
++      }
++   }
++   else
++   {
++      /* Seek to pos  -- but don't loop! */
++      list_for_each_entry_safe(p, foo, timing_recs.next, list) {
++#if 0
++	 printk(KERN_ALERT "%s \t offs = %u, *pos = %u\n", __func__, (u32)offs, (u32)*pos);
++	 printk(KERN_ALERT "%s \t &timing_recs = %p, timing_recs.next = %p, timing_recs.prev = %p\n", __func__,  &timing_recs, timing_recs.next, timing_recs.prev);
++	 printk(KERN_ALERT "%s \t %d p= %p, &(p->list)=%p, p->list.next = %p, p->list.prev = %p\n", __func__, p->stamp1, p, &(p->list), p->list.next, p->list.prev);  
++	 printk(KERN_ALERT "%s \t pkt %d: &timing_recs == &(p->list): %d\n", __func__, p->stamp1, (&timing_recs == &(p->list)));
++#endif 
++	 if (&timing_recs == &(p->list))
++	    return NULL;
++	 
++	 if (offs == *pos)
++	    return p;
++	 ++offs;
++      }
++      return NULL;
++   }
++}
++
++static inline void print_node(struct list_head * node)
++{
++   printk(KERN_ALERT "Node at %p, next = %p prev = %p\n", node, node->next, node->prev);
++}
++
++/**
++ * This function is called after the beginning of a sequence.
++ * It's called untill the return is NULL (this ends the sequence).
++ *
++ */
++static void *my_seq_next(struct seq_file *s, void *v, loff_t *pos)
++{
++
++   struct pkt_record* p = v;
++/*    struct pkt_record* old = v;  */
++   ++*pos;
++
++   p = list_entry(p->list.next, struct pkt_record, list);
++
++#if 0
++   /* Move previous record from timing_records to free_nodes*/
++
++   printk(KERN_ALERT "%s 1\n", __func__); 
++   print_node(&old->list); 
++
++   list_del(&old->list);			/* Take out of timing_recs list */
++
++   printk(KERN_ALERT "Deleting node at %p\n", &old->list);
++   printk(KERN_ALERT "%s 2\n", __func__); 
++   print_node(&old->list);     
++
++   printk(KERN_ALERT "\n");
++   list_add_tail(&old->list, &free_nodes);   
++   printk(KERN_ALERT "%s 3\n", __func__); 
++
++   print_node(&old->list); 
++#endif
++
++
++#if 0
++   printk(KERN_ALERT "%s &timing_recs = %p, timing_recs.next = %p, timing_recs.prev = %p\n", __func__,  &timing_recs, timing_recs.next, timing_recs.prev);
++   printk(KERN_ALERT "%s %d p= %p, &(p->list)=%p, p->list.next = %p, p->list.prev = %p\n", __func__, p->stamp1, p, &(p->list), p->list.next, p->list.prev);  
++   printk(KERN_ALERT "%s pkt %d: &timing_recs == &(p->list): %d\n", __func__, p->stamp1, (&timing_recs == &(p->list)));
++#endif
++   
++   if (&timing_recs == &(p->list)){
++      return NULL;
++   }else{
++      return p;
++   }
++
++}
++
++/**
++ * This function is called at the end of a sequence
++ * 
++ */
++static void my_seq_stop(struct seq_file *s, void *v)
++{
++   return;
++}
++
++/**
++ * This function is called for each "step" of a sequence
++ */
++static int my_seq_show(struct seq_file *s, void *v)
++{
++   struct pkt_record * p = v;
++
++   seq_printf(s, "pkt: %u %u %u %u %u %u %u\n",
++	      p->stamp1, p->stamp2, p->stamp3, 
++	      p->stamp4, p->stamp5, p->stamp6, 
++	      p->stamp7);
++   return 0;
++}
++
++int pkt_time_log(struct ath_buf * buf)
++{
++   struct list_head * head_node;
++   struct pkt_record * tmp;
++      
++   
++   if (sysctl_logging_on == 0){
++#if 0
++      printk(KERN_INFO "pkt_timing NOT recording packet because logging is off.\n");
++#endif
++      return 0;
++   }
++
++   if (list_empty_careful(&free_nodes))
++      goto fail_no_buffers;
++	 
++   head_node = free_nodes.next;
++   list_del(head_node);				/* Take it out of free list */
++   
++   tmp = list_entry(head_node, struct pkt_record, list);
++
++   /* Copy the time stamps  */
++   tmp->stamp1 = buf->stamp1;
++   tmp->stamp2 = buf->stamp2;
++   tmp->stamp3 = buf->stamp3;
++   tmp->stamp4 = buf->stamp4;
++   tmp->stamp5 = buf->stamp5;
++   tmp->stamp6 = buf->stamp6;
++   tmp->stamp7 = buf->stamp7;
++
++   
++   list_add_tail(head_node, &timing_recs);	/* add to timing_recs */
++
++#if 0
++   printk(KERN_ALERT "In %s, found free node (%d).\n", __func__, ct_logged);
++#endif
++
++   return 0;
++
++  fail_no_buffers:
++#if 0   
++   printk(KERN_ALERT "In %s, free ring looks like this:\n", __func__);
++   printk(KERN_ALERT "&free_nodes:");
++   print_node(&free_nodes);
++   __list_for_each(bob_ptr, &free_nodes){
++      print_node(bob_ptr);    
++   }
++#endif
++   printk(KERN_INFO "In %s, no free pkt_record buffers.\n", __func__);
++   return -1;
++};
++EXPORT_SYMBOL_GPL(pkt_time_log);
++
++
++MODULE_LICENSE("GPL");
++MODULE_AUTHOR("Eric Anderson <eric.anderson@colorado.edu>");
++MODULE_DESCRIPTION("Logs packet timing data to memory (avoid printk-based logging overhead.)");
++
++#endif /*EXTRA_TIME_ACCOUNTING*/
+
+Index: ath/pkt_timing.h
+===================================================================
+--- ath/pkt_timing.h	(.../madwifi-scheduling)	(revision 0)
++++ ath/pkt_timing.h	(.../madwifi-timestamp)	(revision 570)
+@@ -0,0 +1,50 @@
++#ifndef __CU_PKT_TIMING_H
++#define __CU_PKT_TIMING_H
++
++/* Too many damned header files. Many can probably be removed!*/
++
++#include "opt_ah.h"
++
++#ifndef AUTOCONF_INCLUDED
++#include <linux/config.h>
++#endif
++#include <linux/version.h>
++#include <linux/module.h>
++#include <linux/init.h>
++#include <linux/skbuff.h>
++#include <linux/netdevice.h>
++#include <linux/etherdevice.h>
++#include <linux/random.h>
++#include <linux/delay.h>
++#include <linux/cache.h>
++#include <linux/sysctl.h>
++#include <linux/proc_fs.h>
++#include <linux/if_arp.h>
++#include <linux/rtnetlink.h>
++#include <asm/uaccess.h>
++
++#include "if_ethersubr.h"		/* for ETHER_IS_MULTICAST */
++#include "if_media.h"
++#include "if_llc.h"
++
++#include <net80211/ieee80211_radiotap.h>
++#include <net80211/ieee80211_var.h>
++#include <net80211/ieee80211_monitor.h>
++#include <net80211/ieee80211_rate.h>
++
++#ifdef USE_HEADERLEN_RESV
++#include <net80211/if_llc.h>
++#endif
++
++#include "net80211/if_athproto.h"
++#include "if_athvar.h"
++
++/* 
++ * Eric Anderson.
++ * (C) Regents of the University of Colorado 2007
++ * Licensed under the GNU General Public License, version 2 or later.
++ * Comment here.
++ */
++
++int pkt_time_log(struct ath_buf * buf);
++#endif
+Index: ath/if_athvar.h
+===================================================================
+--- ath/if_athvar.h	(.../madwifi-scheduling)	(revision 337)
++++ ath/if_athvar.h	(.../madwifi-timestamp)	(working copy)
+@@ -335,6 +335,7 @@
+ #define	ATH_MIN_FF_RATE	12000		/* min rate for ff aggregation in kbps */
+ #define	ATH_MIN_FF_RATE	12000		/* min rate for ff aggregation in kbps */
+ struct ath_buf;
++
+ typedef STAILQ_HEAD(, ath_buf) ath_bufhead;
+ 
+ /* driver-specific node state */
+@@ -407,6 +408,24 @@
+ 	u_int32_t bf_queueage;				/* "age" of txq when this buffer placed on stageq */
+ 	dma_addr_t bf_skbaddrff[ATH_TXDESC - 1]; 	/* extra addrs for FF */
+ #endif
++
++#ifdef EXTRA_TIME_ACCOUNTING
++      /*****************************************************
++       *  These per-athbuf time stamps are associated with *
++       *  a single packet throughout its lifetime.         *
++       *****************************************************/
++
++      u_int32_t stamp1;	       /* pkt. enters driver */
++      u_int32_t stamp2;	       /* TX_BUF aquired; XXX NOW WHAT? */
++      u_int32_t stamp3;      /* immediately before calling bus_map_single() */
++      u_int32_t stamp4;	       /* bus_map_single() completed */
++      u_int32_t stamp5;	       /* ath_tx_txqaddbuff() completed */
++      u_int32_t stamp6;	       /* HAL_INT_TX event time. (1st since
++				* last stamp7, may or may not be
++				* correct. */
++      u_int32_t stamp7;	       /* ath_tx_capture gets to the buffer.  This is
++				* the time that appears in our traces. */
++#endif
+ };
+ 
+ /*
+Index: ath/if_ath.c
+===================================================================
+--- ath/if_ath.c	(.../madwifi-scheduling)	(revision 337)
++++ ath/if_ath.c	(.../madwifi-timestamp)	(working copy)
+@@ -98,6 +98,13 @@
+ #include "ath_tx99.h"
+ #endif
+ 
++#ifdef EXTRA_TIME_ACCOUNTING
++#include <linux/timex.h>
++#include <asm/msr.h>
++#include "pkt_timing.h"
++#endif
++
++
+ /* unaligned little endian access */
+ #define LE_READ_2(p)							\
+ 	((u_int16_t)							\
+@@ -263,6 +270,24 @@
+ static const char *ath_get_hal_status_desc(HAL_STATUS status);
+ static int ath_rcv_dev_event(struct notifier_block *, unsigned long, void *);
+ 
++
++#ifdef EXTRA_TIME_ACCOUNTING
++/* Making these global is dirty, but it's cleaner than changing the parameters
++ * for add_to_tdm_q (maybe), and easier than putting it in the skbuff.
++ * NOT SMP-SAFE */
++
++u_int32_t stamp1 = 0;			/* pkt. enters driver */
++u_int32_t stamp6 = 0;			/* SENT interrupt occurs */
++
++#define xxx_rdtscl(dest)\
++           rdtscl(dest);
++/*         dest = (volatile unsigned long) *IXP4XX_OSTS;*/
++/* Make this work for x86! */
++/*	asm volatile ("mrc p14, 0, %0, c1, c1, 0; nop" : "=r" (dest)); */
++
++#endif
++
++
+ static int ath_calinterval = ATH_SHORT_CALINTERVAL;		/*
+ 								 * calibrate every 30 secs in steady state
+ 								 * but check every second at first.
+@@ -1738,6 +1763,33 @@
+ 				}
+ 			}
+ #endif
++			
++#ifdef EXTRA_TIME_ACCOUNTING
++/********************************************************
++ *  Determine whether or not stamp6 (which is global?)  *
++ *  has been read since the last time we set a value in *
++ *  it.  If not, that means that multiple tranmission   *
++ *  events have occurred, and they'll all share a time  *
++ *  stamp.                                              *
++ ********************************************************
++ */
++			{
++			   u_int32_t nowstamp;
++			   xxx_rdtscl(nowstamp);
++			   
++			   if (stamp6 != 0)
++			   {
++			      printk(KERN_INFO "%s: Multiple HAL_INT_TX events before tasklet.  Keeping old value: %u; ignoring new: %u\n.",
++				     __func__, stamp6, nowstamp);
++			   }
++			   else
++			   {
++			      stamp6 = nowstamp;
++			   }
++			   
++			}
++#endif
++			/* XXX EWA -- This schedules, indirectly, the ath_tx_tasklet */
+ 			ATH_SCHEDULE_TQUEUE(&sc->sc_txtq, &needmark);
+ 		}
+ 		if (status & HAL_INT_BMISS) {
+@@ -2447,6 +2499,15 @@
+ }
+ #endif
+ 
++#ifdef EXTRA_TIME_ACCOUNTING
++#define LOGGING_OP                                                      \
++        xxx_rdtscl(bf->stamp2);                                         \
++        bf->stamp1=stamp1;
++#else
++#define LOGGING_OP				/* no-op */
++#endif
++
++
+ #define ATH_HARDSTART_GET_TX_BUF_WITH_LOCK	do {			\
+ 	ATH_TXBUF_LOCK_IRQ(sc);						\
+ 	bf = STAILQ_FIRST(&sc->sc_txbuf);				\
+@@ -2469,8 +2530,10 @@
+ 			"%s: discard, no xmit buf\n", __func__);	\
+ 		sc->sc_stats.ast_tx_nobuf++;				\
+ 	}								\
++        LOGGING_OP;                                                     \
+ 	} while (0)
+ 
++
+ /*
+  * Transmit a data packet.  On failure caller is
+  * assumed to reclaim the resources.
+@@ -2499,6 +2562,10 @@
+ 	struct ieee80211vap *vap;
+ #endif
+ 
++#ifdef EXTRA_TIME_ACCOUNTING
++	xxx_rdtscl(stamp1);
++#endif	
++
+ 	if ((dev->flags & IFF_RUNNING) == 0 || sc->sc_invalid) {
+ 		DPRINTF(sc, ATH_DEBUG_XMIT,
+ 			"%s: discard, invalid %d flags %x\n",
+@@ -2784,6 +2851,7 @@
+ 	return NETDEV_TX_OK;	
+ }
+ #undef ATH_HARDSTART_GET_TX_BUF_WITH_LOCK
++#undef LOGGING_OP
+ 
+ /*
+  * Transmit a management frame.  On failure we reclaim the skbuff.
+@@ -6707,13 +6775,25 @@
+ 	 * also calculates the number of descriptors we need.
+ 	 */
+ #ifndef ATH_SUPERG_FF
++#ifdef EXTRA_TIME_ACCOUNTING
++	xxx_rdtscl(bf->stamp3);
++#endif
+ 	bf->bf_skbaddr = bus_map_single(sc->sc_bdev,
+ 		skb->data, pktlen, BUS_DMA_TODEVICE);
++#ifdef EXTRA_TIME_ACCOUNTING
++	xxx_rdtscl(bf->stamp4);		
++#endif
+ 	DPRINTF(sc, ATH_DEBUG_XMIT, "%s: skb %p [data %p len %u] skbaddr %llx\n",
+ 		__func__, skb, skb->data, skb->len, ito64(bf->bf_skbaddr));
+ #else /* ATH_SUPERG_FF case */
++#ifdef EXTRA_TIME_ACCOUNTING
++	xxx_rdtscl(bf->stamp3);
++#endif
+ 	bf->bf_skbaddr = bus_map_single(sc->sc_bdev,
+ 		skb->data, skb->len, BUS_DMA_TODEVICE);
++#ifdef EXTRA_TIME_ACCOUNTING
++	xxx_rdtscl(bf->stamp4);		
++#endif
+ 	DPRINTF(sc, ATH_DEBUG_XMIT, "%s: skb %p [data %p len %u] skbaddr %llx\n",
+ 		__func__, skb, skb->data, skb->len, ito64(bf->bf_skbaddr));
+ 	/* NB: ensure skb->len had been updated for each skb so we don't need pktlen */
+@@ -7186,6 +7266,10 @@
+ 
+ 
+ 	ath_tx_txqaddbuf(sc, ni, txq, bf, ds, pktlen);
++#ifdef EXTRA_TIME_ACCOUNTING
++	xxx_rdtscl(bf->stamp5);	
++#endif
++	
+ 	return 0;
+ #undef MIN
+ }
+@@ -7359,6 +7443,12 @@
+ 
+ 			tskb = skb->next;
+ 			DPRINTF(sc, ATH_DEBUG_TX_PROC, "%s: free skb %p\n", __func__, bf->bf_skb);
++#ifdef EXTRA_TIME_ACCOUNTING
++			xxx_rdtscl(bf->stamp7);
++			bf->stamp6=stamp6;
++			
++			pkt_time_log(bf);
++#endif
+ 			ath_tx_capture(sc->sc_dev, bf, skb, tsf);
+ 			skb = tskb;
+ 
+@@ -7371,6 +7461,12 @@
+ 						skb->len, BUS_DMA_TODEVICE);
+ 				DPRINTF(sc, ATH_DEBUG_TX_PROC, "%s: free skb %p\n",
+ 					__func__, skb);
++#ifdef EXTRA_TIME_ACCOUNTING
++				xxx_rdtscl(bf->stamp7);
++				bf->stamp6=stamp6;
++				pkt_time_log(bf);
++#endif
++				
+ 				ath_tx_capture(sc->sc_dev, bf, skb, tsf);
+ 				skb = tskb;
+ 			}
+@@ -7408,6 +7504,13 @@
+ #else
+ 	;
+ #endif /* ATH_SUPERG_FF */
++
++#ifdef EXTRA_TIME_ACCOUNTING
++	/* Now that it's been used, reset global stamp6 to 0, to indicate that
++	 * we're done with it */
++	stamp6 = 0;
++#endif
++
+ }
+ 
+ static __inline int
+Index: ath/Makefile
+===================================================================
+--- ath/Makefile	(.../madwifi-scheduling)	(revision 337)
++++ ath/Makefile	(.../madwifi-timestamp)	(working copy)
+@@ -56,7 +56,7 @@
+ 
+ include $(TOP)/Makefile.inc
+ 
+-obj-m		+= ath_$(BUSNAME).o
++obj-m		+= ath_$(BUSNAME).o pkt_timing.o
+ ath_$(BUSNAME)-objs	:= if_ath.o if_ath_$(BUSNAME).o
+ 
+ INCS += -I$(TOP) -I$(ATH_HAL) -I$(HAL) -I$(WLAN)
+@@ -71,6 +71,7 @@
+ install:
+ 	test -d $(DESTDIR)/$(KMODPATH) || mkdir -p $(DESTDIR)/$(KMODPATH)
+ 	install ath_$(BUSNAME).$(KMODSUF) $(DESTDIR)/$(KMODPATH)
++	install pkt_timing.$(KMODSUF)  $(DESTDIR)/$(KMODPATH)
+ 
+ clean:
+ 	rm -f *~ *.o *.ko *.mod.c .*.cmd
+

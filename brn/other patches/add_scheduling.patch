@@ -1,0 +1,523 @@
+Index: Makefile.inc
+===================================================================
+--- Makefile.inc	(revision 337)
++++ Makefile.inc	(revision 356)
+@@ -195,7 +195,10 @@
+ # conventions.
+ COPTS := $(filter-out -mshort-load-bytes,$(COPTS))
+ 
++# Enable packet-transmission timing features (EA)
++COPTS += -DEXTRA_TIME_ACCOUNTING
+ 
++
+ # The following variables will affect developers only, and are used in the
+ # make-release.bash script.
+ #
+Index: scripts/find-madwifi-modules.sh
+===================================================================
+--- scripts/find-madwifi-modules.sh	(revision 337)
++++ scripts/find-madwifi-modules.sh	(revision 356)
+@@ -24,7 +24,7 @@
+ 
+ SEARCH="${KDEST}/lib/modules/${KVERS}"
+ 
+-PATTERN="^.*\/(ath_(hal|pci|rate_[^.]*)\.k?o)|(wlan(_(acl|ccmp|scan_(ap|sta)|tkip|wep|xauth))?\.k?o)$"
++PATTERN="^.*\/(ath_(hal|pci|rate_[^.]*)\.k?o)|(wlan(_(acl|ccmp|scan_(ap|sta)|tkip|wep|xauth))?\.k?o)|((ar52xx_scheduling)\.k?o)$"
+ OLD_MODULES=$(find ${SEARCH} -type f -regex '.*\.k?o' 2>/dev/null | grep -w -E "${PATTERN}")
+ 
+ if [ -n "${OLD_MODULES}" ]; then
+Index: ath/ar52xx_scheduling.c
+===================================================================
+--- ath/ar52xx_scheduling.c	(revision 0)
++++ ath/ar52xx_scheduling.c	(revision 356)
+@@ -0,0 +1,331 @@
++/*
++ * Eric Anderson 2007. (C) Regents of the University of Colorado.  Released with
++ * the permission of Douglas Sicker and Dirk Grunwald to S. Keshav at the
++ * University of Waterloo.
++ */
++
++
++/*
++ * This module is a demonstration implementation of event scheduling using the
++ * on-chip clock of the AR5212 chipset and the MadWifi driver.  The AR5212
++ * provides a microsecond-resolution clock and provides for automatic
++ * synchronization across multiple devices using 802.11 beacons.
++ */
++
++#include <linux/kernel.h>	
++#include <linux/module.h>	
++#include <linux/init.h>		
++#include <linux/mm.h>
++#include <linux/proc_fs.h>
++#include <linux/seq_file.h>
++#include <linux/sysctl.h>
++
++/* Too many damned header files. Many can probably be removed!*/
++
++#include "opt_ah.h"
++
++#ifndef AUTOCONF_INCLUDED
++#include <linux/config.h>
++#endif
++#include <linux/version.h>
++#include <linux/skbuff.h>
++#include <linux/netdevice.h>
++#include <linux/etherdevice.h>
++#include <linux/random.h>
++#include <linux/delay.h>
++#include <linux/cache.h>
++#include <linux/if_arp.h>
++#include <linux/rtnetlink.h>
++#include <asm/uaccess.h>
++
++#include "if_ethersubr.h"		/* for ETHER_IS_MULTICAST */
++#include "if_media.h"
++#include "if_llc.h"
++
++#include <net80211/ieee80211_radiotap.h>
++#include <net80211/ieee80211_var.h>
++#include <net80211/ieee80211_monitor.h>
++#include <net80211/ieee80211_rate.h>
++
++#ifdef USE_HEADERLEN_RESV
++#include <net80211/if_llc.h>
++#endif
++
++#include "net80211/if_athproto.h"
++#include "if_athvar.h"
++
++#include "if_ath_hal.h"
++
++#include "ar52xx_scheduling.h"
++
++struct timer_list tdm_timer = {.function = handle_timer,
++                               .expires = 0,
++                               .data = 0
++};
++DECLARE_TASKLET(slot_change, do_slot_change, 0);
++
++
++static const char * svn_ver = "$Rev$ -- $Date$";
++
++#define EXTRA_INFO 0				/* set to 1 for information */
++#define ONE_MILLION 1000000
++#define MAX_UINT32 (uint32_t)(((uint64_t)1 << 32)-1)
++#define WRAP_UINT32 ((uint64_t)1 << 32)
++#define	NEXT_WRAPPING(a,b,current,modulus)                    \
++   ((((a)+modulus-current)%modulus) < (((b)+modulus-current)%modulus) ? (a) : (b))
++#define NEXT_WRAP32(a,b,current)                              \
++   NEXT_WRAPPING((uint64_t)(a),                 \
++                 (uint64_t)(b),                 \
++                 (uint64_t)(current),           \
++                 WRAP_UINT32)
++
++
++
++/*
++ * Register SYSTCL node to set event time
++ */
++
++
++static struct ctl_table_header * sysctl_ref;
++static uint32_t one_off_timer = 0;
++static uint32_t timer_interval = ONE_MILLION;
++static int sc_initialized = 0;
++static uint32_t last_event = 0;
++
++
++int wrap_proc_dointvec(ctl_table *, int, struct file *, void __user *, size_t *, loff_t *);
++int proc_time_change(int);
++int proc_intrvl_change(int);
++
++
++
++enum {
++   AR52XX_SCHED_TIMER = 1,
++   AR52XX_SCHED_INTERVAL = 2,
++};
++
++static struct ctl_table sysctl_tab[] = {
++   {
++      .ctl_name  = AR52XX_SCHED_TIMER,
++      .procname  = "time",
++      .maxlen    = sizeof(long int),
++      .data      = &one_off_timer,
++      .mode      = 0644,
++      .proc_handler = &wrap_proc_dointvec,
++      .strategy  = &sysctl_intvec,
++   },
++   {
++      .ctl_name  = AR52XX_SCHED_INTERVAL,
++      .procname  = "interval_usec",
++      .maxlen    = sizeof(long int),
++      .data      = &timer_interval,
++      .mode      = 0644,
++      .proc_handler = &wrap_proc_dointvec,
++      .strategy  = &sysctl_intvec,
++   },
++
++   { .ctl_name = 0 }
++};
++
++static ctl_table pt_dir_table[] = {
++   { .ctl_name   = CTL_KERN, 
++     .procname   = "ath_schedule", 
++     .mode       = 0555, 
++     .child      =sysctl_tab},
++   {0}
++};
++
++
++/* /proc/sys/kernel */
++static ctl_table root_table[] = {
++   { .ctl_name    = CTL_KERN, 
++     .procname    = "kernel", 
++     .mode        = 0555, 
++     .child       = pt_dir_table},
++   {0}
++};
++   
++
++int __init init_module()
++{
++//   struct proc_dir_entry *entry;
++//   int i;
++   
++   printk (KERN_INFO "ar52xx_schedule: AR5212-based distributed scheduler v. %s\n", svn_ver);
++   printk (KERN_INFO "ar52xx_schedule: access through /proc/sys/kernel/ath_schedule/...\n");
++   printk (KERN_INFO "ar52xx_schedule: Be careful, this will probably eat your children.\n");
++   
++   
++   sysctl_ref = register_sysctl_table(root_table, 0);
++   if (!sysctl_ref){
++      goto sysctl_reg_fail;
++   }
++   
++#if 0
++   /* debugging: */
++   printk (KERN_INFO "2^32 -1  = %lX\n", (long unsigned int) MAX_UINT32);
++   printk (KERN_INFO "2^32 = %llX\n", (long long unsigned int) WRAP_UINT32);
++
++   for (i =0; i < 2; i++){
++      ctl_table table;
++      table=sysctl_tab[i];
++      printk(KERN_INFO "Table at %p, named %s, data at %p.\n",
++	     &table, table.procname, table.data);
++   }
++#endif
++   
++   return 0;
++   
++  sysctl_reg_fail:
++   printk(KERN_ALERT "ar52xx_schedule: Unable to register systcl entry in %s..\n", __func__);
++   return -1;
++}
++
++/* 
++ * Cleanup
++ */
++void __exit cleanup_module()
++{
++   unregister_sysctl_table(sysctl_ref);
++   printk(KERN_INFO "ar52xx_schedule: unloaded\n");
++}
++
++int wrap_proc_dointvec(ctl_table *table, int write, struct file *filp,  void __user *buffer, size_t *lenp, loff_t *ppos){
++   /* printk(KERN_ALERT "WRAPPER!  Table->data=%p\n",table->data);*/
++   proc_dointvec(table, write, filp, buffer, lenp, ppos);   
++   switch (table->ctl_name)
++   {
++      case AR52XX_SCHED_TIMER:
++	 return proc_time_change(proc_dointvec(table, write, filp, buffer, lenp, ppos));
++	 break;
++      case AR52XX_SCHED_INTERVAL:
++	 return proc_intrvl_change(proc_dointvec(table, write, filp, buffer, lenp, ppos));
++	 break;
++      default:
++	 printk(KERN_ALERT "%s called for control table it knows nothing about! ERROR!\n",
++		__func__);
++	 return  proc_dointvec(table, write, filp, buffer, lenp, ppos);
++
++   }
++}
++
++
++int proc_time_change(int dointvec_rv){
++   printk(KERN_INFO "ar52xx_schedule: time change registered.\n");
++   return dointvec_rv;
++}
++int proc_intrvl_change(int dointvec_rv){
++   printk(KERN_INFO "ar52xx_schedule: interval change registered.\n");
++   return dointvec_rv;
++}
++
++
++#define INT_RATE 10000           //timer duration for TDM mechanism.
++                                 // with no high-res timers, 10000 is smallest
++
++static inline void SHOW_TIMING(uint32_t I, uint32_t NI, uint32_t O, uint32_t NE)
++{
++#if EXTRA_INFO
++   printk(KERN_INFO "timer_interval\t next_interval\t one_off_timer\t next_event\n"); 
++   printk(KERN_INFO "%016lu\t %016lu\t %016lu\t %016lu\n",
++	  (long unsigned int) (I), (long unsigned int) (NI),
++	  (long unsigned int) (O), (long unsigned int) (NE));   
++#endif
++}
++
++/* Does EVENT fall between START and START+DURATION, mod 2^32? Note that the
++ * modulus is implicit in this implementation; all the numbers involved must be
++ * of the same type, which must correspond to the wrap-around point of the
++ * clock.*/
++
++#define IN_WINDOW_MOD(START, DURATION, EVENT)                               \
++    ((START) <= (((START) + (DURATION)))) ?                                 \
++        (((START) <= (EVENT)) && ((EVENT) <= ((START)+(DURATION)))) :       \
++        !((((START)+(DURATION)) <= (EVENT)) && ((EVENT) <= (START)))
++
++
++//Handler for finding slot boundaries
++// If another interrupt will not occur before the slot boundary, spin
++// wait until slot boundary, then change pattern etc.
++// Otherwise, just reset timer.
++
++void handle_timer(unsigned long ah){
++   
++   uint32_t ath_time = ath_hal_gettsf32((struct ath_hal *)ah);
++   uint32_t tmp_time =0;
++   /* XXX interval only, not one-shot times */
++   uint32_t next_interval = 0;
++   uint32_t next_event = 0;
++      
++   if (timer_interval != 0){			/* avoid divide by 0 */
++      /* the +1 is in there so that the cycle begins at 1 rather than 0, and
++       * thus the sequence is less likely to cycle thtough the invalid time "0"
++       * very often. */
++      next_interval =((((ath_time) / timer_interval) * timer_interval) + timer_interval +1 ) %WRAP_UINT32;
++   }
++
++   /* Choose among the non-zero event time options.  0 is regarded as invalid,
++    * because the clock sits at 0 before the interface is brought up.*/
++
++   if (next_interval !=0 && one_off_timer != 0) /* both valid */
++      next_event = NEXT_WRAP32(next_interval, one_off_timer, ath_time);
++   if (next_interval !=0 && one_off_timer == 0) /* only interval */
++      next_event = next_interval;
++   if (next_interval ==0 && one_off_timer != 0) /* only timer */
++      next_event = one_off_timer;
++   if (next_interval ==0 && one_off_timer == 0) /* none valid */
++      next_event = 0;
++   
++      
++   if (next_event != 0){
++      if (IN_WINDOW_MOD(ath_time, INT_RATE + 100, next_event))
++      {	 
++	 while (IN_WINDOW_MOD(ath_time, INT_RATE + 100, next_event))
++	 {
++	    ath_time = ath_hal_gettsf32((struct ath_hal *) ah);
++	 }
++	 last_event=next_event;
++      
++	 tmp_time=ath_hal_gettsf32((struct ath_hal *) ah);
++	 if (sc_initialized){
++	    tasklet_schedule(&slot_change);  //only start xmit chain on first
++	    // interrupt during slot.
++	    printk(KERN_INFO "ar52xx_schedule: In interrupt!  Time: %16lu (off %d usec)\n", 
++		   (long unsigned int) tmp_time, (tmp_time-last_event));
++	    SHOW_TIMING(timer_interval, next_interval, one_off_timer, next_event);
++	 }
++      }	/* ... > next_event */
++      else{}
++   } /* next_event != 0 */
++   else {}
++   tdm_timer.expires=jiffies+1;
++   add_timer(&tdm_timer);
++}
++
++
++void do_slot_change(unsigned long ah){   
++   uint32_t tmp_time = ath_hal_gettsf32((struct ath_hal *) ah);
++   printk(KERN_INFO "ar52xx_schedule: In tasklet!    Time: %16lu (off %d usec)\n",  
++	  (long unsigned int) tmp_time, tmp_time - last_event);
++   return;
++}
++
++void init_slot_change(unsigned long ah){
++   sc_initialized=1;
++   slot_change.data = ah;
++}
++
++#undef EXTRA_INFO
++#undef IN_WINDOW
++#undef NEXT_WRAP32
++#undef NEXT_WRAPPING
++#undef ONE_MILLION
++#undef WRAP_UINT32
++#undef MAX_UINT32
++
++EXPORT_SYMBOL_GPL(tdm_timer);
++EXPORT_SYMBOL_GPL(do_slot_change);
++EXPORT_SYMBOL_GPL(init_slot_change);
++MODULE_LICENSE("GPL");
++MODULE_AUTHOR("Eric Anderson <eric.anderson@colorado.edu>");
++MODULE_DESCRIPTION("Demonstrate using AR5212 clock for scheduling");
+
+Index: ath/ar52xx_scheduling.h
+===================================================================
+--- ath/ar52xx_scheduling.h	(revision 0)
++++ ath/ar52xx_scheduling.h	(revision 356)
+@@ -0,0 +1,9 @@
++#ifndef _ar52xx_scheduling_h_
++#define _ar52xx_scheduling_h_
++
++extern void handle_timer(unsigned long ah);
++extern struct timer_list tdm_timer;
++extern void do_slot_change(unsigned long);
++extern void init_slot_change(unsigned long ah);
++
++#endif
+Index: ath/if_athvar.h
+===================================================================
+--- ath/if_athvar.h	(revision 337)
++++ ath/if_athvar.h	(revision 356)
+@@ -407,6 +407,26 @@
+ 	u_int32_t bf_queueage;				/* "age" of txq when this buffer placed on stageq */
+ 	dma_addr_t bf_skbaddrff[ATH_TXDESC - 1]; 	/* extra addrs for FF */
+ #endif
++
++#ifdef EXTRA_TIME_ACCOUNTING
++      /*****************************************************
++       *  These per-athbuf time stamps are associated with *
++       *  a single packet throughout its lifetime.         *
++       *****************************************************/
++
++      u_int32_t stamp1;        /* pkt. enters driver */
++      u_int32_t stamp2;        /* enter add_to_tdm_q */
++      u_int32_t stamp3;        /* TX_BUF aquired; calling ath_tx_start(|raw) */
++      u_int32_t stamp3_5;      /* immediately before calling bus_map_single() */
++      u_int32_t stamp4;        /* bus_map_single() completed */
++      u_int32_t stamp5;        /* ath_tx_txqaddbuff() completed */
++      u_int32_t stamp6;        /* HAL_INT_TX event time. (1st since
++                                * last stamp7, may or may not be
++                                * correct. */
++      u_int32_t stamp7;        /* ath_tx_capture gets to the buffer.  This is
++                                * the time that appears in our traces. */
++#endif
++
+ };
+ 
+ /*
+Index: ath/if_ath.c
+===================================================================
+--- ath/if_ath.c	(revision 337)
++++ ath/if_ath.c	(revision 356)
+@@ -98,6 +98,8 @@
+ #include "ath_tx99.h"
+ #endif
+ 
++#include "ar52xx_scheduling.h"
++
+ /* unaligned little endian access */
+ #define LE_READ_2(p)							\
+ 	((u_int16_t)							\
+@@ -120,6 +122,7 @@
+ 	ATH_LED_POLL,
+ };
+ 
++
+ static struct ieee80211vap *ath_vap_create(struct ieee80211com *,
+ 	const char *, int, int, struct net_device *);
+ static void ath_vap_delete(struct ieee80211vap *);
+@@ -474,7 +477,16 @@
+ 		goto bad;
+ 	}
+ 	sc->sc_ah = ah;
++	
++	//Setup timer used to find slot boundaries
++        tdm_timer.data = (unsigned long) ah;
++        init_timer(&tdm_timer);
++        tdm_timer.expires = jiffies + 1;
++        add_timer(&tdm_timer);
+ 
++	init_slot_change((unsigned long) ah);
++
++
+ 	/*
+ 	 * Check if the MAC has multi-rate retry support.
+ 	 * We do this by trying to setup a fake extended
+@@ -982,6 +994,8 @@
+ 	DPRINTF(sc, ATH_DEBUG_ANY, "%s: flags %x\n", __func__, dev->flags);
+ 	ath_stop(dev);
+ 
++	del_timer(&tdm_timer);
++
+ 	ath_hal_setpower(sc->sc_ah, HAL_PM_AWAKE, AH_TRUE);
+ 
+ 	sc->sc_invalid = 1;
+@@ -9260,6 +9274,7 @@
+ 	ATH_XR_POLL_PERIOD 	= 21,
+ 	ATH_XR_POLL_COUNT 	= 22,
+ 	ATH_ACKRATE             = 23,
++	ATH_MACTIME             = 24,
+ };
+ 
+ static int
+@@ -9382,6 +9397,11 @@
+ 				sc->sc_ackrate = val;
+ 				ath_set_ack_bitrate(sc, sc->sc_ackrate);
+ 				break;
++		        case ATH_MACTIME:
++				/* This is redundant with the default case,
++				 it's just here for clarity. */
++				ret = -EINVAL;
++				break;
+ 			default: 
+ 				ret = -EINVAL;
+ 				break;
+@@ -9439,6 +9459,11 @@
+ 		case ATH_ACKRATE:
+ 			val = sc->sc_ackrate;
+ 			break;
++			
++		case ATH_MACTIME:
++			val = ath_hal_gettsf32(ah);
++			break;
++				
+ 		default:
+ 			ret = -EINVAL;
+ 			break;
+@@ -9541,6 +9566,12 @@
+ 	  .mode		= 0644,
+ 	  .proc_handler	= ath_sysctl_halparam
+ 	},
++	{ .ctl_name	= ATH_MACTIME,
++	  .procname	= "mactime",
++	  .mode		= 0644,
++	  .proc_handler	= ath_sysctl_halparam
++	},
++
+ 	{ 0 }
+ };
+ 
+Index: ath/Makefile
+===================================================================
+--- ath/Makefile	(revision 337)
++++ ath/Makefile	(revision 356)
+@@ -56,7 +56,7 @@
+ 
+ include $(TOP)/Makefile.inc
+ 
+-obj-m		+= ath_$(BUSNAME).o
++obj-m			+= ath_$(BUSNAME).o ar52xx_scheduling.o
+ ath_$(BUSNAME)-objs	:= if_ath.o if_ath_$(BUSNAME).o
+ 
+ INCS += -I$(TOP) -I$(ATH_HAL) -I$(HAL) -I$(WLAN)
+@@ -71,6 +71,7 @@
+ install:
+ 	test -d $(DESTDIR)/$(KMODPATH) || mkdir -p $(DESTDIR)/$(KMODPATH)
+ 	install ath_$(BUSNAME).$(KMODSUF) $(DESTDIR)/$(KMODPATH)
++	install ar52xx_scheduling.$(KMODSUF)  $(DESTDIR)/$(KMODPATH)
+ 
+ clean:
+ 	rm -f *~ *.o *.ko *.mod.c .*.cmd

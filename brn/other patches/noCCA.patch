@@ -1,0 +1,666 @@
+Index: README.CCA
+===================================================================
+--- README.CCA	(.../modules/vendor/madwifi/snapshot-2008-02-19)	(revision 0)
++++ README.CCA	(.../trunk/madwifi-noCCA)	(revision 14)
+@@ -0,0 +1,89 @@
++
++   Patch to Disable Clear-Channel-Assessment
++   -----------------------------------------
++
++
++INTRODUCTION:
++-------------
++
++This software consists of a set of changes to the MadWifi driver which
++disable clear-channel assessment and other backoff mechanisms in
++Atheros 5212 and 5213-based wireless cards.  It is based in large part
++on the "txcont" regulatory testing functionality.  The actions
++performed to disable backoff can be grouped as:
++
++0. Disable carrier sense and "virtual carrier sense" (NAV)
++   functionality.  This includes abusing the gain control registers,
++   so successful packet reception is unlikely.
++
++1. Set the DFS control unit (DCU) to backoff or wait as little as
++   possible.
++
++2. For each queue, configure to send as many frames as possible in a
++   burst, and do not do post-frame backoff.
++
++USAGE:
++------
++
++CCA suppression is controlled with the "dev.wifiX.disable_cca"
++sysctl. A value of 0 means "do not perform any CCA suppression."
++Non-zero values are interpreted as a bit-mask: Bits 0, 1 and 2 each
++enable the function groups described above.  Bit 3 disables interrupts
++for beacons and missed beacons.  This is largely unrelated
++functionality; if you don't know why you want it, then you don't.  The
++mask is stored as seven bits, but only the bottom four are
++significant.
++
++
++MISC:
++-----
++
++The most recent version of this software, along with related
++information and tools, can be found at the following URL:
++http://systems.cs.colorado.edu/mediawiki/index.php?title=Downloads 
++
++If you use this software in your research, please cite it as:
++
++@TechReport{Anderson2008Commodity,
++  author = 	 {Eric Anderson and Gary Yee and Caleb Phillips and
++                  Douglas Sicker and Dirk Grunwald},
++  title = 	 {Commodity AR52XX-Based Wireless Adapters as a Research Platform},
++  institution =  {University of Colorado at Boulder},
++  year = 	 {2008},
++  month =	 {April},
++  type =	 {Technical Report},
++  number =	 {CU-CS-XXXX-08},
++  address =	 {Department of Computer Science, Campus Box 430},
++}
++
++
++COPYRIGHT:
++----------
++
++This patch and accompanying text are Copyright (c) 2008, Regents of
++the University of Colorado.  All rights reserved.
++
++Redistribution and use in source and binary forms, with or without
++modification, are permitted provided that the following conditions are met:
++
++    * Redistributions of source code must retain the above copyright
++      notice, this list of conditions and the following disclaimer.
++
++    * Redistributions in binary form must reproduce the above copyright
++      notice, this list of conditions and the following disclaimer in the
++      documentation and/or other materials provided with the distribution.
++
++    * Neither the name of the University of Colorado nor the names of its
++      contributors may be used to endorse or promote products derived from
++      this software without specific prior written permission.  
++
++THIS SOFTWARE IS PROVIDED BY THE UNIVERSITY OF COLORADO ``AS IS'' AND ANY
++EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
++WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
++DISCLAIMED. IN NO EVENT SHALL THE UNIVERSITY OF COLORADO BE LIABLE FOR ANY
++DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
++(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
++LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
++ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
++(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
++SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+Index: Makefile.inc
+===================================================================
+--- Makefile.inc	(.../modules/vendor/madwifi/snapshot-2008-02-19)	(revision 14)
++++ Makefile.inc	(.../trunk/madwifi-noCCA)	(revision 14)
+@@ -101,6 +101,8 @@
+ export TARGET
+ COPTS += -DTARGET='"$(TARGET)"'
+ 
++COPTS += -DCOLORADO_CCA -DHEISENBUG
++
+ # KMODPATH nominates the directory where the modules will be
+ # installed to
+ KMODPATH :=	/lib/modules/$(KERNELRELEASE)/net
+Index: citation.bib
+===================================================================
+--- citation.bib	(.../modules/vendor/madwifi/snapshot-2008-02-19)	(revision 0)
++++ citation.bib	(.../trunk/madwifi-noCCA)	(revision 14)
+@@ -0,0 +1,12 @@
++@TechReport{Anderson2008Commodity,
++  author = 	 {Eric Anderson and Gary Yee and Caleb Phillips and
++                  Douglas Sicker and Dirk Grunwald},
++  title = 	 {Commodity AR52XX-Based Wireless Adapters as a Research Platform},
++  institution =  {University of Colorado at Boulder},
++  year = 	 {2008},
++  month =	 {April},
++  type =	 {Technical Report},
++  number =	 {CU-CS-XXXX-08},
++  address =	 {Department of Computer Science, Campus Box 430},
++}
++
+Index: ath/if_athvar.h
+===================================================================
+--- ath/if_athvar.h	(.../modules/vendor/madwifi/snapshot-2008-02-19)	(revision 14)
++++ ath/if_athvar.h	(.../trunk/madwifi-noCCA)	(revision 14)
+@@ -36,7 +36,37 @@
+  * $Id: if_athvar.h 3358 2008-02-14 06:34:28Z mentor $
+  */
+ 
++
+ /*
++ * Modifications to enable CCA-less operation, and accompanying text, are
++ * Copyright (c) 2008, Regents of the University of Colorado.
++ * All rights reserved.
++ *
++ * Redistribution and use in source and binary forms, with or without
++ * modification, are permitted provided that the following conditions are met:
++ *     * Redistributions of source code must retain the above copyright
++ *       notice, this list of conditions and the following disclaimer.
++ *     * Redistributions in binary form must reproduce the above copyright
++ *       notice, this list of conditions and the following disclaimer in the
++ *       documentation and/or other materials provided with the distribution.
++ *     * Neither the name of the University of Colorado nor the names of its
++ *       contributors may be used to endorse or promote products derived from
++ *       this software without specific prior written permission.  
++ *
++ * THIS SOFTWARE IS PROVIDED BY THE UNIVERSITY OF COLORADO ``AS IS'' AND ANY
++ * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
++ * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
++ * DISCLAIMED. IN NO EVENT SHALL THE UNIVERSITY OF COLORADO BE LIABLE FOR ANY
++ * DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
++ * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
++ * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
++ * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
++ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
++ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
++ */
++
++
++/*
+  * Defintions for the Atheros Wireless LAN controller driver.
+  */
+ #ifndef _DEV_ATH_ATHVAR_H
+@@ -820,6 +850,26 @@
+ 						 * detected radars */
+ 	u_int32_t sc_nexttbtt;
+ 	u_int64_t sc_last_tsf;
++#ifdef COLORADO_CCA
++#define ATH_CCA_BITMASK 0x7F
++	//        u_int32_t sc_txcont_mask;           /* Which operations to perform in txcont configuration */
++	unsigned int sc_disable_cca_mask:8;     /* bitmask for turning off/on parts of 'disable_cca' */
++	unsigned int sc_prev_disable_cca_mask:8;
++	
++	u_int32_t orig_rssi_thresh;
++	u_int32_t orig_phy_nf;
++	u_int32_t orig_diag_sw;
++	u_int32_t orig_dcu_gbl_ifs_sifs;
++	u_int32_t orig_dcu_gbl_ifs_eifs;
++	u_int32_t orig_dcu_gbl_ifs_slot;
++	u_int32_t orig_dcu_gbl_ifs_misc;
++	u_int32_t orig_dcu_misc[4];
++	u_int32_t orig_dcu_chan_time[4];
++	unsigned int orig_sc_beacons;
++	HAL_INT orig_sc_imask;
++
++
++#endif //COLORADO_CCA
+ };
+ 
+ typedef void (*ath_callback) (struct ath_softc *);
+@@ -927,3 +977,9 @@
+ void ath_radar_detected(struct ath_softc *sc, const char* message);
+ 
+ #endif /* _DEV_ATH_ATHVAR_H */
++
++// Local Variables:  
++// mode: c
++// c-file-style: linux
++// compile-command: "make -C .. -k"
++// End: 
+Index: ath/if_ath.c
+===================================================================
+--- ath/if_ath.c	(.../modules/vendor/madwifi/snapshot-2008-02-19)	(revision 14)
++++ ath/if_ath.c	(.../trunk/madwifi-noCCA)	(revision 14)
+@@ -36,7 +36,36 @@
+  * $Id: if_ath.c 3358 2008-02-14 06:34:28Z mentor $
+  */
+ 
++
+ /*
++ * Modifications to enable CCA-less operation, and accompanying text, are
++ * Copyright (c) 2008, Regents of the University of Colorado.
++ * All rights reserved.
++ *
++ * Redistribution and use in source and binary forms, with or without
++ * modification, are permitted provided that the following conditions are met:
++ *     * Redistributions of source code must retain the above copyright
++ *       notice, this list of conditions and the following disclaimer.
++ *     * Redistributions in binary form must reproduce the above copyright
++ *       notice, this list of conditions and the following disclaimer in the
++ *       documentation and/or other materials provided with the distribution.
++ *     * Neither the name of the University of Colorado nor the names of its
++ *       contributors may be used to endorse or promote products derived from
++ *       this software without specific prior written permission.  
++ *
++ * THIS SOFTWARE IS PROVIDED BY THE UNIVERSITY OF COLORADO ``AS IS'' AND ANY
++ * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
++ * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
++ * DISCLAIMED. IN NO EVENT SHALL THE UNIVERSITY OF COLORADO BE LIABLE FOR ANY
++ * DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
++ * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
++ * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
++ * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
++ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
++ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
++ */
++
++/*
+  * Driver for the Atheros Wireless LAN controller.
+  *
+  * This software is derived from work of Atsushi Onoe; his contribution
+@@ -328,6 +357,36 @@
+ 		int direction);
+ #endif /* #ifdef IEEE80211_DEBUG_REFCNT */
+ 
++#if COLORADO_CCA
++//static int disable_cca(struct ieee80211com *ic, u_int32_t mask);
++static int set_cca_mode(struct ath_softc *sc);
++
++#define AR5K_TUNE_RSSI_THRES            255
++#define AR5K_RSSI_THR			0x8018		/* Register Address */
++
++	
++#define AR5K_RSSI_THR_M			0x000000ff	/* Mask for RSSI threshold [5211+] */ //Mask not used, just for reference
++
++#define AR5K_RSSI_THR_BMISS_5211	0x0000ff00	/* Mask for Beacon Missed threshold [5211+] */
++#define	AR5K_RSSI_THR_BMISS_S		8
++#define AR5K_TUNE_BMISS_THRES           7
++
++#define	AR5K_PHY_BASE			0x9800
++#define	AR5K_PHY(_n)			(AR5K_PHY_BASE + ((_n) << 2))
++#define AR5K_PHY_SHIFT_2GHZ		0x00004007
++#define AR5K_PHY_SHIFT_5GHZ		0x00000007
++
++
++
++#ifdef HEISENBUG
++#define EWA_PRINTK(msg, args...) do {			\
++		printk(KERN_INFO "[%s] " msg , __func__, ##args);	\
++} while (0)
++#else  /* ifdef HEISENBUG */
++#define EWA_PRINTK(msg, args...) do {} while (0)
++#endif /* ifdef HEISENBUG */
++#endif	/* COLORADO_CCA */
++
+ /* Regulatory agency testing - continuous transmit support */
+ static void txcont_on(struct ieee80211com *ic);
+ static void txcont_off(struct ieee80211com *ic);
+@@ -1455,6 +1514,13 @@
+ 			ath_beacon_config(sc, NULL);	/* restart beacons */
+ 		ath_hal_intrset(ah, sc->sc_imask);
+ 	}
++#ifdef COLORADO_CCA
++	{					/* GVY removed test */
++	//if (sc->sc_disable_cca){
++		EWA_PRINTK("VAP-create -- re-disabling CCA.\n");
++		set_cca_mode(sc);
++	}
++#endif
+ 
+ 	return vap;
+ }
+@@ -2503,6 +2569,16 @@
+ 	ath_chan_change(sc, ic->ic_curchan);
+ 	ath_set_ack_bitrate(sc, sc->sc_ackrate);
+ 	dev->flags |= IFF_RUNNING;		/* we are ready to go */
++	
++#ifdef COLORADO_CCA
++	//if(sc->sc_disable_cca){
++	sc->sc_disable_cca_mask = 0;
++	sc->sc_prev_disable_cca_mask = 0;
++	//EWA_PRINTK("ath_init -- disabling cca\n");
++	//disable_cca(sc);
++	//}
++#endif
++
+ 	ieee80211_start_running(ic);		/* start all VAPs */
+ #ifdef ATH_TX99_DIAG
+ 	if (sc->sc_tx99 != NULL)
+@@ -2741,6 +2817,16 @@
+ 	ath_update_txpow(sc);		/* update tx power state */
+ 	ath_radar_update(sc);
+ 	ath_setdefantenna(sc, sc->sc_defant);
++
++//This is moved down a few lines in GVY version, but the surrounding code is different.  Don't know what's best.
++#ifdef COLORADO_CCA 
++	{
++		printk(KERN_INFO "Resetting hardware.\n");
++		set_cca_mode(sc);
++	}
++#endif //COLORADO_CCA
++
++
+ 	if (ath_startrecv(sc) != 0)	/* restart recv */
+ 		EPRINTF(sc, "Unable to start receive logic.\n");
+ 	if (sc->sc_softled)
+@@ -5315,10 +5401,25 @@
+ 			 * In AP/IBSS mode we enable the beacon timers and
+ 			 * SWBA interrupts to prepare beacon frames.
+ 			 */
++
++#ifdef COLORADO_CCA
++			/* 
++			 * From GVY version.  Why do we only do this beacon
++			 * stuff if that bit is 0?
++			 */
++
++			if((sc->sc_disable_cca_mask & 0x08)==0){
++				intval |= HAL_BEACON_ENA;
++				sc->sc_imask |= HAL_INT_SWBA;
++				ath_set_beacon_cal(sc, 1);
++				ath_beaconq_config(sc);					
++			}
++#else //COLORADO_CCA
+ 			intval |= HAL_BEACON_ENA;
+ 			sc->sc_imask |= HAL_INT_SWBA;
+ 			ath_set_beacon_cal(sc, 1);
+-			ath_beaconq_config(sc);
++			ath_beaconq_config(sc);			
++#endif //COLORADO_CCA
+ 		} else
+ 			ath_set_beacon_cal(sc, 0);
+ 
+@@ -8669,6 +8770,13 @@
+ 		/* Change channels and update the h/w rate map
+ 		 * if we're switching; e.g. 11a to 11b/g. */
+ 		ath_chan_change(sc, chan);
++
++#ifdef COLORADO_CCA
++		{
++			EWA_PRINTK("ath_chan_set -- re-applying CCA setting\n");
++			set_cca_mode(sc);
++		}
++#endif
+ 		 /* Re-enable rx framework. */
+ 		if (ath_startrecv(sc) != 0) {
+ 			EPRINTF(sc, "Unable to restart receive logic!\n");
+@@ -10427,6 +10535,9 @@
+ 	ATH_RP_IGNORED 		= 24,
+ 	ATH_RADAR_IGNORED       = 25,
+ 	ATH_MAXVAPS  		= 26,
++#if COLORADO_CCA
++	ATH_NOCCA               = 27,
++#endif
+ };
+ 
+ static int
+@@ -10608,6 +10719,15 @@
+ 			case ATH_RADAR_IGNORED:
+ 				sc->sc_radar_ignored = val;
+ 				break;
++#if COLORADO_CCA
++			case ATH_NOCCA:				
++				//sc->sc_disable_cca = (val>0 ? 1:0);
++				//sc->sc_cca_extrabits = val & ATH_CCA_BITMASK;
++				sc->sc_disable_cca_mask = val & ATH_CCA_BITMASK;
++				//disable_cca(sc);
++				ath_reset(sc->sc_dev);
++				break;
++#endif //COLORADO_CCA
+ 			default:
+ 				ret = -EINVAL;
+ 				break;
+@@ -10672,8 +10792,15 @@
+ 			val = sc->sc_rp_ignored;
+ 			break;
+ 		case ATH_RADAR_IGNORED:
+-			val = sc->sc_radar_ignored;
++		        val = sc->sc_radar_ignored;
++		        break;
++#if COLORADO_CCA
++		case ATH_NOCCA:			
++			val = sc->sc_disable_cca_mask;
++			printk(KERN_INFO "sc->sc_disable_cca_mask = 0x%x\n", sc->sc_disable_cca_mask);
+ 			break;
++#endif //COLORADO_CCA
++
+ 		default:
+ 			ret = -EINVAL;
+ 			break;
+@@ -10851,6 +10978,14 @@
+ 	  .proc_handler = ath_sysctl_halparam,
+ 	  .extra2	= (void *)ATH_RADAR_IGNORED,
+ 	},
++#ifdef COLORADO_CCA
++	{ .ctl_name	= CTL_AUTO,
++	  .procname     = "disable_cca",
++	  .mode         = 0644,
++	  .proc_handler = ath_sysctl_halparam,
++	  .extra2	= (void *)ATH_NOCCA,
++	},
++#endif //COLORADO_CCA
+ 	{ 0 }
+ };
+ 
+@@ -11134,7 +11269,206 @@
+ 	}
+ 	return rt->info[closest_rate_ix].rateCode;
+ }
++/*
++ * disable / enable cca, NAV, etc as indicated.
++ */
++static int set_cca_mode(struct ath_softc *sc)
++{
++	struct ath_hal *ah = sc->sc_ah;
++	unsigned int mask = sc->sc_disable_cca_mask;
+ 
++	/* only perform operations that are new */
++	unsigned int changed = sc->sc_disable_cca_mask ^ sc->sc_prev_disable_cca_mask;
++	int ret;
++
++	/* Register defns and code from ar5k driver & txcont */
++#define AR5K_AR5212_TXCFG				0x0030
++#define AR5K_AR5212_TXCFG_TXCONT_ENABLE			0x00000080
++
++#define AR5K_AR5212_PHY_NF				0x9864
++#define AR5K_AR5212_ADDAC_TEST				0x8054
++#define AR5K_AR5212_DIAG_SW				0x8048
++#define AR5K_AR5212_DIAG_SW_IGNOREPHYCS			0x00100000
++#define AR5K_AR5212_DIAG_SW_IGNORENAV			0x00200000
++#define AR5K_AR5212_RSSI_THR				0x8018
++
++#define AR5K_AR5212_DCU_GBL_IFS_SIFS			0x1030
++#define AR5K_AR5212_DCU_GBL_IFS_SIFS_M			0x0000ffff
++
++#define AR5K_AR5212_DCU_GBL_IFS_EIFS			0x10b0
++#define AR5K_AR5212_DCU_GBL_IFS_EIFS_M			0x0000ffff
++
++#define AR5K_AR5212_DCU_GBL_IFS_SLOT			0x1070
++#define AR5K_AR5212_DCU_GBL_IFS_SLOT_M			0x0000ffff
++
++#define AR5K_AR5212_DCU_GBL_IFS_MISC			0x10f0
++#define	AR5K_AR5212_DCU_GBL_IFS_MISC_USEC_DUR		0x000ffc00
++#define	AR5K_AR5212_DCU_GBL_IFS_MISC_DCU_ARB_DELAY	0x00300000
++#define	AR5K_AR5212_DCU_GBL_IFS_MISC_SIFS_DUR_USEC	0x000003f0
++#define	AR5K_AR5212_DCU_GBL_IFS_MISC_LFSR_SLICE		0x00000007
++#define	AR5K_AR5212_DCU_MISC_POST_FR_BKOFF_DIS		0x00200000
++#define	AR5K_AR5212_DCU_CHAN_TIME_ENABLE		0x00100000
++
++#define	AR5K_AR5212_DCU(_n, _a)		                AR5K_AR5212_QCU(_n, _a)
++#define	AR5K_AR5212_QCU(_n, _a)		                (((_n) << 2) + _a)
++#define AR5K_AR5212_DCU_CHAN_TIME(_n)			AR5K_AR5212_DCU(_n, 0x10c0)
++#define AR5K_AR5212_DCU_MISC(_n)			AR5K_AR5212_DCU(_n, 0x1100)
++#define	AR5K_AR5212_DCU_CHAN_TIME_DUR			0x000ffff
++
++  
++	if (ar_device(sc->devid) == 5212 || ar_device(sc->devid) == 5213) {
++		/* registers taken from openhal */
++		if ((mask & 0x01) > 0) {
++			if ((changed & 0x01) > 0) {
++				/* store original values */
++				sc->orig_rssi_thresh = OS_REG_READ(ah, AR5K_AR5212_RSSI_THR);
++				sc->orig_phy_nf = OS_REG_READ(ah, AR5K_AR5212_PHY_NF);
++				sc->orig_diag_sw = OS_REG_READ(ah, AR5K_AR5212_DIAG_SW);
++			}
++			EWA_PRINTK("RSSI, NF, carrier sense\n");
++			/*  Set RSSI threshold to extreme, hear nothing */
++			OS_REG_WRITE(ah, AR5K_AR5212_RSSI_THR, 0xffffffff);
++			/*  Blast away at noise floor, assuming AGC has
++			 *  already set it... we want to trash it. */
++			OS_REG_WRITE(ah, AR5K_AR5212_PHY_NF,   0xffffffff);
++
++			/* Ignore real and virtual carrier sensing, and reception */
++			OS_REG_WRITE(ah, AR5K_AR5212_DIAG_SW,
++				     OS_REG_READ(ah, AR5K_AR5212_DIAG_SW) |
++				     AR5K_AR5212_DIAG_SW_IGNOREPHYCS |
++				     AR5K_AR5212_DIAG_SW_IGNORENAV);
++		} else if ((mask & 0x01) == 0 && (changed & 0x01) > 0) {
++			/* restore original values */
++			OS_REG_WRITE(ah, AR5K_AR5212_RSSI_THR, sc->orig_rssi_thresh);
++			OS_REG_WRITE(ah, AR5K_AR5212_PHY_NF, sc->orig_phy_nf);
++			OS_REG_WRITE(ah, AR5K_AR5212_DIAG_SW, sc->orig_diag_sw);
++		} /* mask 0x01 */
++
++		if ((mask & 0x02) > 0) {
++			if ((changed & 0x02) > 0) {
++				/* store original values */
++				sc->orig_dcu_gbl_ifs_sifs = OS_REG_READ(ah, AR5K_AR5212_DCU_GBL_IFS_SIFS);
++				sc->orig_dcu_gbl_ifs_eifs = OS_REG_READ(ah, AR5K_AR5212_DCU_GBL_IFS_EIFS);
++				sc->orig_dcu_gbl_ifs_slot = OS_REG_READ(ah, AR5K_AR5212_DCU_GBL_IFS_SLOT);
++				sc->orig_dcu_gbl_ifs_misc = OS_REG_READ(ah, AR5K_AR5212_DCU_GBL_IFS_MISC);
++			}
++			EWA_PRINTK("SIFS, EIFS, slot time\n");
++			
++			/*  Set SIFS to rediculously small value...  */
++			OS_REG_WRITE(ah, AR5K_AR5212_DCU_GBL_IFS_SIFS,
++				     (OS_REG_READ(ah,
++						  AR5K_AR5212_DCU_GBL_IFS_SIFS) &
++				      ~AR5K_AR5212_DCU_GBL_IFS_SIFS_M) | 1);
++			/*  Set EIFS to rediculously small value...  */
++			OS_REG_WRITE(ah, AR5K_AR5212_DCU_GBL_IFS_EIFS,
++				     (OS_REG_READ(ah,
++						  AR5K_AR5212_DCU_GBL_IFS_EIFS) &
++				      ~AR5K_AR5212_DCU_GBL_IFS_EIFS_M) | 1);
++			/*  Set slot time to rediculously small value...  */
++			OS_REG_WRITE(ah, AR5K_AR5212_DCU_GBL_IFS_SLOT,
++				     (OS_REG_READ(ah,
++						  AR5K_AR5212_DCU_GBL_IFS_SLOT) &
++				      ~AR5K_AR5212_DCU_GBL_IFS_SLOT_M) | 1);
++			/* Do we even know what we're negating here? */
++			OS_REG_WRITE(ah, AR5K_AR5212_DCU_GBL_IFS_MISC,
++				     OS_REG_READ(ah, AR5K_AR5212_DCU_GBL_IFS_MISC) &
++				     ~AR5K_AR5212_DCU_GBL_IFS_MISC_SIFS_DUR_USEC &
++				     ~AR5K_AR5212_DCU_GBL_IFS_MISC_USEC_DUR &
++				     ~AR5K_AR5212_DCU_GBL_IFS_MISC_DCU_ARB_DELAY &
++				     ~AR5K_AR5212_DCU_GBL_IFS_MISC_LFSR_SLICE);
++		} else if ((mask & 0x02) == 0 && (changed & 0x02) > 0) {
++			/* restore original values */
++			OS_REG_WRITE(ah, AR5K_AR5212_DCU_GBL_IFS_SIFS, sc->orig_dcu_gbl_ifs_sifs);
++			OS_REG_WRITE(ah, AR5K_AR5212_DCU_GBL_IFS_EIFS, sc->orig_dcu_gbl_ifs_eifs);
++			OS_REG_WRITE(ah, AR5K_AR5212_DCU_GBL_IFS_SLOT, sc->orig_dcu_gbl_ifs_slot);
++			OS_REG_WRITE(ah, AR5K_AR5212_DCU_GBL_IFS_MISC, sc->orig_dcu_gbl_ifs_misc);
++		} /* mask 0x02 */
++
++		if ((mask & 0x04) > 0) {
++			int q;
++			EWA_PRINTK("Queue backoff, queue full?");
++
++			/*  Disable queue backoff (default was like 256 or 0x100) */
++			for (q = 0; q < 4; q++) {
++				if ((changed & 0x04) > 0) {
++					/* store original values */
++					sc->orig_dcu_misc[q] = OS_REG_READ(ah, AR5K_AR5212_DCU_MISC(q));
++					sc->orig_dcu_chan_time[q] = OS_REG_READ(ah, AR5K_AR5212_DCU_CHAN_TIME(q));
++				}
++				OS_REG_WRITE(ah, AR5K_AR5212_DCU_MISC(q),
++					     AR5K_AR5212_DCU_MISC_POST_FR_BKOFF_DIS);
++				/*  Set the channel time (burst time) to the
++				 *  highest setting the register can take,
++				 *  forget this compliant 8192 limit... */
++				OS_REG_WRITE(ah, AR5K_AR5212_DCU_CHAN_TIME(q),
++					     AR5K_AR5212_DCU_CHAN_TIME_ENABLE |
++					     AR5K_AR5212_DCU_CHAN_TIME_DUR);
++			}
++		} else if ((mask & 0x04) == 0 && (changed & 0x04) > 0) {
++			int q;
++			for (q = 0; q < 4; q++) {
++				/* restore original values */
++				OS_REG_WRITE(ah, AR5K_AR5212_DCU_MISC(q), sc->orig_dcu_misc[q]);
++				OS_REG_WRITE(ah, AR5K_AR5212_DCU_CHAN_TIME(q), sc->orig_dcu_chan_time[q]);
++			}
++		} /* mask 0x04 */
++
++		if ((mask & 0x08) > 0) {
++			if ((changed & 0x08) > 0) {
++				/* store orginal values */
++				sc->orig_sc_beacons = sc->sc_beacons;
++				sc->orig_sc_imask = sc->sc_imask;
++			}
++
++			/* Disable beacons and beacon miss interrupts */
++			sc->sc_beacons = 0;
++			sc->sc_imask &= ~(HAL_INT_SWBA | HAL_INT_BMISS);
++			ath_hal_intrset(ah, sc->sc_imask);
++		} else if ((mask & 0x08) == 0 && (changed & 0x08) > 0) {
++			/* restore original values */
++			sc->sc_beacons = sc->orig_sc_beacons;
++			sc->sc_imask = sc->orig_sc_imask;
++			ath_hal_intrset(ah, sc->sc_imask);
++		} /* mask 0x08 */
++		ret = 0;
++	}  else {
++		ret = 1;
++	}
++
++	sc->sc_prev_disable_cca_mask = sc->sc_disable_cca_mask;
++	return ret;
++
++#undef AR5K_AR5212_TXCFG
++#undef AR5K_AR5212_TXCFG_TXCONT_ENABLE
++#undef AR5K_AR5212_PHY_NF
++#undef AR5K_AR5212_DIAG_SW
++#undef AR5K_AR5212_ADDAC_TEST
++#undef AR5K_AR5212_DIAG_SW
++#undef AR5K_AR5212_DIAG_SW_IGNOREPHYCS
++#undef AR5K_AR5212_DIAG_SW_IGNORENAV
++#undef AR5K_AR5212_RSSI_THR
++#undef AR5K_AR5212_DCU_GBL_IFS_SIFS
++#undef AR5K_AR5212_DCU_GBL_IFS_SIFS_M
++#undef AR5K_AR5212_DCU_GBL_IFS_EIFS
++#undef AR5K_AR5212_DCU_GBL_IFS_EIFS_M
++#undef AR5K_AR5212_DCU_GBL_IFS_SLOT
++#undef AR5K_AR5212_DCU_GBL_IFS_SLOT_M
++#undef AR5K_AR5212_DCU_GBL_IFS_MISC
++#undef AR5K_AR5212_DCU_GBL_IFS_MISC_USEC_DUR
++#undef AR5K_AR5212_DCU_GBL_IFS_MISC_DCU_ARB_DELAY
++#undef AR5K_AR5212_DCU_GBL_IFS_MISC_SIFS_DUR_USEC
++#undef AR5K_AR5212_DCU_GBL_IFS_MISC_LFSR_SLICE
++#undef AR5K_AR5212_DCU_MISC_POST_FR_BKOFF_DIS
++#undef AR5K_AR5212_DCU_CHAN_TIME_ENABLE
++#undef AR5K_AR5212_DCU
++#undef AR5K_AR5212_QCU
++#undef AR5K_AR5212_DCU_CHAN_TIME
++#undef AR5K_AR5212_DCU_MISC
++#undef AR5K_AR5212_DCU_CHAN_TIME_DUR
++	
++}
++
++
+ /*
+ Configure the radio for continuous transmission
+ */
+@@ -12878,3 +13212,8 @@
+ 	return bf;
+ }
+ 
++// Local Variables:  
++// mode: c
++// c-file-style: "linux"
++// compile-command: "make -C .. -k"
++// End: 
+Index: Makefile
+===================================================================
+--- Makefile	(.../modules/vendor/madwifi/snapshot-2008-02-19)	(revision 14)
++++ Makefile	(.../trunk/madwifi-noCCA)	(revision 14)
+@@ -52,7 +52,7 @@
+ 
+ obj-y := ath/ ath_hal/ ath_rate/ net80211/
+ 
+-all: modules tools
++all: modules tools tags
+ 
+ modules: configcheck svnversion.h
+ ifdef LINUX24
+@@ -200,3 +200,8 @@
+ 	fi
+ 	
+ 	@echo "ok."
++
++.PHONY: tags
++tags: 
++	find . -name '*.h' -or -name '*.c' -not -wholename '*/.svn/*' -print0 | \
++	xargs -0 etags --members
