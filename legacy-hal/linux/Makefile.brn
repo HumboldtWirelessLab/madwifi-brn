@@ -1,0 +1,22 @@
+all: clean hal
+
+hal:
+	mkdir obj/i386-elf
+	make TARGET=i386-elf BOARD_TYPE=localPC AH_SUPPORT_XR=1 release
+	mv obj/i386-elf/opt_ah.h obj/i386-elf/i386-elf.opt_ah.h
+
+driver: clean hal 
+	(cd ../..;make clean)
+	(cd ../../hal/public;mv i386-elf.hal.o.uu i386-elf.hal.o.uu.bak; mv i386-elf.opt_ah.h i386-elf.opt_ah.h.bak)
+	cp obj/i386-elf/i386-elf.hal.o.uu ../../hal/public/
+	cp obj/i386-elf/i386-elf.opt_ah.h ../../hal/public/
+	(cd ../..; make KERNELPATH=${KERNELPATH})
+	(cd ../../hal/public;rm i386-elf.hal.o.uu; rm i386-elf.opt_ah.h)
+	(cd ../../hal/public;mv i386-elf.hal.o.uu.bak i386-elf.hal.o.uu; mv i386-elf.opt_ah.h.bak i386-elf.opt_ah.h)
+
+clean:
+	make TARGET=i386-elf BOARD_TYPE=localPC AH_SUPPORT_XR=1 clean
+
+driverclean: clean
+	(cd ../..;make clean)
+
