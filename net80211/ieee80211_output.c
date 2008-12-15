@@ -261,9 +261,12 @@ ieee80211_hardstart(struct sk_buff *skb, struct net_device *dev)
 	
 	if (vap->iv_opmode == IEEE80211_M_MONITOR) {
 		
-		if ( ( skb->dev->type == ARPHRD_IEEE80211_ATHDESC ) || ( skb->dev->type == ARPHRD_IEEE80211_ATHDESC2 ) ) {
+		if ( ( (vap->iv_flags_ext & IEEE80211_FEXT_MACCLONE) != 0 ) && ( ( skb->dev->type == ARPHRD_IEEE80211_ATHDESC ) || ( skb->dev->type == ARPHRD_IEEE80211_ATHDESC2 ) ) ) {
 		
-		    wf = (struct ieee80211_frame *)&(skb->data[ATHDESC_HEADER_SIZE]);
+		    if ( skb->dev->type == ARPHRD_IEEE80211_ATHDESC )
+			wf = (struct ieee80211_frame *)&(skb->data[ATHDESC_HEADER_SIZE]);
+		    else
+			wf = (struct ieee80211_frame *)&(skb->data[ATHDESC2_HEADER_SIZE]);
 	    
 		    if ((vap->iv_flags_ext & IEEE80211_FEXT_MACCLONE) != 0 && 
 				    vap->iv_opmode == IEEE80211_M_MONITOR && 

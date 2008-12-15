@@ -279,7 +279,9 @@ ieee80211_monitor_encap(struct ieee80211vap *vap, struct sk_buff *skb)
 			if ( skb->dev->type == ARPHRD_IEEE80211_ATHDESC )
 				skb_pull(skb, ATHDESC_HEADER_SIZE);
 			else
+			{
 				skb_pull(skb, ATHDESC2_HEADER_SIZE);
+			}
 		}
 		break;
 	}
