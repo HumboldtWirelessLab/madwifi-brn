@@ -129,6 +129,8 @@ ieee80211_monitor_encap(struct ieee80211vap *vap, struct sk_buff *skb)
 {
 	struct ieee80211_channel *chan;
 	struct ieee80211com *ic;
+    struct ath2_header *ath2_h;
+    struct ath2_tx_anno *ath2_txanno;
 
 	struct ieee80211_phy_params *ph = &(SKB_CB(skb)->phy);
 	SKB_CB(skb)->flags = M_RAW;
@@ -297,18 +299,19 @@ ieee80211_monitor_encap(struct ieee80211vap *vap, struct sk_buff *skb)
 			ph->try[2] = desc->xmit_tries2;
 			ph->try[3] = desc->xmit_tries3;
 
-			ic = vap->iv_ic;
-			//ic->ic_curchan = chan;
 			/*I edit the current channel structure, the other option is to create new structure*/
+			ic = vap->iv_ic;
 			chan = ic->ic_curchan;
-			if ( chan->ic_ieee == 6 )
-			  chan->ic_ieee = 11;
-			else
-			  chan->ic_ieee = 6;
-
-			chan->ic_freq = ieee80211_ieee2mhz( chan->ic_ieee , chan->ic_flags);
+			ath2_h = ( struct ath2_header*)(skb->data + ATHDESC_HEADER_SIZE);
+            ath2_txanno = ath2_h->tx_anno;
 			
-			ic->ic_set_channel(ic);
+			if ( ( ath2_txanno->channel != 0 ) && ( ath2_txanno->channel != chan->ic_ieee ) ) {
+			  printk("channelswitch: %d to %d\n",chan->ic_ieee,ath2_txanno->channel);
+			  chan->ic_ieee = ath2_txanno->channel;
+			  chan->ic_freq = ieee80211_ieee2mhz( chan->ic_ieee , chan->ic_flags);
+			  ic->ic_set_channel(ic);
+            }
+            /*end of channel switching*/
 
 			skb_pull(skb, ATHDESC2_HEADER_SIZE);
 		}
