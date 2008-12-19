@@ -127,6 +127,9 @@ struct ar5212_openbsd_desc {
 void
 ieee80211_monitor_encap(struct ieee80211vap *vap, struct sk_buff *skb)
 {
+	struct ieee80211_channel *chan;
+	struct ieee80211com *ic;
+
 	struct ieee80211_phy_params *ph = &(SKB_CB(skb)->phy);
 	SKB_CB(skb)->flags = M_RAW;
 	SKB_NI(skb) = ieee80211_ref_node(vap->iv_bss);
@@ -276,15 +279,12 @@ ieee80211_monitor_encap(struct ieee80211vap *vap, struct sk_buff *skb)
 			ph->try[2] = desc->xmit_tries2;
 			ph->try[3] = desc->xmit_tries3;
 			
-//			struct ieee80211_channel chan;
-//			ath_chan_set(struct ath_softc *sc, struct ieee80211_channel *chan)
-			
 			skb_pull(skb, ATHDESC_HEADER_SIZE);
 		}
 		break;
 	}
 	case ARPHRD_IEEE80211_ATHDESC2: {
-		if (skb->len > ATHDESC_HEADER_SIZE) {
+		if (skb->len > ATHDESC2_HEADER_SIZE) {
 			struct ar5212_openbsd_desc *desc =
 				(struct ar5212_openbsd_desc *)(skb->data + 8);
 			ph->power = desc->xmit_power;
@@ -296,12 +296,21 @@ ieee80211_monitor_encap(struct ieee80211vap *vap, struct sk_buff *skb)
 			ph->try[1] = desc->xmit_tries1;
 			ph->try[2] = desc->xmit_tries2;
 			ph->try[3] = desc->xmit_tries3;
-			if ( skb->dev->type == ARPHRD_IEEE80211_ATHDESC )
-				skb_pull(skb, ATHDESC_HEADER_SIZE);
+
+			ic = vap->iv_ic;
+			//ic->ic_curchan = chan;
+			/*I edit the current channel structure, the other option is to create new structure*/
+			chan = ic->ic_curchan;
+			if ( chan->ic_ieee == 6 )
+			  chan->ic_ieee = 11;
 			else
-			{
-				skb_pull(skb, ATHDESC2_HEADER_SIZE);
-			}
+			  chan->ic_ieee = 6;
+
+			chan->ic_freq = ieee80211_ieee2mhz( chan->ic_ieee , chan->ic_flags);
+			
+			ic->ic_set_channel(ic);
+
+			skb_pull(skb, ATHDESC2_HEADER_SIZE);
 		}
 		break;
 	}
