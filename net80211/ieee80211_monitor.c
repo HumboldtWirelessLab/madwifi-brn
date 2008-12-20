@@ -304,7 +304,7 @@ ieee80211_monitor_encap(struct ieee80211vap *vap, struct sk_buff *skb)
 			ath2_h = ( struct ath2_header*)(skb->data + ATHDESC_HEADER_SIZE);
 			
 			if ( ( ath2_h->anno.tx_anno.channel != 0 ) && ( ath2_h->anno.tx_anno.channel != chan->ic_ieee ) ) {
-			  printk("channelswitch: %d to %d\n",chan->ic_ieee,ath2_h->anno.tx_anno.channel);
+//			  printk("channelswitch: %d to %d\n",chan->ic_ieee,ath2_h->anno.tx_anno.channel);
 			  chan->ic_ieee = ath2_h->anno.tx_anno.channel;
 			  chan->ic_freq = ieee80211_ieee2mhz( chan->ic_ieee , chan->ic_flags);
 			  ic->ic_set_channel(ic);
