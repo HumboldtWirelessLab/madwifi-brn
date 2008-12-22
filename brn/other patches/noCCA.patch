@@ -105,65 +105,10 @@ Index: Makefile.inc
  # KMODPATH nominates the directory where the modules will be
  # installed to
  KMODPATH :=	/lib/modules/$(KERNELRELEASE)/net
-Index: citation.bib
-===================================================================
---- citation.bib	(.../modules/vendor/madwifi/snapshot-2008-02-19)	(revision 0)
-+++ citation.bib	(.../trunk/madwifi-noCCA)	(revision 14)
-@@ -0,0 +1,12 @@
-+@TechReport{Anderson2008Commodity,
-+  author = 	 {Eric Anderson and Gary Yee and Caleb Phillips and
-+                  Douglas Sicker and Dirk Grunwald},
-+  title = 	 {Commodity AR52XX-Based Wireless Adapters as a Research Platform},
-+  institution =  {University of Colorado at Boulder},
-+  year = 	 {2008},
-+  month =	 {April},
-+  type =	 {Technical Report},
-+  number =	 {CU-CS-XXXX-08},
-+  address =	 {Department of Computer Science, Campus Box 430},
-+}
-+
 Index: ath/if_athvar.h
 ===================================================================
 --- ath/if_athvar.h	(.../modules/vendor/madwifi/snapshot-2008-02-19)	(revision 14)
 +++ ath/if_athvar.h	(.../trunk/madwifi-noCCA)	(revision 14)
-@@ -36,7 +36,37 @@
-  * $Id: if_athvar.h 3358 2008-02-14 06:34:28Z mentor $
-  */
- 
-+
- /*
-+ * Modifications to enable CCA-less operation, and accompanying text, are
-+ * Copyright (c) 2008, Regents of the University of Colorado.
-+ * All rights reserved.
-+ *
-+ * Redistribution and use in source and binary forms, with or without
-+ * modification, are permitted provided that the following conditions are met:
-+ *     * Redistributions of source code must retain the above copyright
-+ *       notice, this list of conditions and the following disclaimer.
-+ *     * Redistributions in binary form must reproduce the above copyright
-+ *       notice, this list of conditions and the following disclaimer in the
-+ *       documentation and/or other materials provided with the distribution.
-+ *     * Neither the name of the University of Colorado nor the names of its
-+ *       contributors may be used to endorse or promote products derived from
-+ *       this software without specific prior written permission.  
-+ *
-+ * THIS SOFTWARE IS PROVIDED BY THE UNIVERSITY OF COLORADO ``AS IS'' AND ANY
-+ * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-+ * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-+ * DISCLAIMED. IN NO EVENT SHALL THE UNIVERSITY OF COLORADO BE LIABLE FOR ANY
-+ * DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-+ * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-+ * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
-+ * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-+ */
-+
-+
-+/*
-  * Defintions for the Atheros Wireless LAN controller driver.
-  */
- #ifndef _DEV_ATH_ATHVAR_H
 @@ -820,6 +850,26 @@
  						 * detected radars */
  	u_int32_t sc_nexttbtt;
@@ -191,57 +136,10 @@ Index: ath/if_athvar.h
  };
  
  typedef void (*ath_callback) (struct ath_softc *);
-@@ -927,3 +977,9 @@
- void ath_radar_detected(struct ath_softc *sc, const char* message);
- 
- #endif /* _DEV_ATH_ATHVAR_H */
-+
-+// Local Variables:  
-+// mode: c
-+// c-file-style: linux
-+// compile-command: "make -C .. -k"
-+// End: 
 Index: ath/if_ath.c
 ===================================================================
 --- ath/if_ath.c	(.../modules/vendor/madwifi/snapshot-2008-02-19)	(revision 14)
 +++ ath/if_ath.c	(.../trunk/madwifi-noCCA)	(revision 14)
-@@ -36,7 +36,36 @@
-  * $Id: if_ath.c 3358 2008-02-14 06:34:28Z mentor $
-  */
- 
-+
- /*
-+ * Modifications to enable CCA-less operation, and accompanying text, are
-+ * Copyright (c) 2008, Regents of the University of Colorado.
-+ * All rights reserved.
-+ *
-+ * Redistribution and use in source and binary forms, with or without
-+ * modification, are permitted provided that the following conditions are met:
-+ *     * Redistributions of source code must retain the above copyright
-+ *       notice, this list of conditions and the following disclaimer.
-+ *     * Redistributions in binary form must reproduce the above copyright
-+ *       notice, this list of conditions and the following disclaimer in the
-+ *       documentation and/or other materials provided with the distribution.
-+ *     * Neither the name of the University of Colorado nor the names of its
-+ *       contributors may be used to endorse or promote products derived from
-+ *       this software without specific prior written permission.  
-+ *
-+ * THIS SOFTWARE IS PROVIDED BY THE UNIVERSITY OF COLORADO ``AS IS'' AND ANY
-+ * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-+ * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-+ * DISCLAIMED. IN NO EVENT SHALL THE UNIVERSITY OF COLORADO BE LIABLE FOR ANY
-+ * DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-+ * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-+ * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
-+ * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-+ */
-+
-+/*
-  * Driver for the Atheros Wireless LAN controller.
-  *
-  * This software is derived from work of Atsushi Onoe; his contribution
 @@ -328,6 +357,36 @@
  		int direction);
  #endif /* #ifdef IEEE80211_DEBUG_REFCNT */
@@ -633,34 +531,3 @@ Index: ath/if_ath.c
  /*
  Configure the radio for continuous transmission
  */
-@@ -12878,3 +13212,8 @@
- 	return bf;
- }
- 
-+// Local Variables:  
-+// mode: c
-+// c-file-style: "linux"
-+// compile-command: "make -C .. -k"
-+// End: 
-Index: Makefile
-===================================================================
---- Makefile	(.../modules/vendor/madwifi/snapshot-2008-02-19)	(revision 14)
-+++ Makefile	(.../trunk/madwifi-noCCA)	(revision 14)
-@@ -52,7 +52,7 @@
- 
- obj-y := ath/ ath_hal/ ath_rate/ net80211/
- 
--all: modules tools
-+all: modules tools tags
- 
- modules: configcheck svnversion.h
- ifdef LINUX24
-@@ -200,3 +200,8 @@
- 	fi
- 	
- 	@echo "ok."
-+
-+.PHONY: tags
-+tags: 
-+	find . -name '*.h' -or -name '*.c' -not -wholename '*/.svn/*' -print0 | \
-+	xargs -0 etags --members
