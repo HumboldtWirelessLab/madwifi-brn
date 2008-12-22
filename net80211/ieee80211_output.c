@@ -282,7 +282,7 @@ ieee80211_hardstart(struct sk_buff *skb, struct net_device *dev)
 		    }
 		}
 		
-		if ( ( (vap->iv_flags_ext & IEEE80211_FEXT_MACCLONE) != 0 ) && ( skb->dev->type == ARPHRD_IEEE80211_ATHDESC2 ) )
+		if ( ( (vap->iv_flags_ext & IEEE80211_FEXT_CHANNELSWITCH) != 0 ) && ( skb->dev->type == ARPHRD_IEEE80211_ATHDESC2 ) )
 		{
 			/*I edit the current channel structure, the other option is to create new structure*/
 			chan = ic->ic_curchan;
