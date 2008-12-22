@@ -236,6 +236,10 @@ ieee80211_hardstart(struct sk_buff *skb, struct net_device *dev)
 	struct ether_header *eh = NULL;
 	struct ieee80211_frame *wf = NULL;
 
+	struct ieee80211_channel *chan;
+	struct ath2_header *ath2_h;
+
+
 	/* Reset the SKB of new frames reaching this layer BEFORE
 	 * we invoke ieee80211_skb_track. */
 	memset(SKB_CB(skb), 0, sizeof(struct ieee80211_cb));
@@ -276,6 +280,23 @@ ieee80211_hardstart(struct sk_buff *skb, struct net_device *dev)
 				goto bad;
 			    }
 		    }
+		}
+		
+		if ( ( (vap->iv_flags_ext & IEEE80211_FEXT_MACCLONE) != 0 ) && ( skb->dev->type == ARPHRD_IEEE80211_ATHDESC2 ) )
+		{
+			/*I edit the current channel structure, the other option is to create new structure*/
+			chan = ic->ic_curchan;
+			ath2_h = ( struct ath2_header*)(skb->data + ATHDESC_HEADER_SIZE);
+			
+			if ( ( ath2_h->anno.tx_anno.channel != 0 ) && ( ath2_h->anno.tx_anno.channel != chan->ic_ieee ) ) {
+				//printk("channelswitch: %d to %d\n",chan->ic_ieee,ath2_h->anno.tx_anno.channel);
+				chan->ic_ieee = ath2_h->anno.tx_anno.channel;
+				chan->ic_freq = ieee80211_ieee2mhz( chan->ic_ieee , chan->ic_flags);
+				//see ieee80211_input.c and what is done here						       
+				ic->ic_set_channel(ic);
+            }
+            /*end of channel switching*/
+	
 		}
 
 		ieee80211_monitor_encap(vap, skb);

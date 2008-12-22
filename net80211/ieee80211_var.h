@@ -604,6 +604,7 @@ MALLOC_DECLARE(M_80211_VAP);
 #define IEEE80211_FEXT_DROPUNENC_EAPOL	0x00000800	/* CONF: drop unencrypted eapol frames */
 #define IEEE80211_FEXT_APPIE_UPDATE	0x00001000	/* STATE: beacon APP IE updated */
 #define IEEE80211_FEXT_MACCLONE         0x40000000      /* STATUS: mac cloning */
+#define IEEE80211_FEXT_CHANNELSWITCH    0x80000000      /* STATUS: channel switching */
 
 #define IEEE80211_COM_UAPSD_ENABLE(_ic)		((_ic)->ic_flags_ext |= IEEE80211_FEXT_UAPSD)
 #define IEEE80211_COM_UAPSD_DISABLE(_ic)	((_ic)->ic_flags_ext &= ~IEEE80211_FEXT_UAPSD)

@@ -2891,6 +2891,12 @@ ieee80211_ioctl_setparam(struct net_device *dev, struct iw_request_info *info,
 			ATH_UNLOCK(sc);
 		}
 		break;
+	case IEEE80211_PARAM_CHANNELSWITCH:
+		if (value)
+			vap->iv_flags_ext |= IEEE80211_FEXT_CHANNELSWITCH;
+		else
+			vap->iv_flags_ext &= ~IEEE80211_FEXT_CHANNELSWITCH;
+		break;		
 #ifdef ATH_REVERSE_ENGINEERING
 	case IEEE80211_PARAM_DUMPREGS:
 		ieee80211_dump_registers(dev, info, w, extra);
@@ -3231,6 +3237,9 @@ ieee80211_ioctl_getparam(struct net_device *dev, struct iw_request_info *info,
 		break;
 	case IEEE80211_PARAM_MACCLONE:
 		param[0] = (vap->iv_flags_ext & IEEE80211_FEXT_MACCLONE) != 0;
+		break;
+	case IEEE80211_PARAM_CHANNELSWITCH:
+		param[0] = (vap->iv_flags_ext & IEEE80211_FEXT_CHANNELSWITCH) != 0;
 		break;
 	default:
 		return -EOPNOTSUPP;
@@ -5688,6 +5697,10 @@ static const struct iw_priv_args ieee80211_priv_args[] = {
 	  IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 1, 0, "macclone" },
 	{ IEEE80211_PARAM_MACCLONE,
 	  0, IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 1, "get_macclone" },
+	{ IEEE80211_PARAM_CHANNELSWITCH,
+	  IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 1, 0, "channelswitch" },
+	{ IEEE80211_PARAM_CHANNELSWITCH,
+	  0, IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 1, "get_chan_switch" },
 	
 #ifdef ATH_REVERSE_ENGINEERING
 	/*

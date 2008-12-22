@@ -651,6 +651,7 @@ enum {
 	IEEE80211_PARAM_LEAKTXBUFS		= 82,	/* Leak tx buffers */
 
 	IEEE80211_PARAM_MACCLONE                = 83,   /* MAC cloning */
+	IEEE80211_PARAM_CHANNELSWITCH           = 84,   /* Channel Switch */
 };
 
 #define	SIOCG80211STATS			(SIOCDEVPRIVATE+2)
