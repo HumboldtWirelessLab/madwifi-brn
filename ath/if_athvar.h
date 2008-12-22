@@ -856,6 +856,26 @@ struct ath_softc {
 						 * detected radars */
 	u_int32_t sc_nexttbtt;
 	u_int64_t sc_last_tsf;
+#ifdef COLORADO_CCA
+#define ATH_CCA_BITMASK 0x7F
+	//        u_int32_t sc_txcont_mask;           /* Which operations to perform in txcont configuration */
+	unsigned int sc_disable_cca_mask:8;     /* bitmask for turning off/on parts of 'disable_cca' */
+	unsigned int sc_prev_disable_cca_mask:8;
+	
+	u_int32_t orig_rssi_thresh;
+	u_int32_t orig_phy_nf;
+	u_int32_t orig_diag_sw;
+	u_int32_t orig_dcu_gbl_ifs_sifs;
+	u_int32_t orig_dcu_gbl_ifs_eifs;
+	u_int32_t orig_dcu_gbl_ifs_slot;
+	u_int32_t orig_dcu_gbl_ifs_misc;
+	u_int32_t orig_dcu_misc[4];
+	u_int32_t orig_dcu_chan_time[4];
+	unsigned int orig_sc_beacons;
+	HAL_INT orig_sc_imask;
+
+
+#endif //COLORADO_CCA
 };
 
 typedef void (*ath_callback) (struct ath_softc *);
