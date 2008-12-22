@@ -283,7 +283,7 @@ static void ath_return_txbuf_list_locked(struct ath_softc *sc, ath_bufhead *bfhe
 static struct ath_buf *cleanup_ath_buf(struct ath_softc *sc,
 		struct ath_buf *buf, int direction);
 
-#if COLORADO_CCA
+#ifdef COLORADO_CCA
 //static int disable_cca(struct ieee80211com *ic, u_int32_t mask);
 static int set_cca_mode(struct ath_softc *sc);
 
@@ -10638,7 +10638,7 @@ enum {
 	ATH_MAXVAPS  		= 26,
 	ATH_INTMIT 		= 27,
 	ATH_DISTANCE		= 28,
-#if COLORADO_CCA
+#ifdef COLORADO_CCA
 	ATH_NOCCA               = 29,
 #endif
 };
@@ -10953,7 +10953,7 @@ ATH_SYSCTL_DECL(ath_sysctl_halparam, ctl, write, filp, buffer, lenp, ppos)
 				 * settings. */
 				ath_override_intmit_if_disabled(sc);
 				break;
-#if COLORADO_CCA
+#ifdef COLORADO_CCA
 			case ATH_NOCCA:				
 				//sc->sc_disable_cca = (val>0 ? 1:0);
 				//sc->sc_cca_extrabits = val & ATH_CCA_BITMASK;
@@ -11034,7 +11034,7 @@ ATH_SYSCTL_DECL(ath_sysctl_halparam, ctl, write, filp, buffer, lenp, ppos)
 		case ATH_INTMIT:
 			val = sc->sc_useintmit;
 			break;
-#if COLORADO_CCA
+#ifdef COLORADO_CCA
 			case ATH_NOCCA:				
 				//sc->sc_disable_cca = (val>0 ? 1:0);
 				//sc->sc_cca_extrabits = val & ATH_CCA_BITMASK;
@@ -11514,6 +11514,8 @@ ath_get_txcont_adj_ratecode(struct ath_softc *sc)
 	}
 	return rt->info[closest_rate_ix].rateCode;
 }
+
+#ifdef COLORADO_CCA
 /*
  * disable / enable cca, NAV, etc as indicated.
  */
@@ -11712,7 +11714,7 @@ static int set_cca_mode(struct ath_softc *sc)
 #undef AR5K_AR5212_DCU_CHAN_TIME_DUR
 	
 }
-
+#endif //COLORADO_CCA
 
 /*
 Configure the radio for continuous transmission
