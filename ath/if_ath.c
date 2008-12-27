@@ -11035,13 +11035,10 @@ ATH_SYSCTL_DECL(ath_sysctl_halparam, ctl, write, filp, buffer, lenp, ppos)
 			val = sc->sc_useintmit;
 			break;
 #ifdef COLORADO_CCA
-			case ATH_NOCCA:				
-				//sc->sc_disable_cca = (val>0 ? 1:0);
-				//sc->sc_cca_extrabits = val & ATH_CCA_BITMASK;
-				sc->sc_disable_cca_mask = val & ATH_CCA_BITMASK;
-				//disable_cca(sc);
-				ath_reset(sc->sc_dev);
-				break;
+		case ATH_NOCCA:				
+			val = sc->sc_disable_cca_mask;
+			printk(KERN_INFO "sc->sc_disable_cca_mask = 0x%x\n", sc->sc_disable_cca_mask);
+ 			break;
 #endif //COLORADO_CCA
 		default:
 			ret = -EINVAL;
