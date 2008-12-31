@@ -82,9 +82,29 @@ ieee80211_setup_macclone(struct ieee80211vap *vap, const char* addr) {
 	struct ath_softc *sc = ic->ic_dev->priv;
 	struct ath_hal *ah = sc->sc_ah;
 
+	/*Search for device with given addr ( for_each_dev and memcmp)
+	 * if none is found ( if (!dev) ) then addr is set
+	 * if there is a device with the given mac, then nothing to do.
+	 * 
+	 * ubnt return 1 if the mac is changes, but it results in dropping the packet:
+	 *  -> if (ieee80211_setup_macclone != 0 ) goto bad;
+	 * 
+	 * i don't know why. I will comment our return 1, so it returns 0 in evry case.
+	 * Please check this !!
+	 */
+
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,24))
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,22))
 	for (dev=dev_base; dev; dev=dev->next)
-		if (!memcmp(dev->dev_addr, addr, dev->addr_len))
-			break;
+#else
+	for_each_netdev(dev)
+#endif
+#else /* 2.6.24 and up */
+	for_each_netdev(&init_net, dev)
+#endif
+
+	if (!memcmp(dev->dev_addr, addr, dev->addr_len))
+			break;	
 
 	if (!dev) {
 		ATH_LOCK(sc);
@@ -96,10 +116,10 @@ ieee80211_setup_macclone(struct ieee80211vap *vap, const char* addr) {
 		ic->ic_reset(ic->ic_dev);
 		ATH_UNLOCK(sc);
 
-		return 0;
+		//return 1;
 	}
 
-	return 1;
+	return 0;
 }
 
 /*
@@ -277,7 +297,7 @@ ieee80211_hardstart(struct sk_buff *skb, struct net_device *dev)
 				    memcmp(wf->i_addr2, vap->iv_myaddr, ETH_ALEN) != 0) {
 				    
 			    if (ieee80211_setup_macclone(vap, wf->i_addr2) != 0) {
-				goto bad;
+					goto bad;
 			    }
 		    }
 		}
