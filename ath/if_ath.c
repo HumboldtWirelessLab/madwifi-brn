@@ -10959,7 +10959,12 @@ ATH_SYSCTL_DECL(ath_sysctl_halparam, ctl, write, filp, buffer, lenp, ppos)
 				//sc->sc_cca_extrabits = val & ATH_CCA_BITMASK;
 				sc->sc_disable_cca_mask = val & ATH_CCA_BITMASK;
 				//disable_cca(sc);
-				ath_reset(sc->sc_dev);
+
+				/* Only do a reset if device is valid and UP
+				 * and we just made a change to the settings. */
+				if (sc->sc_dev && !sc->sc_invalid &&
+				    (sc->sc_dev->flags & IFF_RUNNING))
+					ath_reset(sc->sc_dev);
 				break;
 #endif //COLORADO_CCA
 			default:
