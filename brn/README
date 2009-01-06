@@ -3,3 +3,10 @@
 	- macclone
 	- txfeedback
 	- athdesc2 (use click-brn to use it)
+
+06.Jan 2009
+0.2 :
+	- bugfix for macclone
+	- macclone compiles with newer kernels
+	- channelswitch per packet (use athdesc2)
+	- noCCA-patch to disable cca

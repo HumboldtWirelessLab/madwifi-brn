@@ -1,3 +1,3 @@
-CCA:
-    -driver crashes during sysctl if there is no VAP define for physical devices
-	sysctl -w dev.wifi1.disable_cca=1 causes segfault
+CCA: * fixed
+         -driver crashes during sysctl if there is no VAP define for physical devices
+             sysctl -w dev.wifi1.disable_cca=1 causes segfault
