@@ -505,7 +505,7 @@ MODULE_PARM_DESC(ieee80211_debug, "Load-time 802.11 debug output enable");
 int
 ath_attach(u_int16_t devid, struct net_device *dev, HAL_BUS_TAG tag)
 {
-	struct ath_softc *sc = dev->priv;
+	struct ath_softc *sc = netdev_priv(dev);
 	struct ieee80211com *ic = &sc->sc_ic;
 	struct ieee80211vap *vap;
 	struct ath_hal *ah;
@@ -1157,7 +1157,7 @@ bad:
 int
 ath_detach(struct net_device *dev)
 {
-	struct ath_softc *sc = dev->priv;
+	struct ath_softc *sc = netdev_priv(dev);
 	struct ath_hal *ah = sc->sc_ah;
 
 	HAL_INT tmp;
@@ -1221,7 +1221,7 @@ static struct ieee80211vap *
 ath_vap_create(struct ieee80211com *ic, const char *name,
 	int opmode, int flags, struct net_device *mdev)
 {
-	struct ath_softc *sc = ic->ic_dev->priv;
+	struct ath_softc *sc = netdev_priv(ic->ic_dev);
 	struct ath_hal *ah = sc->sc_ah;
 	struct net_device *dev;
 	struct ath_vap *avp;
@@ -1296,7 +1296,7 @@ ath_vap_create(struct ieee80211com *ic, const char *name,
 		return NULL;
 	}
 
-	avp = dev->priv;
+	avp = netdev_priv(dev);
 	ieee80211_vap_setup(ic, dev, name, opmode, flags);
 	/* override with driver methods */
 	vap = &avp->av_vap;
@@ -1487,7 +1487,7 @@ static void
 ath_vap_delete(struct ieee80211vap *vap)
 {
 	struct net_device *dev = vap->iv_ic->ic_dev;
-	struct ath_softc *sc = dev->priv;
+	struct ath_softc *sc = netdev_priv(dev);
 	struct ath_hal *ah = sc->sc_ah;
 	struct ath_vap *avp = ATH_VAP(vap);
 	int decrease = 1;
@@ -1587,14 +1587,16 @@ ath_vap_delete(struct ieee80211vap *vap)
 void
 ath_suspend(struct net_device *dev)
 {
-	DPRINTF(((struct ath_softc *)dev->priv), ATH_DEBUG_ANY, "flags=%x\n", dev->flags);
+	DPRINTF(((struct ath_softc *)netdev_priv(dev)), ATH_DEBUG_ANY,
+		"flags=%x\n", dev->flags);
 	ath_stop(dev);
 }
 
 void
 ath_resume(struct net_device *dev)
 {
-	DPRINTF(((struct ath_softc *)dev->priv), ATH_DEBUG_ANY, "flags=%x\n", dev->flags);
+	DPRINTF(((struct ath_softc *)netdev_priv(dev)), ATH_DEBUG_ANY,
+		"flags=%x\n", dev->flags);
 	ath_init(dev);
 }
 
@@ -2349,7 +2351,7 @@ ath_intr(int irq, void *dev_id, struct pt_regs *regs)
 #endif
 {
 	struct net_device *dev = dev_id;
-	struct ath_softc *sc = dev->priv;
+	struct ath_softc *sc = netdev_priv(dev);
 	struct ath_hal *ah = sc->sc_ah;
 	u_int64_t hw_tsf = 0;
 	HAL_INT status;
@@ -2545,7 +2547,7 @@ static void
 ath_fatal_tasklet(TQUEUE_ARG data)
 {
 	struct net_device *dev = (struct net_device *)data;
-	struct ath_softc *sc = dev->priv;
+	struct ath_softc *sc = netdev_priv(dev);
 
 	EPRINTF(sc, "Hardware error; resetting.\n");
 	ath_reset(dev);
@@ -2555,7 +2557,7 @@ static void
 ath_rxorn_tasklet(TQUEUE_ARG data)
 {
 	struct net_device *dev = (struct net_device *)data;
-	struct ath_softc *sc = dev->priv;
+	struct ath_softc *sc = netdev_priv(dev);
 
 	EPRINTF(sc, "Receive FIFO overrun; resetting.\n");
 	ath_reset(dev);
@@ -2565,7 +2567,7 @@ static void
 ath_bmiss_tasklet(TQUEUE_ARG data)
 {
 	struct net_device *dev = (struct net_device *)data;
-	struct ath_softc *sc = dev->priv;
+	struct ath_softc *sc = netdev_priv(dev);
 
 	if (time_before(jiffies, sc->sc_ic.ic_bmiss_guard)) {
 		/* Beacon miss interrupt occured too short after last beacon
@@ -2607,7 +2609,7 @@ ath_chan2flags(struct ieee80211_channel *chan)
 static int
 ath_init(struct net_device *dev)
 {
-	struct ath_softc *sc = dev->priv;
+	struct ath_softc *sc = netdev_priv(dev);
 	struct ieee80211com *ic = &sc->sc_ic;
 	struct ath_hal *ah = sc->sc_ah;
 	HAL_STATUS status;
@@ -2720,7 +2722,7 @@ done:
 static int
 ath_stop_locked(struct net_device *dev)
 {
-	struct ath_softc *sc = dev->priv;
+	struct ath_softc *sc = netdev_priv(dev);
 	struct ieee80211com *ic = &sc->sc_ic;
 	struct ath_hal *ah = sc->sc_ah;
 
@@ -2801,7 +2803,7 @@ static void ath_set_beacon_cal(struct ath_softc *sc, int val)
 static int
 ath_stop(struct net_device *dev)
 {
-	struct ath_softc *sc = dev->priv;
+	struct ath_softc *sc = netdev_priv(dev);
 	int error;
 
 	ATH_LOCK(sc);
@@ -2841,7 +2843,7 @@ ath_stop(struct net_device *dev)
 static int
 ath_reset(struct net_device *dev)
 {
-	struct ath_softc *sc = dev->priv;
+	struct ath_softc *sc = netdev_priv(dev);
 	struct ieee80211com *ic = &sc->sc_ic;
 	struct ath_hal *ah = sc->sc_ah;
 	struct ieee80211_channel *c;
@@ -3054,7 +3056,7 @@ dot11_to_ratecode(struct ath_softc *sc, const HAL_RATE_TABLE *rt, int dot11)
 static int
 ath_tx_startraw(struct net_device *dev, struct ath_buf *bf, struct sk_buff *skb)
 {
-	struct ath_softc *sc = dev->priv;
+	struct ath_softc *sc = netdev_priv(dev);
 	struct ath_hal *ah = sc->sc_ah;
 	struct ieee80211_phy_params *ph = &(SKB_CB(skb)->phy); 
 	const HAL_RATE_TABLE *rt;
@@ -3393,7 +3395,7 @@ _take_txbuf(struct ath_softc *sc, int for_management)
 static int
 ath_hardstart(struct sk_buff *__skb, struct net_device *dev)
 {
-	struct ath_softc *sc = dev->priv;
+	struct ath_softc *sc = netdev_priv(dev);
 	struct ieee80211_node *ni = NULL;
 	struct ath_buf *bf = NULL;
 	struct ether_header *eh;
@@ -3740,7 +3742,7 @@ static int
 ath_mgtstart(struct ieee80211com *ic, struct sk_buff *skb)
 {
 	struct net_device *dev = ic->ic_dev;
-	struct ath_softc *sc = dev->priv;
+	struct ath_softc *sc = netdev_priv(dev);
 	struct ath_buf *bf = NULL;
 	int error;
 
@@ -4072,7 +4074,7 @@ static ieee80211_keyix_t
 ath_key_alloc(struct ieee80211vap *vap, const struct ieee80211_key *k)
 {
 	struct net_device *dev = vap->iv_ic->ic_dev;
-	struct ath_softc *sc = dev->priv;
+	struct ath_softc *sc = netdev_priv(dev);
 
 	/*
 	 * Group key allocation must be handled specially for
@@ -4137,7 +4139,7 @@ ath_key_delete(struct ieee80211vap *vap, const struct ieee80211_key *k,
 				struct ieee80211_node *ninfo)
 {
 	struct net_device *dev = vap->iv_ic->ic_dev;
-	struct ath_softc *sc = dev->priv;
+	struct ath_softc *sc = netdev_priv(dev);
 	struct ath_hal *ah = sc->sc_ah;
 	struct ieee80211_node *ni = NULL;
 	const struct ieee80211_cipher *cip = k->wk_cipher;
@@ -4213,7 +4215,7 @@ ath_key_set(struct ieee80211vap *vap, const struct ieee80211_key *k,
 	const u_int8_t mac[IEEE80211_ADDR_LEN])
 {
 	struct net_device *dev = vap->iv_ic->ic_dev;
-	struct ath_softc *sc = dev->priv;
+	struct ath_softc *sc = netdev_priv(dev);
 
 	return ath_keyset(sc, k, mac, vap->iv_bss);
 }
@@ -4228,7 +4230,7 @@ static void
 ath_key_update_begin(struct ieee80211vap *vap)
 {
 	struct net_device *dev = vap->iv_ic->ic_dev;
-	struct ath_softc *sc = dev->priv;
+	struct ath_softc *sc = netdev_priv(dev);
 
 	DPRINTF(sc, ATH_DEBUG_KEYCACHE, "Begin\n");
 	/*
@@ -4249,7 +4251,7 @@ static void
 ath_key_update_end(struct ieee80211vap *vap)
 {
 	struct net_device *dev = vap->iv_ic->ic_dev;
-	struct ath_softc *sc = dev->priv;
+	struct ath_softc *sc = netdev_priv(dev);
 
 	DPRINTF(sc, ATH_DEBUG_KEYCACHE, "End\n");
 	netif_wake_queue(dev);
@@ -4339,7 +4341,7 @@ ath_merge_mcast(struct ath_softc *sc, u_int32_t mfilt[2])
 static void
 ath_mode_init(struct net_device *dev)
 {
-	struct ath_softc *sc = dev->priv;
+	struct ath_softc *sc = netdev_priv(dev);
 	struct ath_hal *ah = sc->sc_ah;
 	u_int32_t rfilt, mfilt[2];
 
@@ -4533,7 +4535,7 @@ ath_setctstimeout(struct ath_softc *sc)
 static void
 ath_updateslot(struct net_device *dev)
 {
-	struct ath_softc *sc = dev->priv;
+	struct ath_softc *sc = netdev_priv(dev);
 	struct ieee80211com *ic = &sc->sc_ic;
 
 	/*
@@ -4560,7 +4562,7 @@ static void
 ath_beacon_dturbo_config(struct ieee80211vap *vap, u_int32_t intval)
 {
 	struct ieee80211com *ic = vap->iv_ic;
-	struct ath_softc *sc = ic->ic_dev->priv;
+	struct ath_softc *sc = netdev_priv(ic->ic_dev);
 
 	/* Check VAP capability. */
 	if ((ic->ic_opmode == IEEE80211_M_HOSTAP) && vap->iv_bss &&
@@ -4609,7 +4611,7 @@ static void
 ath_beacon_dturbo_update(struct ieee80211vap *vap, int *needmark, u_int8_t dtim)
 {
 	struct ieee80211com *ic = vap->iv_ic;
-	struct ath_softc *sc = ic->ic_dev->priv;
+	struct ath_softc *sc = netdev_priv(ic->ic_dev);
 	u_int32_t bss_traffic;
 
 	if (sc->sc_ignore_ar) {
@@ -4752,7 +4754,7 @@ static void
 ath_turbo_switch_mode(unsigned long data)
 {
 	struct net_device *dev = (struct net_device *)data;
-	struct ath_softc *sc = dev->priv;
+	struct ath_softc *sc = netdev_priv(dev);
 	struct ieee80211com *ic = &sc->sc_ic;
 	unsigned int newflags;
 
@@ -5466,7 +5468,7 @@ static void
 ath_bstuck_tasklet(TQUEUE_ARG data)
 {
 	struct net_device *dev = (struct net_device *)data;
-	struct ath_softc *sc = dev->priv;
+	struct ath_softc *sc = netdev_priv(dev);
 	/*
 	 * XXX:if the bmisscount is cleared while the
 	 *     tasklet execution is pending, the following
@@ -5905,7 +5907,7 @@ ath_desc_free(struct ath_softc *sc)
 static struct ieee80211_node *
 ath_node_alloc(struct ieee80211vap *vap)
 {
-	struct ath_softc *sc = vap->iv_ic->ic_dev->priv;
+	struct ath_softc *sc = netdev_priv(vap->iv_ic->ic_dev);
 	const size_t space = sizeof(struct ath_node) + sc->sc_rc->arc_space;
 	struct ath_node *an = kzalloc(space, GFP_ATOMIC);
 	if (an != NULL) {
@@ -5933,7 +5935,7 @@ static void
 ath_node_cleanup(struct ieee80211_node *ni)
 {
 	struct ieee80211com *ic = ni->ni_ic;
-	struct ath_softc *sc = ni->ni_ic->ic_dev->priv;
+	struct ath_softc *sc = netdev_priv(ni->ni_ic->ic_dev);
 	struct ath_node *an = ATH_NODE(ni);
 	struct ath_buf *bf;
 
@@ -6018,7 +6020,7 @@ ath_node_move_data(const struct ieee80211_node *ni)
 #ifdef NOT_YET
 	struct ath_txq *txq = NULL;
 	struct ieee80211com *ic = ni->ni_ic;
-	struct ath_softc *sc = ic->ic_dev->priv;
+	struct ath_softc *sc = netdev_priv(ic->ic_dev);
 	struct ath_buf *bf, *prev, *bf_tmp, *bf_tmp1;
 	struct ath_hal *ah = sc->sc_ah;
 	struct sk_buff *skb = NULL;
@@ -6454,7 +6456,7 @@ static int
 ath_recv_mgmt(struct ieee80211vap * vap, struct ieee80211_node *ni_or_null,
 	struct sk_buff *skb, int subtype, int rssi, u_int64_t rtsf)
 {
-	struct ath_softc *sc = vap->iv_ic->ic_dev->priv;
+	struct ath_softc *sc = netdev_priv(vap->iv_ic->ic_dev);
 	struct ieee80211_node * ni = ni_or_null;
 	u_int64_t hw_tsf, beacon_tsf;
 	u_int32_t hw_tu, beacon_tu, intval;
@@ -6585,7 +6587,7 @@ ath_rx_tasklet(TQUEUE_ARG data)
 		((_pa) - (_sc)->sc_rxdma.dd_desc_paddr)))
 	struct net_device *dev = (struct net_device *)data;
 	struct ath_buf *bf;
-	struct ath_softc *sc = dev->priv;
+	struct ath_softc *sc = netdev_priv(dev);
 	struct ieee80211com *ic = &sc->sc_ic;
 	struct ath_hal *ah = sc ? sc->sc_ah : NULL;
 	struct ath_desc *ds;
@@ -7023,7 +7025,7 @@ static void ath_grppoll_start(struct ieee80211vap *vap, int pollcount)
 	struct sk_buff *skb = NULL;
 	struct ath_buf *bf = NULL, *head = NULL;
 	struct ieee80211com *ic = vap->iv_ic;
-	struct ath_softc *sc = ic->ic_dev->priv;
+	struct ath_softc *sc = netdev_priv(ic->ic_dev);
 	struct ath_hal *ah = sc->sc_ah;
 	u_int8_t rate;
 	unsigned int ctsrate = 0, ctsduration = 0;
@@ -7229,7 +7231,7 @@ static void ath_grppoll_start(struct ieee80211vap *vap, int pollcount)
 static void ath_grppoll_stop(struct ieee80211vap *vap)
 {
 	struct ieee80211com *ic = vap->iv_ic;
-	struct ath_softc *sc = ic->ic_dev->priv;
+	struct ath_softc *sc = netdev_priv(ic->ic_dev);
 	struct ath_hal *ah = sc->sc_ah;
 	struct ath_txq *txq = &sc->sc_grpplq;
 	struct ath_buf *bf;
@@ -7435,7 +7437,7 @@ ath_txq_update(struct ath_softc *sc, struct ath_txq *txq, int ac)
 static int
 ath_wme_update(struct ieee80211com *ic)
 {
-	struct ath_softc *sc = ic->ic_dev->priv;
+	struct ath_softc *sc = netdev_priv(ic->ic_dev);
 
 	if (sc->sc_uapsdq)
 		ath_txq_update(sc, sc->sc_uapsdq, WME_AC_VO);
@@ -7454,7 +7456,7 @@ ath_uapsd_flush(struct ieee80211_node *ni)
 {
 	struct ath_node *an = ATH_NODE(ni);
 	struct ath_buf *bf;
-	struct ath_softc *sc = ni->ni_ic->ic_dev->priv;
+	struct ath_softc *sc = netdev_priv(ni->ni_ic->ic_dev);
 	struct ath_txq *txq;
 
 	ATH_NODE_UAPSD_LOCK_IRQ(an);
@@ -7627,7 +7629,7 @@ static int
 ath_tx_start(struct net_device *dev, struct ieee80211_node *ni, 
 		struct ath_buf *bf, struct sk_buff *skb, int nextfraglen)
 {
-	struct ath_softc *sc = dev->priv;
+	struct ath_softc *sc = netdev_priv(dev);
 	struct ieee80211com *ic = ni->ni_ic;
 	struct ieee80211vap *vap = ni->ni_vap;
 	struct ath_hal *ah = sc->sc_ah;
@@ -8476,7 +8478,7 @@ static void
 ath_tx_tasklet_q0(TQUEUE_ARG data)
 {
 	struct net_device *dev = (struct net_device *)data;
-	struct ath_softc *sc = dev->priv;
+	struct ath_softc *sc = netdev_priv(dev);
 
 	if (txqactive(sc->sc_ah, 0))
 		ath_tx_processq(sc, &sc->sc_txq[0]);
@@ -8497,7 +8499,7 @@ static void
 ath_tx_tasklet_q0123(TQUEUE_ARG data)
 {
 	struct net_device *dev = (struct net_device *)data;
-	struct ath_softc *sc = dev->priv;
+	struct ath_softc *sc = netdev_priv(dev);
 
 	/*
 	 * Process each active queue.
@@ -8541,7 +8543,7 @@ static void
 ath_tx_tasklet(TQUEUE_ARG data)
 {
 	struct net_device *dev = (struct net_device *)data;
-	struct ath_softc *sc = dev->priv;
+	struct ath_softc *sc = netdev_priv(dev);
 	unsigned int i;
 
 	for (i = 0; i < HAL_NUM_TX_QUEUES; i++) {
@@ -8574,7 +8576,7 @@ ath_tx_tasklet(TQUEUE_ARG data)
 static void
 ath_tx_timeout(struct net_device *dev)
 {
-	struct ath_softc *sc = dev->priv;
+	struct ath_softc *sc = netdev_priv(dev);
 	int i;
 
 	if (ath_chan_unavail(sc))
@@ -8966,7 +8968,7 @@ static void
 ath_calibrate(unsigned long arg)
 {
 	struct net_device *dev = (struct net_device *)arg;
-	struct ath_softc *sc = dev->priv;
+	struct ath_softc *sc = netdev_priv(dev);
 	struct ath_hal *ah = sc->sc_ah;
 	struct ieee80211com *ic = &sc->sc_ic;
 	/* u_int32_t nchans; */
@@ -9046,7 +9048,7 @@ static void
 ath_scan_start(struct ieee80211com *ic)
 {
 	struct net_device *dev = ic->ic_dev;
-	struct ath_softc *sc = dev->priv;
+	struct ath_softc *sc = netdev_priv(dev);
 	struct ath_hal *ah = sc->sc_ah;
 	u_int32_t rfilt;
 
@@ -9066,7 +9068,7 @@ static void
 ath_scan_end(struct ieee80211com *ic)
 {
 	struct net_device *dev = ic->ic_dev;
-	struct ath_softc *sc = dev->priv;
+	struct ath_softc *sc = netdev_priv(dev);
 	struct ath_hal *ah = sc->sc_ah;
 	u_int32_t rfilt;
 
@@ -9084,7 +9086,7 @@ static void
 ath_set_channel(struct ieee80211com *ic)
 {
 	struct net_device *dev = ic->ic_dev;
-	struct ath_softc *sc = dev->priv;
+	struct ath_softc *sc = netdev_priv(dev);
 
 	(void) ath_chan_set(sc, ic->ic_curchan);
 	/*
@@ -9100,7 +9102,7 @@ ath_set_channel(struct ieee80211com *ic)
 static void
 ath_set_coverageclass(struct ieee80211com *ic)
 {
-	struct ath_softc *sc = ic->ic_dev->priv;
+	struct ath_softc *sc = netdev_priv(ic->ic_dev);
 
 	ath_hal_setcoverageclass(sc->sc_ah, ic->ic_coverageclass, 0);
 
@@ -9110,7 +9112,7 @@ ath_set_coverageclass(struct ieee80211com *ic)
 static u_int
 ath_mhz2ieee(struct ieee80211com *ic, u_int freq, u_int flags)
 {
-	struct ath_softc *sc = ic->ic_dev->priv;
+	struct ath_softc *sc = netdev_priv(ic->ic_dev);
 
 	return (ath_hal_mhz2ieee(sc->sc_ah, freq, flags));
 }
@@ -9125,7 +9127,7 @@ ath_newstate(struct ieee80211vap *vap, enum ieee80211_state nstate, int arg)
 	struct ath_vap *avp = ATH_VAP(vap);
 	struct ieee80211com *ic = vap->iv_ic;
 	struct net_device *dev = ic->ic_dev;
-	struct ath_softc *sc = dev->priv;
+	struct ath_softc *sc = netdev_priv(dev);
 	struct ath_hal *ah = sc->sc_ah;
 	struct ieee80211_node *ni, *wds_ni;
 	unsigned int i;
@@ -9567,7 +9569,7 @@ static void
 ath_setup_comp(struct ieee80211_node *ni, int enable)
 {
 	struct ieee80211vap *vap = ni->ni_vap;
-	struct ath_softc *sc = vap->iv_ic->ic_dev->priv;
+	struct ath_softc *sc = netdev_priv(vap->iv_ic->ic_dev);
 	struct ath_node *an = ATH_NODE(ni);
 	ieee80211_keyix_t keyix;
 
@@ -9620,7 +9622,7 @@ static void
 ath_setup_stationkey(struct ieee80211_node *ni)
 {
 	struct ieee80211vap *vap = ni->ni_vap;
-	struct ath_softc *sc = vap->iv_ic->ic_dev->priv;
+	struct ath_softc *sc = netdev_priv(vap->iv_ic->ic_dev);
 	ieee80211_keyix_t keyix;
 
 	keyix = ath_key_alloc(vap, &ni->ni_ucastkey);
@@ -9781,7 +9783,7 @@ ath_newassoc(struct ieee80211_node *ni, int isnew)
 {
 	struct ieee80211com *ic = ni->ni_ic;
 	struct ieee80211vap *vap = ni->ni_vap;
-	struct ath_softc *sc = ic->ic_dev->priv;
+	struct ath_softc *sc = netdev_priv(ic->ic_dev);
 
 	sc->sc_rc->ops->newassoc(sc, ATH_NODE(ni), isnew);
 
@@ -9812,7 +9814,7 @@ static int
 ath_getchannels(struct net_device *dev, u_int cc,
 	HAL_BOOL outdoor, HAL_BOOL xchanmode)
 {
-	struct ath_softc *sc = dev->priv;
+	struct ath_softc *sc = netdev_priv(dev);
 	struct ieee80211com *ic = &sc->sc_ic;
 	struct ath_hal *ah = sc->sc_ah;
 	HAL_CHANNEL *chans;
@@ -10110,7 +10112,7 @@ ath_update_txpow(struct ath_softc *sc)
 static int
 ath_xr_rate_setup(struct net_device *dev)
 {
-	struct ath_softc *sc = dev->priv;
+	struct ath_softc *sc = netdev_priv(dev);
 	struct ath_hal *ah = sc->sc_ah;
 	struct ieee80211com *ic = &sc->sc_ic;
 	const HAL_RATE_TABLE *rt;
@@ -10139,7 +10141,7 @@ ath_xr_rate_setup(struct net_device *dev)
 static void
 ath_setup_subrates(struct net_device *dev)
 {
-	struct ath_softc *sc = dev->priv;
+	struct ath_softc *sc = netdev_priv(dev);
 	struct ath_hal *ah = sc->sc_ah;
 	struct ieee80211com *ic = &sc->sc_ic;
 	const HAL_RATE_TABLE *rt;
@@ -10182,7 +10184,7 @@ ath_setup_subrates(struct net_device *dev)
 static int
 ath_rate_setup(struct net_device *dev, u_int mode)
 {
-	struct ath_softc *sc = dev->priv;
+	struct ath_softc *sc = netdev_priv(dev);
 	struct ath_hal *ah = sc->sc_ah;
 	struct ieee80211com *ic = &sc->sc_ic;
 	const HAL_RATE_TABLE *rt;
@@ -10406,7 +10408,7 @@ ath_printtxbuf(const struct ath_buf *bf, int done)
 {
 	const struct ath_tx_status *ts = &bf->bf_dsstatus.ds_txstat;
 	const struct ath_desc *ds = bf->bf_desc;
-	struct ath_softc *sc = ATH_BUF_NI(bf)->ni_ic->ic_dev->priv;
+	struct ath_softc *sc = netdev_priv(ATH_BUF_NI(bf)->ni_ic->ic_dev);
 	u_int8_t status = done ? ts->ts_status : 0;
 
 	DPRINTF(sc, ATH_DEBUG_ANY, 
@@ -10433,7 +10435,7 @@ ath_printtxbuf(const struct ath_buf *bf, int done)
 static struct net_device_stats *
 ath_getstats(struct net_device *dev)
 {
-	struct ath_softc *sc = dev->priv;
+	struct ath_softc *sc = netdev_priv(dev);
 	struct net_device_stats *stats = &sc->sc_devstats;
 
 	/* update according to private statistics */
@@ -10456,7 +10458,7 @@ ath_getstats(struct net_device *dev)
 static int
 ath_set_mac_address(struct net_device *dev, void *addr)
 {
-	struct ath_softc *sc = dev->priv;
+	struct ath_softc *sc = netdev_priv(dev);
 	struct ieee80211com *ic = &sc->sc_ic;
 	struct ath_hal *ah = sc->sc_ah;
 	struct sockaddr *mac = addr;
@@ -10485,7 +10487,7 @@ ath_set_mac_address(struct net_device *dev, void *addr)
 static int
 ath_change_mtu(struct net_device *dev, int mtu)
 {
-	struct ath_softc *sc = dev->priv;
+	struct ath_softc *sc = netdev_priv(dev);
 	int error = 0;
 
 	if (!(ATH_MIN_MTU < mtu && mtu <= ATH_MAX_MTU)) {
@@ -10574,7 +10576,7 @@ bad:
 static int
 ath_ioctl(struct net_device *dev, struct ifreq *ifr, int cmd)
 {
-	struct ath_softc *sc = dev->priv;
+	struct ath_softc *sc = netdev_priv(dev);
 	struct ieee80211com *ic = &sc->sc_ic;
 	struct ath_diag ad;
 	int error;
@@ -11354,7 +11356,7 @@ ath_dynamic_sysctl_unregister(struct ath_softc *sc)
 static void
 ath_announce(struct net_device *dev)
 {
-	struct ath_softc *sc = dev->priv;
+	struct ath_softc *sc = netdev_priv(dev);
 	struct ath_hal *ah = sc->sc_ah;
 	u_int modes, cc;
 #if 0
@@ -11751,7 +11753,7 @@ static void
 txcont_configure_radio(struct ieee80211com *ic)
 {
 	struct net_device           *dev = ic->ic_dev;
-	struct ath_softc            *sc = dev->priv;
+	struct ath_softc            *sc = netdev_priv(dev);
 	struct ath_hal              *ah = sc->sc_ah;
 	struct ieee80211_wme_state  *wme = &ic->ic_wme;
 	struct ieee80211vap         *vap = TAILQ_FIRST(&ic->ic_vaps);
@@ -12022,7 +12024,7 @@ static void
 txcont_queue_packet(struct ieee80211com *ic, struct ath_txq *txq)
 {
 	struct net_device *dev             = ic->ic_dev;
-	struct ath_softc *sc               = dev->priv;
+	struct ath_softc *sc               = netdev_priv(dev);
 	struct ath_hal *ah                 = sc->sc_ah;
 	struct ath_buf *bf                 = NULL;
 	struct sk_buff *skb                = NULL;
@@ -12156,7 +12158,7 @@ static void
 txcont_on(struct ieee80211com *ic)
 {
 	struct net_device *dev = ic->ic_dev;
-	struct ath_softc *sc = dev->priv;
+	struct ath_softc *sc = netdev_priv(dev);
 
 	if (IFF_RUNNING != (ic->ic_dev->flags & IFF_RUNNING)) {
 		EPRINTF(sc, "Cannot enable txcont when"
@@ -12177,7 +12179,7 @@ static void
 txcont_off(struct ieee80211com *ic)
 {
 	struct net_device *dev = ic->ic_dev;
-	struct ath_softc *sc = dev->priv;
+	struct ath_softc *sc = netdev_priv(dev);
 
 	if (TAILQ_FIRST(&ic->ic_vaps)->iv_opmode != IEEE80211_M_WDS)
 		sc->sc_beacons = 1;
@@ -12191,7 +12193,7 @@ static int
 ath_get_dfs_testmode(struct ieee80211com *ic)
 {
 	struct net_device *dev = ic->ic_dev;
-	struct ath_softc *sc = dev->priv;
+	struct ath_softc *sc = netdev_priv(dev);
 	return sc->sc_dfs_testmode;
 }
 
@@ -12218,7 +12220,7 @@ static void
 ath_set_dfs_testmode(struct ieee80211com *ic, int value)
 {
 	struct net_device *dev = ic->ic_dev;
-	struct ath_softc *sc = dev->priv;
+	struct ath_softc *sc = netdev_priv(dev);
 	sc->sc_dfs_testmode = !!value;
 }
 
@@ -12228,7 +12230,7 @@ static int
 ath_get_txcont(struct ieee80211com *ic)
 {
 	struct net_device *dev = ic->ic_dev;
-	struct ath_softc *sc = dev->priv;
+	struct ath_softc *sc = netdev_priv(dev);
 	return sc->sc_txcont;
 }
 
@@ -12246,7 +12248,7 @@ static void
 ath_set_txcont_power(struct ieee80211com *ic, unsigned int txpower)
 {
 	struct net_device *dev = ic->ic_dev;
-	struct ath_softc *sc = dev->priv;
+	struct ath_softc *sc = netdev_priv(dev);
 	int new_txcont_power = txpower > IEEE80211_TXPOWER_MAX ? 
 		IEEE80211_TXPOWER_MAX : txpower;
 	if (sc->sc_txcont_power != new_txcont_power) {
@@ -12264,7 +12266,7 @@ static int
 ath_get_txcont_power(struct ieee80211com *ic)
 {
 	struct net_device *dev = ic->ic_dev;
-	struct ath_softc *sc = dev->priv;
+	struct ath_softc *sc = netdev_priv(dev);
 	/* VERY conservative default */
 	return sc->sc_txcont_power ? sc->sc_txcont_power : 0;
 }
@@ -12274,7 +12276,7 @@ ath_get_txcont_power(struct ieee80211com *ic)
 ath_set_txcont_rate(struct ieee80211com *ic, unsigned int new_rate)
 {
 	struct net_device *dev = ic->ic_dev;
-	struct ath_softc *sc = dev->priv;
+	struct ath_softc *sc = netdev_priv(dev);
 	if (sc->sc_txcont_rate != new_rate) {
 		/*  NOTE: This value is sanity checked and dropped down to 
 		 *  closest rate in txcont_on. */
@@ -12291,7 +12293,7 @@ ath_set_txcont_rate(struct ieee80211com *ic, unsigned int new_rate)
 ath_get_txcont_rate(struct ieee80211com *ic)
 {
 	struct net_device *dev = ic->ic_dev;
-	struct ath_softc *sc = dev->priv;
+	struct ath_softc *sc = netdev_priv(dev);
 	return sc->sc_txcont_rate ? sc->sc_txcont_rate : 0;
 }
 
@@ -12301,7 +12303,7 @@ static void
 ath_set_dfs_cac_time(struct ieee80211com *ic, unsigned int time_s)
 {
 	struct net_device *dev = ic->ic_dev;
-	struct ath_softc *sc = dev->priv;
+	struct ath_softc *sc = netdev_priv(dev);
 	sc->sc_dfs_cac_period = time_s;
 }
 
@@ -12311,7 +12313,7 @@ static unsigned int
 ath_get_dfs_cac_time(struct ieee80211com *ic)
 {
 	struct net_device *dev = ic->ic_dev;
-	struct ath_softc *sc = dev->priv;
+	struct ath_softc *sc = netdev_priv(dev);
 	return sc->sc_dfs_cac_period;
 }
 
@@ -12331,7 +12333,7 @@ static void
 ath_set_dfs_excl_period(struct ieee80211com *ic, unsigned int time_s)
 {
 	struct net_device *dev = ic->ic_dev;
-	struct ath_softc *sc = dev->priv;
+	struct ath_softc *sc = netdev_priv(dev);
 	sc->sc_dfs_excl_period = time_s;
 }
 
@@ -12340,7 +12342,7 @@ static unsigned int
 ath_get_dfs_excl_period(struct ieee80211com *ic)
 {
 	struct net_device *dev = ic->ic_dev;
-	struct ath_softc *sc = dev->priv;
+	struct ath_softc *sc = netdev_priv(dev);
 	return sc->sc_dfs_excl_period;
 }
 
@@ -12352,7 +12354,7 @@ static unsigned int
 ath_test_radar(struct ieee80211com *ic)
 {
 	struct net_device *dev = ic->ic_dev;
-	struct ath_softc *sc   = dev->priv;
+	struct ath_softc *sc   = netdev_priv(dev);
 	if ((ic->ic_flags & IEEE80211_F_DOTH) && (sc->sc_curchan.privFlags & CHANNEL_DFS))
 		ath_radar_detected(sc, "ath_test_radar from user space");
 	else
@@ -12367,7 +12369,7 @@ static unsigned int
 ath_dump_hal_map(struct ieee80211com *ic)
 {
 	struct net_device *dev = ic->ic_dev;
-	struct ath_softc *sc   = dev->priv;
+	struct ath_softc *sc   = netdev_priv(dev);
 	ath_hal_dump_map(sc->sc_ah);
 	return 0;
 }
@@ -12476,7 +12478,7 @@ ath_rcv_dev_event(struct notifier_block *this, unsigned long event,
 	void *ptr)
 {
 	struct net_device *dev = (struct net_device *)ptr;
-	struct ath_softc *sc = (struct ath_softc *)dev->priv;
+	struct ath_softc *sc = (struct ath_softc *)netdev_priv(dev);
 
 	if (!dev || !sc || dev->open != &ath_init)
 		return 0;
@@ -12593,7 +12595,7 @@ static unsigned int
 ath_read_register(struct ieee80211com *ic, unsigned int address, 
 		unsigned int *value)
 {
-	struct ath_softc *sc = ic->ic_dev->priv;
+	struct ath_softc *sc = netdev_priv(ic->ic_dev);
 	if (address >= MAX_REGISTER_ADDRESS) {
 		IPRINTF(sc, "Illegal Atheros register access "
 				"attempted: 0x%04x >= 0x%04x\n",
@@ -12623,7 +12625,7 @@ static unsigned int
 ath_write_register(struct ieee80211com *ic, unsigned int address, 
 		unsigned int value)
 {
-	struct ath_softc *sc = ic->ic_dev->priv;
+	struct ath_softc *sc = netdev_priv(ic->ic_dev);
 	if (address >= MAX_REGISTER_ADDRESS) {
 		IPRINTF(sc, "Illegal Atheros register access "
 				"attempted: 0x%04x >= 0x%04x\n",
@@ -12651,7 +12653,7 @@ static void
 ath_registers_dump(struct ieee80211com *ic)
 {
 	struct net_device *dev = ic->ic_dev;
-	struct ath_softc *sc = dev->priv;
+	struct ath_softc *sc = netdev_priv(dev);
 	ath_ar5212_registers_dump(sc);
 }
 #endif /* #ifdef ATH_REVERSE_ENGINEERING */
@@ -12663,7 +12665,7 @@ static void
 ath_registers_mark(struct ieee80211com *ic)
 {
 	struct net_device *dev = ic->ic_dev;
-	struct ath_softc *sc = dev->priv;
+	struct ath_softc *sc = netdev_priv(dev);
 	ath_ar5212_registers_mark(sc);
 }
 #endif /* #ifdef ATH_REVERSE_ENGINEERING */
@@ -12675,7 +12677,7 @@ static void
 ath_registers_dump_delta(struct ieee80211com *ic)
 {
 	struct net_device *dev = ic->ic_dev;
-	struct ath_softc *sc = dev->priv;
+	struct ath_softc *sc = netdev_priv(dev);
 	ath_ar5212_registers_dump_delta(sc);
 }
 #endif /* #ifdef ATH_REVERSE_ENGINEERING */
@@ -12847,7 +12849,7 @@ descdma_get_buffer(struct ath_descdma *dd, int index)
 static int ath_debug_iwpriv(struct ieee80211com *ic, 
 		unsigned int param, unsigned int value)
 {
-	struct ath_softc *sc = ic->ic_dev->priv;
+	struct ath_softc *sc = netdev_priv(ic->ic_dev);
 	switch (param) {
 	case IEEE80211_PARAM_DRAINTXQ:
 		printk("Draining tx queue...\n");
