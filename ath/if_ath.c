@@ -3065,6 +3065,10 @@ ath_tx_startraw(struct net_device *dev, struct ath_buf *bf, struct sk_buff *skb)
 	struct ath_txq *txq = NULL;
 	struct ath_desc *ds = NULL;
 	struct ieee80211_frame *wh;
+#ifdef EXTATHFLAGS
+	unsigned int rts_cts_rate;
+	unsigned int ant_mode_xmit;
+#endif
 
 	wh = (struct ieee80211_frame *)skb->data;
 	try0 = ph->try[0];
@@ -3102,6 +3106,24 @@ ath_tx_startraw(struct net_device *dev, struct ath_buf *bf, struct sk_buff *skb)
 
 	flags |= HAL_TXDESC_INTREQ;
 
+#ifdef EXTATHFLAGS
+#ifdef EXTATHFLAGSDEBUG
+	printk("Flags in ath_if.c: %d\n",flags);
+#endif
+
+	flags |= (ph->flags & HAL_TXDESC_NOACK);
+	flags |= (ph->flags & HAL_TXDESC_RTSENA);
+	flags |= (ph->flags & HAL_TXDESC_CTSENA);
+	
+	ant_mode_xmit = ( ( ph->flags >> 28 ) & 15 ); //4 Bits
+	
+	rts_cts_rate = ( ( ph->flags >> 23 ) & 31 );  //5 Bits 
+	
+#ifdef EXTATHFLAGSDEBUG
+	printk("New Flags in ath_if.c: %d\n",flags);
+#endif
+#endif
+
 	/* XXX check return value? */
 	ath_hal_setuptxdesc(ah, ds,
 			    pktlen,			/* packet length */
@@ -3112,7 +3134,11 @@ ath_tx_startraw(struct net_device *dev, struct ath_buf *bf, struct sk_buff *skb)
 			    HAL_TXKEYIX_INVALID,	/* key cache index */
 			    sc->sc_txantenna,		/* antenna mode */
 			    flags,			/* flags */
+#ifdef EXTATHFLAGS
+			    rts_cts_rate,	/* rts/cts rate */
+#else
 			    0,				/* rts/cts rate */
+#endif
 			    0,				/* rts/cts duration */
 			    0,				/* comp icv len */
 			    0,				/* comp iv len */

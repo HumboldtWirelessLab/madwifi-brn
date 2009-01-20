@@ -103,6 +103,9 @@ COPTS += -DTARGET='"$(TARGET)"'
 
 COPTS += -DCOLORADO_CCA -DHEISENBUG
 
+COPTS += -DEXTATHFLAGS
+#-DEXTATHFLAGSDEBUG
+
 # KMODPATH nominates the directory where the modules will be
 # installed to
 KMODPATH :=	/lib/modules/$(KERNELRELEASE)/net

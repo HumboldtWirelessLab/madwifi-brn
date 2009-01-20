@@ -101,7 +101,23 @@ struct ar5212_openbsd_desc {
 	u_int32_t encrypt_key_valid:1;
 	u_int32_t cts_enable:1;
 
+#ifndef EXTATHFLAGS
 	u_int32_t r1;
+#else
+	/* the struct is cpoied from click/elements/wifi/athdesc.h */
+	/*
+	 * tx_control_1
+	 */
+	u_int32_t	buf_len:12;
+	u_int32_t	more:1;
+	u_int32_t	encrypt_key_index:7;
+	u_int32_t	frame_type:4;
+	u_int32_t	no_ack:1;
+	u_int32_t	comp_proc:2;
+	u_int32_t	comp_iv_len:2;
+	u_int32_t	comp_icv_len:2;
+	u_int32_t	reserved_31:1;
+#endif
 
 	/*
 	 * tx_control_2
@@ -276,6 +292,36 @@ ieee80211_monitor_encap(struct ieee80211vap *vap, struct sk_buff *skb)
 			ph->try[1] = desc->xmit_tries1;
 			ph->try[2] = desc->xmit_tries2;
 			ph->try[3] = desc->xmit_tries3;
+			
+#ifdef EXTATHFLAGS
+#ifdef EXTATHFLAGSDEBUG
+			printk("PhyFlag in Monitor: %d\n",ph->flags);
+#endif
+
+			if ( desc->no_ack == 1 ) {				//set no ack to phyflags
+				ph->flags |= HAL_TXDESC_NOACK;
+			}
+
+			if ( desc->ant_mode_xmit > 0 ) {		         // move antmode to the highest 4 bits (not used now)
+				ph->flags |= ( desc->ant_mode_xmit << 28 );   
+			}
+			
+			if ( desc->rts_cts_enable == 1 ) {
+				ph->flags |= HAL_TXDESC_RTSENA;
+			} else {
+				if ( desc->cts_enable == 1 ) {          //is this cts-to-self ? Enable only if no RTS/CTS
+					ph->flags |= HAL_TXDESC_CTSENA;
+				}
+			}
+			
+			if ( desc->rts_cts_rate > 0 ) {
+				ph->flags |= ( desc->rts_cts_rate << 23 );
+			}
+			
+#ifdef EXTATHFLAGSDEBUG
+			printk("New PhyFlag in Monitor: %d\n",ph->flags);
+#endif
+#endif			
 			
 			if ( skb->dev->type == ARPHRD_IEEE80211_ATHDESC )
 				skb_pull(skb, ATHDESC_HEADER_SIZE);
