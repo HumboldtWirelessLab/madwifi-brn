@@ -3114,7 +3114,7 @@ ath_tx_startraw(struct net_device *dev, struct ath_buf *bf, struct sk_buff *skb)
 #endif
 
 	flags |= (ph->flags & HAL_TXDESC_NOACK);
-	flags |= (ph->flags & HAL_TXDESC_RTSENA);
+	flags |= (ph->flags & HAL_TXDESC_RTSENA);  //RTS/CTS-rate must set, multirate is not supported if using rts/cts
 	flags |= (ph->flags & HAL_TXDESC_CTSENA);
 	
 	ant_mode_xmit = ( ( ph->flags >> 28 ) & 15 ); //4 Bits
