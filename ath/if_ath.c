@@ -3070,6 +3070,9 @@ ath_tx_startraw(struct net_device *dev, struct ath_buf *bf, struct sk_buff *skb)
 #ifdef EXTATHFLAGS
 	unsigned int rts_cts_rate;
 	unsigned int ant_mode_xmit;
+	u_int8_t cix, rix = 0;
+	unsigned int ctsrate = 0, ctsduration = 0;
+	HAL_BOOL shortPreamble;
 #endif
 
 	wh = (struct ieee80211_frame *)skb->data;
@@ -3121,6 +3124,68 @@ ath_tx_startraw(struct net_device *dev, struct ath_buf *bf, struct sk_buff *skb)
 	
 	rts_cts_rate = ( ( ph->flags >> 23 ) & 31 );  //5 Bits 
 	
+	rix = sc->sc_minrateix;
+	cix = rt->info[sc->sc_protrix].controlRate;
+	/*
+	 * Calculate RTS/CTS rate and duration if needed.
+	 */
+	ctsduration = 0;
+
+	if (flags & (HAL_TXDESC_RTSENA|HAL_TXDESC_CTSENA)) {
+
+		/*
+		 * NB: the 802.11 layer marks whether or not we should
+		 * use short preamble based on the current mode and
+		 * negotiated parameters.
+		 */
+
+//	    	if ((ic->ic_flags & IEEE80211_F_SHPREAMBLE) &&
+//		    (ni->ni_capinfo & IEEE80211_CAPINFO_SHORT_PREAMBLE)) {
+//			shortPreamble = AH_TRUE;
+//		} else
+
+	    		shortPreamble = AH_FALSE;
+
+		/*
+		 * CTS transmit rate is derived from the transmit rate
+		 * by looking in the h/w rate table.  We must also factor
+		 * in whether or not a short preamble is to be used.
+		 */
+		/* NB: cix is set above where RTS/CTS is enabled */
+		KASSERT(cix != 0xff, ("cix not setup"));
+		ctsrate = rt->info[cix].rateCode;
+		/*
+		 * Compute the transmit duration based on the frame
+		 * size and the size of an ACK frame.  We call into the
+		 * HAL to do the computation since it depends on the
+		 * characteristics of the actual PHY being used.
+		 *
+		 * NB: CTS is assumed the same size as an ACK so we can
+		 *     use the precalculated ACK durations.
+		 */
+		if (shortPreamble) {
+			ctsrate |= rt->info[cix].shortPreamble;
+			if (flags & HAL_TXDESC_RTSENA)		/* SIFS + CTS */
+				ctsduration += rt->info[cix].spAckDuration;
+			ctsduration += ath_hal_computetxtime(ah,
+				rt, pktlen, rix, AH_TRUE);
+			if ((flags & HAL_TXDESC_NOACK) == 0)	/* SIFS + ACK */
+				ctsduration += rt->info[rix].spAckDuration;
+		} else {
+			if (flags & HAL_TXDESC_RTSENA)		/* SIFS + CTS */
+				ctsduration += rt->info[cix].lpAckDuration;
+			ctsduration += ath_hal_computetxtime(ah,
+				rt, pktlen, rix, AH_FALSE);
+			if ((flags & HAL_TXDESC_NOACK) == 0)	/* SIFS + ACK */
+				ctsduration += rt->info[rix].lpAckDuration;
+		}
+		/*
+		 * Must disable multi-rate retry when using RTS/CTS.
+		 */
+		try0 = ATH_TXMAXTRY;
+	} else
+		ctsrate = 0;
+	
 #ifdef EXTATHFLAGSDEBUG
 	printk("New Flags in ath_if.c: %d\n",flags);
 #endif
@@ -3137,11 +3202,12 @@ ath_tx_startraw(struct net_device *dev, struct ath_buf *bf, struct sk_buff *skb)
 			    sc->sc_txantenna,		/* antenna mode */
 			    flags,			/* flags */
 #ifdef EXTATHFLAGS
-			    rts_cts_rate,	/* rts/cts rate */
+			    ctsrate,			/* rts/cts rate */
+			    ctsduration,		/* rts/cts duration */
 #else
 			    0,				/* rts/cts rate */
-#endif
 			    0,				/* rts/cts duration */
+#endif
 			    0,				/* comp icv len */
 			    0,				/* comp iv len */
 			    ATH_COMP_PROC_NO_COMP_NO_CCS /* comp scheme */
