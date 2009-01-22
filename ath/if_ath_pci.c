@@ -34,7 +34,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $Id: if_ath_pci.c 3825 2008-07-30 21:33:40Z proski $
+ * $Id: if_ath_pci.c 3902 2009-01-14 02:36:53Z proski $
  */
 #include "opt_ah.h"
 
