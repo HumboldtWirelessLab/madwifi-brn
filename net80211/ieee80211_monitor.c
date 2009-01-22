@@ -278,8 +278,10 @@ ieee80211_monitor_encap(struct ieee80211vap *vap, struct sk_buff *skb)
 			ph->try[0] = 1;
 		break;
 	}
-	case ARPHRD_IEEE80211_ATHDESC:
-	case ARPHRD_IEEE80211_ATHDESC2: {
+#ifdef AHT2HEADER
+	case ARPHRD_IEEE80211_ATHDESC2:
+#endif
+	case ARPHRD_IEEE80211_ATHDESC: {
 		if (skb->len > ATHDESC_HEADER_SIZE) {
 			struct ar5212_openbsd_desc *desc =
 				(struct ar5212_openbsd_desc *)(skb->data + 8);
@@ -292,7 +294,8 @@ ieee80211_monitor_encap(struct ieee80211vap *vap, struct sk_buff *skb)
 			ph->try[1] = desc->xmit_tries1;
 			ph->try[2] = desc->xmit_tries2;
 			ph->try[3] = desc->xmit_tries3;
-			
+
+#ifdef AHT2HEADER			
 #ifdef EXTATHFLAGS
 #ifdef EXTATHFLAGSDEBUG
 			printk("PhyFlag in Monitor: %d\n",ph->flags);
@@ -323,10 +326,11 @@ ieee80211_monitor_encap(struct ieee80211vap *vap, struct sk_buff *skb)
 #endif
 #endif			
 			
-			if ( skb->dev->type == ARPHRD_IEEE80211_ATHDESC )
-				skb_pull(skb, ATHDESC_HEADER_SIZE);
+			if ( skb->dev->type == ARPHRD_IEEE80211_ATHDESC2 )
+				skb_pull(skb, ATHDESC2_HEADER_SIZE);
 			else
-				skb_pull(skb, ATHDESC2_HEADER_SIZE); 
+#endif
+				skb_pull(skb, ATHDESC_HEADER_SIZE); 
 		}
 		break;
 	}
@@ -353,8 +357,10 @@ ieee80211_input_monitor(struct ieee80211com *ic, struct sk_buff *skb,
 	int noise = 0, antenna = 0, ieeerate = 0;
 	u_int32_t rssi = 0;
 	u_int8_t pkttype = 0;
+#ifdef AHT2HEADER
 	u_int8_t *skb1_data;
 	struct ath2_header ath2_h;
+#endif
 
 	if (tx) {
 		rssi = bf->bf_dsstatus.ds_txstat.ts_rssi;
@@ -403,8 +409,11 @@ ieee80211_input_monitor(struct ieee80211com *ic, struct sk_buff *skb,
 			 * on the contents of the frame to set pkttype.
 			 */
 			if (tx)
-				//pkttype = PACKET_OUTGOING;
+#ifdef TXFEEDBACK_BUGFIX
 				pkttype = PACKET_OTHERHOST;
+#else
+				pkttype = PACKET_OUTGOING;
+#endif
 			else if (IEEE80211_IS_MULTICAST(wh->i_addr1)) {
 				if (IEEE80211_ADDR_EQ(wh->i_addr1, dev->broadcast))
 					pkttype = PACKET_BROADCAST;
@@ -610,6 +619,7 @@ ieee80211_input_monitor(struct ieee80211com *ic, struct sk_buff *skb,
 					ds, ATHDESC_HEADER_SIZE);
 			break;
 		}
+#ifdef AHT2HEADER
 		case ARPHRD_IEEE80211_ATHDESC2: {
 			if (skb_headroom(skb1) < ATHDESC2_HEADER_SIZE) {
 				printk("%s:%d %s\n", __FILE__, 
@@ -662,6 +672,7 @@ ieee80211_input_monitor(struct ieee80211com *ic, struct sk_buff *skb,
 			/*Copy the hole rx/tx-status and brn extra*/
 			break;
 		}
+#endif
 		default:
 			break;
 		}

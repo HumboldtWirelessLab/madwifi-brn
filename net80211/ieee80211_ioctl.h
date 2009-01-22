@@ -649,9 +649,12 @@ enum {
 	IEEE80211_PARAM_RESETTXBUFS		= 80,   /* Reset transmit DMA */
 	IEEE80211_PARAM_SCANBUFS		= 81,	/* Heap analysis for TX DMA */
 	IEEE80211_PARAM_LEAKTXBUFS		= 82,	/* Leak tx buffers */
-
+#ifdef MACCLONE
 	IEEE80211_PARAM_MACCLONE                = 83,   /* MAC cloning */
+#endif
+#ifdef CHANNELSWITCH
 	IEEE80211_PARAM_CHANNELSWITCH           = 84,   /* Channel Switch */
+#endif
 };
 
 #define	SIOCG80211STATS			(SIOCDEVPRIVATE+2)

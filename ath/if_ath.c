@@ -2866,8 +2866,8 @@ ath_reset(struct net_device *dev)
 		EPRINTF(sc, "Unable to reset hardware: '%s' (HAL status %u)\n",
 			ath_get_hal_status_desc(status), status);
 
-//This is moved down a few lines in GVY version, but the surrounding code is different.  Don't know what's best.
 #ifdef COLORADO_CCA 
+//This is moved down a few lines in GVY version, but the surrounding code is different.  Don't know what's best.
 	{
 		printk(KERN_INFO "Resetting hardware.\n");
 		set_cca_mode(sc);

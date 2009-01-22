@@ -57,7 +57,9 @@
 #include <net80211/ieee80211_monitor.h>
 #include <net80211/if_athproto.h>
 
+#ifdef MACCLONE
 #include <ath/if_ath_hal.h>
+#endif
 
 #ifdef IEEE80211_DEBUG
 /*
@@ -75,6 +77,7 @@ doprint(struct ieee80211vap *vap, int subtype)
 }
 #endif
 
+#ifdef MACCLONE
 static int
 ieee80211_setup_macclone(struct ieee80211vap *vap, const char* addr) {
 	struct net_device *dev = NULL;
@@ -121,6 +124,7 @@ ieee80211_setup_macclone(struct ieee80211vap *vap, const char* addr) {
 
 	return 0;
 }
+#endif
 
 /*
  * Determine the priority based on VLAN and/or IP TOS. Priority is
@@ -253,12 +257,14 @@ ieee80211_hardstart(struct sk_buff *skb, struct net_device *dev)
 	struct ieee80211com *ic = vap->iv_ic;
 	struct net_device *parent = ic->ic_dev;
 	struct ieee80211_node *ni = NULL;
-	struct ether_header *eh = NULL;
+	struct ether_header *eh;
+#ifdef MACCLONE
 	struct ieee80211_frame *wf = NULL;
-
+#endif
+#ifdef CHANNELSWITCH
 	struct ieee80211_channel *chan;
 	struct ath2_header *ath2_h;
-
+#endif
 
 	/* Reset the SKB of new frames reaching this layer BEFORE
 	 * we invoke ieee80211_skb_track. */
@@ -284,7 +290,8 @@ ieee80211_hardstart(struct sk_buff *skb, struct net_device *dev)
 	}
 	
 	if (vap->iv_opmode == IEEE80211_M_MONITOR) {
-		
+
+#ifdef MACCLONE		
 		if ( ( (vap->iv_flags_ext & IEEE80211_FEXT_MACCLONE) != 0 ) && ( ( skb->dev->type == ARPHRD_IEEE80211_ATHDESC ) || ( skb->dev->type == ARPHRD_IEEE80211_ATHDESC2 ) ) ) {
 		
 		    if ( skb->dev->type == ARPHRD_IEEE80211_ATHDESC )
@@ -301,7 +308,8 @@ ieee80211_hardstart(struct sk_buff *skb, struct net_device *dev)
 			    }
 		    }
 		}
-		
+#endif
+#ifdef CHANNELSWITCH		
 		if ( ( (vap->iv_flags_ext & IEEE80211_FEXT_CHANNELSWITCH) != 0 ) && ( skb->dev->type == ARPHRD_IEEE80211_ATHDESC2 ) )
 		{
 			/*I edit the current channel structure, the other option is to create new structure*/
@@ -318,7 +326,7 @@ ieee80211_hardstart(struct sk_buff *skb, struct net_device *dev)
             /*end of channel switching*/
 	
 		}
-
+#endif
 		ieee80211_monitor_encap(vap, skb);
 		ieee80211_parent_queue_xmit(skb);
 		return NETDEV_TX_OK;
@@ -332,7 +340,9 @@ ieee80211_hardstart(struct sk_buff *skb, struct net_device *dev)
 	eh = (struct ether_header *)skb->data;
 	if (vap->iv_opmode == IEEE80211_M_WDS)
 		ni = ieee80211_find_txnode(vap, vap->wds_mac);
-	else {
+	else 
+	{
+#ifdef MACCLONE
 		if ((vap->iv_flags_ext & IEEE80211_FEXT_MACCLONE) != 0 &&
 				 vap->iv_opmode == IEEE80211_M_STA &&
 				 memcmp(eh->ether_shost, vap->iv_myaddr, ETH_ALEN) != 0) {
@@ -340,6 +350,7 @@ ieee80211_hardstart(struct sk_buff *skb, struct net_device *dev)
 				 goto bad;
 			 }
 		}
+#endif
 		ni = ieee80211_find_txnode(vap, eh->ether_dhost);
 	}
 	if (ni == NULL) {

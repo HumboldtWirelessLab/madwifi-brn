@@ -43,7 +43,9 @@
 
 #define ATHDESC_HEADER_SIZE	32
 
+#ifdef AHT2HEADER
 #include <net80211/ieee80211_monitor_ath2.h>
+#endif
 
 #define IEEE80211_MON_MAXHDROOM ((unsigned int)			\
 	A_MAX(sizeof(struct ath_tx_radiotap_header),		\

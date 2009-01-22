@@ -101,10 +101,7 @@ include $(TOP)/ath_hal/ah_target.inc
 export TARGET
 COPTS += -DTARGET='"$(TARGET)"'
 
-COPTS += -DCOLORADO_CCA -DHEISENBUG
-
-COPTS += -DEXTATHFLAGS
-#-DEXTATHFLAGSDEBUG
+include $(TOP)/Makefile.brn
 
 # KMODPATH nominates the directory where the modules will be
 # installed to

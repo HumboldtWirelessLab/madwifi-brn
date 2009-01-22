@@ -64,8 +64,10 @@
 
 #include <net80211/ieee80211_var.h>
 #include <net80211/ieee80211_linux.h>
+#ifdef MACCLONE
 #include <ath/if_athvar.h>
 #include <ath/if_ath_hal.h>
+#endif
 #include "ah.h"
 
 #define	IS_UP(_dev) \
@@ -2874,6 +2876,7 @@ ieee80211_ioctl_setparam(struct net_device *dev, struct iw_request_info *info,
 		else
 			ic->ic_flags_ext &= ~IEEE80211_FEXT_MARKDFS;
 		break;
+#ifdef MACCLONE
 	case IEEE80211_PARAM_MACCLONE:
 		if (value)
 			vap->iv_flags_ext |= IEEE80211_FEXT_MACCLONE;
@@ -2891,12 +2894,15 @@ ieee80211_ioctl_setparam(struct net_device *dev, struct iw_request_info *info,
 			ATH_UNLOCK(sc);
 		}
 		break;
+#endif
+#ifdef CHANNELSWITCH
 	case IEEE80211_PARAM_CHANNELSWITCH:
 		if (value)
 			vap->iv_flags_ext |= IEEE80211_FEXT_CHANNELSWITCH;
 		else
 			vap->iv_flags_ext &= ~IEEE80211_FEXT_CHANNELSWITCH;
-		break;		
+		break;
+#endif		
 #ifdef ATH_REVERSE_ENGINEERING
 	case IEEE80211_PARAM_DUMPREGS:
 		ieee80211_dump_registers(dev, info, w, extra);
@@ -3235,12 +3241,16 @@ ieee80211_ioctl_getparam(struct net_device *dev, struct iw_request_info *info,
 		else
 			param[0] = 0;
 		break;
+#ifdef MACCLONE
 	case IEEE80211_PARAM_MACCLONE:
 		param[0] = (vap->iv_flags_ext & IEEE80211_FEXT_MACCLONE) != 0;
 		break;
+#endif
+#ifdef CHANNELSWITCH
 	case IEEE80211_PARAM_CHANNELSWITCH:
 		param[0] = (vap->iv_flags_ext & IEEE80211_FEXT_CHANNELSWITCH) != 0;
 		break;
+#endif
 	default:
 		return -EOPNOTSUPP;
 	}
@@ -5693,15 +5703,18 @@ static const struct iw_priv_args ieee80211_priv_args[] = {
 	  IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 1, 0, "debug_scanbufs" },
 	{ IEEE80211_PARAM_LEAKTXBUFS,
 	  IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 1, 0, "debug_leaktxbufs" },
+#ifdef MACCLONE
 	{ IEEE80211_PARAM_MACCLONE,
 	  IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 1, 0, "macclone" },
 	{ IEEE80211_PARAM_MACCLONE,
 	  0, IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 1, "get_macclone" },
+#endif
+#ifdef CHANNELSWITCH
 	{ IEEE80211_PARAM_CHANNELSWITCH,
 	  IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 1, 0, "channelswitch" },
 	{ IEEE80211_PARAM_CHANNELSWITCH,
 	  0, IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 1, "get_chan_switch" },
-	
+#endif	
 #ifdef ATH_REVERSE_ENGINEERING
 	/*
 	Diagnostic dump of device registers
