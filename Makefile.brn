@@ -7,3 +7,6 @@ COPTS += -DCOLORADO_CCA -DHEISENBUG
 COPTS += -DAHT2HEADER
 COPTS += -DEXTATHFLAGS 
 COPTS += -DEXTATHFLAGSDEBUG
+
+#freehal:
+#	make -C ./hal_free -f Makefile
