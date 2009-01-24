@@ -43,7 +43,7 @@
 obj := $(firstword $(obj) $(SUBDIRS) .)
 TOP = $(obj)/..
 
-include $(TOP)/Makefile.inc
+include $(TOP)/Makefile.inc.freehal
 
 obj-m		+= ath_hal.o
 ath_hal-objs	:= \
