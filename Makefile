@@ -45,8 +45,13 @@ TOP = $(obj)
 
 include $(TOP)/Makefile.inc
 
+ifeq ($(FREEHAL),)
 obj-y := ath/ ath_hal/ ath_rate/ net80211/
-#obj-y := ath/ hal_free/ ath_rate/ net80211/
+else
+obj-y := ath/ hal_free/ ath_rate/ net80211/
+endif
+
+obj-y-all := ath/ ath_hal/ hal_free/ ath_rate/ net80211/
 
 ifdef CRYPTO_TESTING
 obj-y += regression/
@@ -129,7 +134,7 @@ reinstall-modules: uninstall-modules install-modules
 
 .PHONY: clean
 clean:
-	for i in $(obj-y); do \
+	for i in $(obj-y-all); do \
 		$(MAKE) -C $$i clean; \
 	done
 	-$(MAKE) -C $(TOOLS) clean
