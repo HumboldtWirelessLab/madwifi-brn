@@ -5714,7 +5714,8 @@ static const struct iw_priv_args ieee80211_priv_args[] = {
 	  IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 1, 0, "channelswitch" },
 	{ IEEE80211_PARAM_CHANNELSWITCH,
 	  0, IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 1, "get_chan_switch" },
-#endif	
+#endif
+	
 #ifdef ATH_REVERSE_ENGINEERING
 	/*
 	Diagnostic dump of device registers
