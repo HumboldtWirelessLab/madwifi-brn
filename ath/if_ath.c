@@ -3073,6 +3073,7 @@ ath_tx_startraw(struct net_device *dev, struct ath_buf *bf, struct sk_buff *skb)
 	u_int8_t cix, rix = 0;
 	unsigned int ctsrate = 0, ctsduration = 0;
 	HAL_BOOL shortPreamble;
+	unsigned int sc_txantenna;
 #endif
 
 	wh = (struct ieee80211_frame *)skb->data;
@@ -3120,8 +3121,15 @@ ath_tx_startraw(struct net_device *dev, struct ath_buf *bf, struct sk_buff *skb)
 	flags |= (ph->flags & HAL_TXDESC_RTSENA);  //RTS/CTS-rate must set, multirate is not supported if using rts/cts
 	flags |= (ph->flags & HAL_TXDESC_CTSENA);
 	
+
 	ant_mode_xmit = ( ( ph->flags >> 28 ) & 15 ); //4 Bits
 	
+	if ( ant_mode_xmit == 0 )
+	    sc_txantenna = sc->sc_txantenna;
+	else
+	    sc_txantenna = ant_mode_xmit;
+
+
 	rts_cts_rate = ( ( ph->flags >> 23 ) & 31 );  //5 Bits 
 	
 	rix = sc->sc_minrateix;
@@ -3199,7 +3207,11 @@ ath_tx_startraw(struct net_device *dev, struct ath_buf *bf, struct sk_buff *skb)
 			    power,			/* txpower */
 			    txrate, try0,		/* series 0 rate/tries */
 			    HAL_TXKEYIX_INVALID,	/* key cache index */
+#ifdef EXTATHFLAGS
+			    sc_txantenna,
+#else
 			    sc->sc_txantenna,		/* antenna mode */
+#endif
 			    flags,			/* flags */
 #ifdef EXTATHFLAGS
 			    ctsrate,			/* rts/cts rate */
