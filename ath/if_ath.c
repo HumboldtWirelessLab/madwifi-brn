@@ -3068,12 +3068,15 @@ ath_tx_startraw(struct net_device *dev, struct ath_buf *bf, struct sk_buff *skb)
 	struct ath_desc *ds = NULL;
 	struct ieee80211_frame *wh;
 #ifdef EXTATHFLAGS
+	struct ieee80211com *ic = &sc->sc_ic;
 	unsigned int rts_cts_rate;
 	unsigned int ant_mode_xmit;
 	u_int8_t cix, rix = 0;
 	unsigned int ctsrate = 0, ctsduration = 0;
 	HAL_BOOL shortPreamble;
 	unsigned int sc_txantenna;
+	struct sk_buff *original_skb = skb;
+	struct ieee80211_node *ni = NULL;
 #endif
 
 	wh = (struct ieee80211_frame *)skb->data;
@@ -3146,12 +3149,13 @@ ath_tx_startraw(struct net_device *dev, struct ath_buf *bf, struct sk_buff *skb)
 		 * use short preamble based on the current mode and
 		 * negotiated parameters.
 		 */
+		 
+		ni = SKB_NI(original_skb);
 
-//	    	if ((ic->ic_flags & IEEE80211_F_SHPREAMBLE) &&
-//		    (ni->ni_capinfo & IEEE80211_CAPINFO_SHORT_PREAMBLE)) {
-//			shortPreamble = AH_TRUE;
-//		} else
-
+	    	if ((ic->ic_flags & IEEE80211_F_SHPREAMBLE) &&
+		    (ni->ni_capinfo & IEEE80211_CAPINFO_SHORT_PREAMBLE)) {
+			shortPreamble = AH_TRUE;
+		} else
 	    		shortPreamble = AH_FALSE;
 
 		/*
