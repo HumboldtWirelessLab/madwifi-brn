@@ -68,5 +68,7 @@ AH_REGOPS_FUNC=1
 
 LDOPTS=	-EL
 COPTS+=	-DAH_BYTE_ORDER=AH_LITTLE_ENDIAN
-COPTS+=	-G 0 -EL -mno-abicalls -fno-pic -mips1 -Wa,--trap \
+COPTS+=	-G 0 -mno-abicalls -fno-pic -Wa,--trap,-relax-branch \
 	-fno-strict-aliasing -fno-common -fomit-frame-pointer -mlong-calls
+#COPTS+=	-G 0 -EL -mno-abicalls -fno-pic -mips1 -Wa,--trap \
+#	-fno-strict-aliasing -fno-common -fomit-frame-pointer -mlong-calls
