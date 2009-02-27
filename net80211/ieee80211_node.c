@@ -29,7 +29,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $Id: ieee80211_node.c 3743 2008-06-22 02:12:53Z mentor $
+ * $Id: ieee80211_node.c 3941 2009-02-04 21:43:58Z proski $
  */
 #ifndef EXPORT_SYMTAB
 #define	EXPORT_SYMTAB
@@ -812,8 +812,6 @@ node_cleanup(struct ieee80211_node *ni)
 		IEEE80211_NOTE(vap, IEEE80211_MSG_POWER, ni,
 			"Power save mode off, %u STAs in PS mode",
 			vap->iv_ps_sta);
-		if (ieee80211_msg_is_reported(vap, IEEE80211_MSG_POWER))
-				dump_stack();
 #endif
 		if (ni->ni_flags & IEEE80211_NODE_UAPSD_TRIG) {
 			ni->ni_flags &= ~IEEE80211_NODE_UAPSD_TRIG;
@@ -888,7 +886,6 @@ node_print_message(
 			ni->ni_table != NULL ? " table" : "",
 			ni->ni_table != NULL ? "" : " (not in any tables)",
 			adjusted_refcount);
-	dump_stack();
 	va_end(args);
 }
 #else
