@@ -29,7 +29,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $Id: ieee80211_node.h 3743 2008-06-22 02:12:53Z mentor $
+ * $Id: ieee80211_node.h 3960 2009-04-01 19:34:57Z proski $
  */
 #ifndef _NET80211_IEEE80211_NODE_H_
 #define _NET80211_IEEE80211_NODE_H_
@@ -275,8 +275,6 @@ struct ieee80211_node *ieee80211_find_rxnode(struct ieee80211com *,
 	const struct ieee80211_frame_min *);
 struct ieee80211_node *ieee80211_find_txnode(struct ieee80211vap *,
 	const u_int8_t *);
-
-void ieee80211_free_node(struct ieee80211_node *ni);
 
 /* Reference counting only needs to be locked out against the transitions,
  * 0->1 and 1->0 (i.e., when we do not own the reference we are getting).

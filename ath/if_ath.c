@@ -33,7 +33,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $Id: if_ath.c 3941 2009-02-04 21:43:58Z proski $
+ * $Id: if_ath.c 3954 2009-04-01 03:17:48Z proski $
  */
 
 /*
@@ -7500,7 +7500,7 @@ ath_txq_update(struct ath_softc *sc, struct ath_txq *txq, int ac)
 	qi.tqi_aifs = wmep->wmep_aifsn;
 	qi.tqi_cwmin = (1 << wmep->wmep_logcwmin) - 1;
 	qi.tqi_cwmax = (1 << wmep->wmep_logcwmax) - 1;
-	qi.tqi_burstTime = wmep->wmep_txopLimit / 32; /* 32 us units. */
+	qi.tqi_burstTime = IEEE80211_TXOP_TO_US(wmep->wmep_txopLimit);
 
 	if (!ath_hal_settxqueueprops(ah, txq->axq_qnum, &qi)) {
 		EPRINTF(sc, "Unable to update hardware queue "

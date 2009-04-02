@@ -29,7 +29,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $Id: ieee80211_node.c 3941 2009-02-04 21:43:58Z proski $
+ * $Id: ieee80211_node.c 3962 2009-04-01 19:44:05Z proski $
  */
 #ifndef EXPORT_SYMTAB
 #define	EXPORT_SYMTAB
@@ -75,7 +75,6 @@ static struct ieee80211_node *node_alloc(struct ieee80211vap *);
 static void node_cleanup(struct ieee80211_node *);
 static void node_free(struct ieee80211_node *);
 
-static int32_t node_count(struct ieee80211com *ic);
 static u_int8_t node_getrssi(const struct ieee80211_node *);
 
 static void node_table_leave_locked(struct ieee80211_node_table *, 
@@ -108,7 +107,6 @@ ieee80211_node_attach(struct ieee80211com *ic)
 	ic->ic_node_free = node_free;
 	ic->ic_node_cleanup = node_cleanup;
 
-	ic->ic_node_count = node_count;
 	ic->ic_node_getrssi = node_getrssi;
 }
 
@@ -920,12 +918,6 @@ node_free(struct ieee80211_node *ni)
 	FREE(ni, M_80211_NODE);
 }
 
-static int32_t
-node_count(struct ieee80211com *ic)
-{
-	return atomic_read(&ic->ic_node_counter);
-}
-
 static u_int8_t
 node_getrssi(const struct ieee80211_node *ni)
 {
@@ -1384,7 +1376,7 @@ ieee80211_find_txnode(struct ieee80211vap *vap, const u_int8_t *mac)
 EXPORT_SYMBOL(ieee80211_find_txnode);
 
 /* Context: hwIRQ, softIRQ and process context. */
-void
+static void
 ieee80211_free_node(struct ieee80211_node *ni)
 {
 	struct ieee80211vap *vap = ni->ni_vap;
@@ -1402,7 +1394,6 @@ ieee80211_free_node(struct ieee80211_node *ni)
 
 	vap->iv_ic->ic_node_free(ni);
 }
-EXPORT_SYMBOL(ieee80211_free_node);
 
 static void _reset_node(void *arg, struct ieee80211_node *ni)
 {
@@ -2158,12 +2149,3 @@ ieee80211_unref_node(struct ieee80211_node **pni)
 	*pni = NULL;
 }
 EXPORT_SYMBOL(ieee80211_unref_node);
-
-int32_t 
-ieee80211_get_node_count(struct ieee80211com *ic)
-{
-	return node_count(ic);
-}
-EXPORT_SYMBOL(ieee80211_get_node_count);
-
-

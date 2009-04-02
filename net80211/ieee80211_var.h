@@ -29,7 +29,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $Id: ieee80211_var.h 3849 2008-08-27 17:18:39Z proski $
+ * $Id: ieee80211_var.h 3962 2009-04-01 19:44:05Z proski $
  */
 
 #ifndef _NET80211_IEEE80211_VAR_H_
@@ -463,7 +463,6 @@ struct ieee80211com {
 	void (*ic_newassoc)(struct ieee80211_node *, int);
 
 	/* Node state management */
-	int32_t (*ic_node_count)(struct ieee80211com *);
 	struct ieee80211_node *(*ic_node_alloc)(struct ieee80211vap *);
 	void (*ic_node_cleanup)(struct ieee80211_node *);
 	void (*ic_node_free)(struct ieee80211_node *);
