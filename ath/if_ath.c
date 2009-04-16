@@ -33,7 +33,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $Id: if_ath.c 3954 2009-04-01 03:17:48Z proski $
+ * $Id: if_ath.c 4002 2009-04-15 04:21:12Z proski $
  */
 
 /*
@@ -500,6 +500,20 @@ MODULE_PARM_DESC(ieee80211_debug, "Load-time 802.11 debug output enable");
 				(bssid)[0] |= (((id) << 2) | 0x02);	\
 		} while (0)
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,29)
+static const struct net_device_ops ath_netdev_ops = {
+	.ndo_open		= ath_init,
+	.ndo_stop		= ath_stop,
+	.ndo_start_xmit		= ath_hardstart,
+	.ndo_tx_timeout 	= ath_tx_timeout,
+	.ndo_set_multicast_list = ath_mode_init,
+	.ndo_do_ioctl		= ath_ioctl,
+	.ndo_get_stats		= ath_getstats,
+	.ndo_set_mac_address	= ath_set_mac_address,
+	.ndo_change_mtu 	= ath_change_mtu,
+};
+#endif
+
 /* Initialize ath_softc structure */
 
 int
@@ -613,12 +627,14 @@ ath_attach(u_int16_t devid, struct net_device *dev, HAL_BUS_TAG tag)
 				"supported by the HAL/hardware.\n");
 		intmit = 0; /* Stop use in future ath_attach(). */
 	}
+#if 0
 	else {
 		ath_hal_setintmit(ah, sc->sc_useintmit);
 		DPRINTF(sc, ATH_DEBUG_ANY, "Interference mitigation is "
 			"supported.  Currently %s.\n",
 			(sc->sc_useintmit ? "enabled" : "disabled"));
 	}
+#endif
 
 	sc->sc_dmasize_stomp = 0;
 
@@ -846,16 +862,20 @@ ath_attach(u_int16_t devid, struct net_device *dev, HAL_BUS_TAG tag)
 	}
 
 	/* NB: ether_setup is done by bus-specific code */
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,29)
 	dev->open = ath_init;
 	dev->stop = ath_stop;
 	dev->hard_start_xmit = ath_hardstart;
 	dev->tx_timeout = ath_tx_timeout;
-	dev->watchdog_timeo = 5 * HZ;
 	dev->set_multicast_list = ath_mode_init;
 	dev->do_ioctl = ath_ioctl;
 	dev->get_stats = ath_getstats;
 	dev->set_mac_address = ath_set_mac_address;
 	dev->change_mtu = ath_change_mtu;
+#else
+	dev->netdev_ops = &ath_netdev_ops;
+#endif
+	dev->watchdog_timeo = 5 * HZ;
 	dev->tx_queue_len = ATH_TXBUF - ATH_TXBUF_MGT_RESERVED;
 #ifdef USE_HEADERLEN_RESV
 	dev->hard_header_len += sizeof(struct ieee80211_qosframe) +
@@ -1212,7 +1232,7 @@ ath_detach(struct net_device *dev)
 	ATH_BBUF_LOCK_DESTROY(sc);
 	ATH_GBUF_LOCK_DESTROY(sc);
 	ATH_HAL_LOCK_DESTROY(sc);
-	dev->stop = NULL; /* prevent calling ath_stop again */
+	dev->flags &= ~IFF_RUNNING; /* mark as stopped */
 	unregister_netdev(dev);
 	return 0;
 }
@@ -1668,7 +1688,7 @@ static HAL_BOOL ath_hw_reset(struct ath_softc *sc, HAL_OPMODE opmode,
 	HAL_BOOL ret;
 	unsigned long __axq_lockflags[HAL_NUM_TX_QUEUES];
 	struct ath_txq * txq;
-	int i;
+	int i, lclass = 0;
  	u_int8_t old_privFlags = sc->sc_curchan.privFlags;
 
 	/* ath_hal_reset() resets all TXDP pointers, so we need to
@@ -1678,7 +1698,9 @@ static HAL_BOOL ath_hw_reset(struct ath_softc *sc, HAL_OPMODE opmode,
 	for (i = 0; i < HAL_NUM_TX_QUEUES; i++) {
 		if (ATH_TXQ_SETUP(sc, i)) {
 			txq = &sc->sc_txq[i];
-			spin_lock_irqsave(&txq->axq_lock, __axq_lockflags[i]);
+			(void)lclass;	/* mark as used */
+			spin_lock_irqsave_nested(&txq->axq_lock,
+						 __axq_lockflags[i], lclass++);
 		}
 	}
 
@@ -9950,8 +9972,8 @@ ath_getchannels(struct net_device *dev, u_int cc,
 
 		DPRINTF(sc, ATH_DEBUG_RATE,
 				"Channel %3d (%4d MHz) Max Tx Power %d dBm%s "
-				"[%d hw %d reg] Flags%s%s%s%s%s%s%s%s%s%s%s%s%"
-				"s%s%s%s%s%s%s%s%s%s%s%s\n",
+				"[%d hw %d reg] Flags%s%s%s%s%s%s%s%s%s%s%s%s"
+				"%s%s%s%s%s%s%s%s%s%s%s\n",
 				ichan->ic_ieee,
 				c->channel,
 				(c->maxRegTxPower > (c->maxTxPower / 2) ? 
@@ -9995,9 +10017,6 @@ ath_getchannels(struct net_device *dev, u_int cc,
 				/* Dynamic CCK-OFDM channel */
 				(c->channelFlags & CHANNEL_DYN ? 
 				 " CF_DYNAMIC_TURBO" : ""),
-				/* GFSK channel (FHSS  PHY) */
-				(c->channelFlags & CHANNEL_XR ? 
-				 " CF_FHSS" : ""),
 				/* Radar found on channel */
 				(c->channelFlags & IEEE80211_CHAN_RADAR ? 
 				 " CF_RADAR_SEEN" : ""),
@@ -10494,7 +10513,7 @@ ath_printtxbuf(const struct ath_buf *bf, int done)
 	u_int8_t status = done ? ts->ts_status : 0;
 
 	DPRINTF(sc, ATH_DEBUG_ANY, 
-		"T (%p %08llx) %08x %08x %08x %08x %08x %08x %08x %08x%s%s%s%s%s%s%s%s%s\n",
+		"T (%p %08llx) %08x %08x %08x %08x %08x %08x %08x %08x%s%s%s%s%s%s\n",
 		ds, (u_int64_t)bf->bf_daddr,
 		ds->ds_link, ds->ds_data,
 		ds->ds_ctl0, ds->ds_ctl1,
@@ -10504,9 +10523,6 @@ ath_printtxbuf(const struct ath_buf *bf, int done)
 		status & HAL_TXERR_FILT			? " ERR_FILT"		: "",
 		status & HAL_TXERR_FIFO			? " ERR_FIFO"		: "",
 		status & HAL_TXERR_XTXOP		? " ERR_XTXOP" 		: "",
-		status & HAL_TXERR_DESC_CFG_ERR		? " ERR_DESC_CFG_ERR" 	: "",
-		status & HAL_TXERR_DATA_UNDERRUN	? " ERR_DATA_UNDERRUN"	: "",
-		status & HAL_TXERR_DELIM_UNDERRUN	? " ERR_DELIM_UNDERRUN"	: "",
 		status & 0x80				? " (1<<7)"		: "");
 }
 #endif /* AR_DEBUG */
@@ -12562,8 +12578,13 @@ ath_rcv_dev_event(struct notifier_block *this, unsigned long event,
 	struct net_device *dev = (struct net_device *)ptr;
 	struct ath_softc *sc = (struct ath_softc *)netdev_priv(dev);
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,29)
 	if (!dev || !sc || dev->open != &ath_init)
 		return 0;
+#else
+	if (!dev || !sc || dev->netdev_ops->ndo_open != &ath_init)
+		return 0;
+#endif
 
 	switch (event) {
 	case NETDEV_CHANGENAME:

@@ -24,7 +24,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $Id: ieee80211_linux.c 3902 2009-01-14 02:36:53Z proski $
+ * $Id: ieee80211_linux.c 4002 2009-04-15 04:21:12Z proski $
  */
 #ifndef EXPORT_SYMTAB
 #define	EXPORT_SYMTAB
@@ -965,8 +965,14 @@ ieee80211_rcv_dev_event(struct notifier_block *this, unsigned long event,
 	void *ptr)
 {
 	struct net_device *dev = (struct net_device *)ptr;
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,29)
 	if (!dev || dev->open != &ieee80211_open)
 		return 0;
+#else
+	if (!dev || dev->netdev_ops->ndo_open != &ieee80211_open)
+		return 0;
+#endif
 
 	switch (event) {
 	case NETDEV_CHANGENAME:

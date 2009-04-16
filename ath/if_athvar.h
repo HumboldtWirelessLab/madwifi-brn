@@ -33,7 +33,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $Id: if_athvar.h 3856 2008-09-02 21:30:32Z proski $
+ * $Id: if_athvar.h 3985 2009-04-08 06:09:58Z proski $
  */
 
 /*
@@ -103,11 +103,13 @@ typedef void *TQUEUE_ARG;
 /*
  * Guess how the interrupt handler should work.
  */
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,29)
 #if !defined(IRQ_NONE)
 typedef void irqreturn_t;
 #define	IRQ_NONE
 #define	IRQ_HANDLED
 #endif /* !defined(IRQ_NONE) */
+#endif /* Linux < 2.6.29 */
 
 #ifndef SET_MODULE_OWNER
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,23)

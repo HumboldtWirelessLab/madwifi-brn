@@ -33,7 +33,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $Id: athstats.c 3710 2008-06-06 20:32:29Z mentor $
+ * $Id: athstats.c 3978 2009-04-07 01:26:53Z proski $
  */
 
 /*
@@ -52,12 +52,11 @@
 #include <signal.h>
 #include <string.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <ctype.h>
 #include <unistd.h>
 #include <err.h>
 
-/* We don't need the real TARGET.opt_ah.h */
-#define OPT_AH_H <stdio.h>
 #include "ah_desc.h"
 
 #include "wireless_copy.h"

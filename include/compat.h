@@ -33,7 +33,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $Id: compat.h 3902 2009-01-14 02:36:53Z proski $
+ * $Id: compat.h 3995 2009-04-12 05:53:23Z proski $
  */
 #ifndef _ATH_COMPAT_H_
 #define _ATH_COMPAT_H_
@@ -208,6 +208,13 @@ typedef unsigned long resource_size_t;
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,0)
 #define request_module(_fmt, _modname) request_module(_modname)
+#endif
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,19)
+#ifndef spin_lock_irqsave_nested
+#define spin_lock_irqsave_nested(_lock, _flags, _subclass) \
+	spin_lock_irqsave(_lock, _flags)
+#endif
 #endif
 
 #endif /* __KERNEL__ */

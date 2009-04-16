@@ -34,7 +34,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $Id: if_ath_pci.c 3902 2009-01-14 02:36:53Z proski $
+ * $Id: if_ath_pci.c 3989 2009-04-08 21:42:36Z proski $
  */
 #include "opt_ah.h"
 
@@ -113,6 +113,7 @@ static struct pci_device_id ath_pci_id_table[] __devinitdata = {
 	{ 0x168c, 0x001d, PCI_ANY_ID, PCI_ANY_ID }, /* PCI Express ???  */
 	{ 0x168c, 0x0023, PCI_ANY_ID, PCI_ANY_ID },
 	{ 0x168c, 0x0024, PCI_ANY_ID, PCI_ANY_ID },
+	{ 0x168c, 0x0027, PCI_ANY_ID, PCI_ANY_ID },
 	{ 0x168c, 0x9013, PCI_ANY_ID, PCI_ANY_ID }, /* sonicwall */
 	{ 0 }
 };
@@ -190,25 +191,6 @@ ath_pci_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 		goto bad1;
 	}
 
-/*
- * Reject new MAC revisions if HAL doesn't support AR2425.  Ideally, it could
- * be done in the PCI ID table, but AR2424 and AR2425 share the same vendor ID
- * 168c:001c.
- */
-#ifndef AH_SUPPORT_2425
-#define AR5K_SREV		0x4020	/* MAC revision */
-#define AR5K_SREV_CUTOFF	0xE0	/* Cutoff revision */
-	{
-		u_int32_t mac_rev = readl(mem + AR5K_SREV);
-		if (mac_rev > AR5K_SREV_CUTOFF)
-		{
-			printk(KERN_ERR "%s: HAL doesn't support MAC revision "
-			       "0x%02x\n", dev_info, mac_rev);
-			goto bad2;
-		}
-	}
-#endif
-
 	dev = alloc_netdev(sizeof(struct ath_pci_softc), "wifi%d", ether_setup);
 	if (dev == NULL) {
 		printk(KERN_ERR "%s: no memory for device state\n", dev_info);
@@ -271,7 +253,7 @@ ath_pci_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 		dev_info, dev->name, athname ? athname : "Atheros ???",
 		(unsigned long long)phymem, dev->irq);
 
-	if (vdevice == AR5418_DEVID)
+	if (vdevice == AR5416_DEVID_PCIE)
 		sc->aps_sc.sc_dmasize_stomp = 1;
 
 	/* ready to process interrupts */

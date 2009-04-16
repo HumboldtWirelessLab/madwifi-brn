@@ -24,7 +24,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $Id: ieee80211_linux.h 3710 2008-06-06 20:32:29Z mentor $
+ * $Id: ieee80211_linux.h 4000 2009-04-15 03:11:34Z proski $
  */
 #ifndef _NET80211_IEEE80211_LINUX_H_
 #define _NET80211_IEEE80211_LINUX_H_
@@ -628,6 +628,7 @@ void ieee80211_vlan_vdetach(struct ieee80211vap *);
 #define	free_netdev(dev)	kfree(dev)
 #endif
 
+int ieee80211_ioctl(struct net_device *dev, struct ifreq *ifr, int cmd);
 void ieee80211_ioctl_vattach(struct ieee80211vap *);
 void ieee80211_ioctl_vdetach(struct ieee80211vap *);
 struct ifreq;
