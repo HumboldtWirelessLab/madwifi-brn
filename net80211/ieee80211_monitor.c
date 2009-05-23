@@ -647,6 +647,8 @@ ieee80211_input_monitor(struct ieee80211com *ic, struct sk_buff *skb,
 				ath2_h.anno.tx.ts_hosttime = jiffies;
 				ath2_h.anno.tx.ts_mactime = mactime;
 				ath2_h.anno.tx.ts_noise = (int8_t) noise;
+				ath2_h.anno.tx.ts_channel = (int8_t) ieee80211_mhz2ieee(ic->ic_curchan->ic_freq, ic->ic_curchan->ic_flags);
+
 			}
 			else
 			{
@@ -663,6 +665,7 @@ ieee80211_input_monitor(struct ieee80211com *ic, struct sk_buff *skb,
 				ath2_h.anno.rx.rs_hosttime = jiffies;
 				ath2_h.anno.rx.rs_mactime = mactime;
 				ath2_h.anno.rx.rs_noise = (int8_t) noise;
+				ath2_h.anno.rx.rs_channel = (int8_t) ieee80211_mhz2ieee(ic->ic_curchan->ic_freq, ic->ic_curchan->ic_flags);
 			}
 
 			skb1_data = skb_push(skb1, ATHDESC2_HEADER_SIZE);
