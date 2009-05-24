@@ -29,7 +29,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $Id: ieee80211_node.c 3962 2009-04-01 19:44:05Z proski $
+ * $Id: ieee80211_node.c 4024 2009-05-24 01:09:25Z proski $
  */
 #ifndef EXPORT_SYMTAB
 #define	EXPORT_SYMTAB
@@ -1636,7 +1636,8 @@ ieee80211_dump_node(struct ieee80211_node_table *nt, struct ieee80211_node *ni)
 		       ni->ni_rxseqs[i] & IEEE80211_SEQ_FRAG_MASK);
 	}
 	printk("\trtsf %10llu rssi %u intval %u capinfo 0x%x\n",
-		ni->ni_rtsf, ni->ni_rssi, ni->ni_intval, ni->ni_capinfo);
+		(unsigned long long)ni->ni_rtsf, ni->ni_rssi, ni->ni_intval,
+		ni->ni_capinfo);
 	printk("\tbssid " MAC_FMT " essid \"%.*s\" channel %u:0x%x\n",
 		MAC_ADDR(ni->ni_bssid),
 		ni->ni_esslen, ni->ni_essid,

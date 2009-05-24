@@ -33,7 +33,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $Id: if_ath.c 4002 2009-04-15 04:21:12Z proski $
+ * $Id: if_ath.c 4026 2009-05-24 01:21:48Z proski $
  */
 
 /*
@@ -234,18 +234,6 @@ static void ath_newassoc(struct ieee80211_node *, int);
 static int ath_getchannels(struct net_device *, u_int, HAL_BOOL, HAL_BOOL);
 static void ath_led_event(struct ath_softc *, int);
 static void ath_update_txpow(struct ath_softc *);
-
-#ifdef ATH_REVERSE_ENGINEERING
-/* Reverse engineering utility commands */
-static void ath_registers_dump(struct ieee80211com *ic);
-static void ath_registers_dump_delta(struct ieee80211com *ic);
-static void ath_registers_mark(struct ieee80211com *ic);
-static unsigned int ath_read_register(struct ieee80211com *ic, 
-		unsigned int address, unsigned int *value);
-static unsigned int ath_write_register(struct ieee80211com *ic, 
-		unsigned int address, unsigned int value);
-static void ath_ar5212_registers_dump(struct ath_softc *sc);
-#endif /* #ifdef ATH_REVERSE_ENGINEERING */
 
 static int ath_set_mac_address(struct net_device *, void *);
 static int ath_change_mtu(struct net_device *, int);
@@ -1083,13 +1071,6 @@ ath_attach(u_int16_t devid, struct net_device *dev, HAL_BUS_TAG tag)
 	ic->ic_scan_end			= ath_scan_end;
 	ic->ic_set_channel		= ath_set_channel;
 
-#ifdef ATH_REVERSE_ENGINEERING
-	ic->ic_read_register		= ath_read_register;
-	ic->ic_write_register		= ath_write_register;
-	ic->ic_registers_dump		= ath_registers_dump;
-	ic->ic_registers_dump_delta	= ath_registers_dump_delta;
-	ic->ic_registers_mark		= ath_registers_mark;
-#endif /* #ifdef ATH_REVERSE_ENGINEERING */
 	ic->ic_debug_ath_iwpriv		= ath_debug_iwpriv;
 
 	ic->ic_set_coverageclass = ath_set_coverageclass;
@@ -1737,7 +1718,7 @@ static HAL_BOOL ath_hw_reset(struct ath_softc *sc, HAL_OPMODE opmode,
 						"TXQ%d: restoring"
 						" TXDP:%08llx\n",
  						txq->axq_qnum,
- 						(u_int64_t)bf->bf_daddr);
+ 						(unsigned long long)bf->bf_daddr);
 					ath_hw_puttxbuf(sc, txq->axq_qnum,
 							bf->bf_daddr,
 							__func__);
@@ -1979,7 +1960,7 @@ ath_intr_process_rx_descriptors(struct ath_softc *sc, int *pneedmark, u_int64_t 
 
 			DPRINTF(sc, ATH_DEBUG_TSF,
 				"rs_tstamp=%10llx count=%d\n",
-				bf->bf_tsf, count);
+				(unsigned long long)bf->bf_tsf, count);
 
 			/* compute rollover */
 			if (last_rs_tstamp > rs->rs_tstamp) {
@@ -2248,7 +2229,7 @@ ath_intr_process_rx_descriptors(struct ath_softc *sc, int *pneedmark, u_int64_t 
 			rollover++;
 			DPRINTF(sc, ATH_DEBUG_TSF,
 				"%d rollover detected for hw_tsf=%10llx\n",
-				rollover, hw_tsf);
+				rollover, (unsigned long long)hw_tsf);
 		}
 
 		last_rs_tstamp = 0;
@@ -2277,14 +2258,15 @@ ath_intr_process_rx_descriptors(struct ath_softc *sc, int *pneedmark, u_int64_t 
 
 				DPRINTF(sc, ATH_DEBUG_TSF,
 					"bf_tsf=%10llx hw_tsf=%10llx\n",
-					bf->bf_tsf, hw_tsf);
+					(unsigned long long)bf->bf_tsf,
+					(unsigned long long)hw_tsf);
 
 				if (bf->bf_tsf < sc->sc_last_tsf) {
 					DPRINTF(sc, ATH_DEBUG_TSF, 
 						"TSF error: bf_tsf=%10llx "
 						"sc_last_tsf=%10llx\n",
-						bf->bf_tsf,
-						sc->sc_last_tsf);
+						(unsigned long long)bf->bf_tsf,
+						(unsigned long long)sc->sc_last_tsf);
 				}
 				sc->sc_last_tsf = bf->bf_tsf;
 			}
@@ -2475,7 +2457,8 @@ ath_intr(int irq, void *dev_id, struct pt_regs *regs)
 			DPRINTF(sc, ATH_DEBUG_BEACON,
 				"ath_intr HAL_INT_SWBA at "
 				"tsf %10llx nexttbtt %10llx\n",
-				hw_tsf, (u_int64_t)sc->sc_nexttbtt << 10);
+				(unsigned long long)hw_tsf,
+				(unsigned long long)sc->sc_nexttbtt << 10);
 
 			/* Software beacon alert--time to send a beacon.
 			 * Handle beacon transmission directly; deferring
@@ -2966,7 +2949,7 @@ ath_txq_dump(struct ath_softc *sc, struct ath_txq *txq)
 		DPRINTF(sc, ATH_DEBUG_WATCHDOG, "  [%3u] bf_daddr:%08llx "
 			"ds_link:%08x %s\n",
 			j++,
-			(u_int64_t)bf->bf_daddr, bf->bf_desc->ds_link,
+			(unsigned long long)bf->bf_daddr, bf->bf_desc->ds_link,
 			status == HAL_EINPROGRESS ? "pending" : "done");
 	}
 }
@@ -3035,7 +3018,7 @@ ath_tx_txqaddbuf(struct ath_softc *sc, struct ieee80211_node *ni,
 		DPRINTF(sc, ATH_DEBUG_XMIT, 
 				"link[%u]=%08llx (%p)\n",
 				txq->axq_qnum, 
-  				(u_int64_t)bf->bf_daddr, bf->bf_desc);
+  				(unsigned long long)bf->bf_daddr, bf->bf_desc);
 
 		/* We do not start tx on this queue as it will be done as
 		 * "CAB" data at DTIM intervals. */
@@ -3053,7 +3036,7 @@ ath_tx_txqaddbuf(struct ath_softc *sc, struct ieee80211_node *ni,
 				"link[%u] (%08x)=%08llx (%p)\n",
 				txq->axq_qnum, 
 				ath_get_last_ds_link(txq),
-				(u_int64_t)bf->bf_daddr, bf->bf_desc);
+				(unsigned long long)bf->bf_daddr, bf->bf_desc);
 
 		ath_hal_txstart(ah, txq->axq_qnum);
 		sc->sc_dev->trans_start = jiffies;
@@ -3114,7 +3097,7 @@ ath_tx_startraw(struct net_device *dev, struct ath_buf *bf, struct sk_buff *skb)
 	bf->bf_skbaddr = bus_map_single(sc->sc_bdev,
 					skb->data, pktlen, BUS_DMA_TODEVICE);
 	DPRINTF(sc, ATH_DEBUG_XMIT, "skb=%p [data %p len %u] skbaddr %08llx\n",
-		skb, skb->data, skb->len, (u_int64_t)bf->bf_skbaddr);
+		skb, skb->data, skb->len, (unsigned long long)bf->bf_skbaddr);
 
 	bf->bf_skb = skb;
 #ifdef ATH_SUPERG_FF
@@ -5920,7 +5903,8 @@ ath_descdma_setup(struct ath_softc *sc,
 	ds = dd->dd_desc;
 	DPRINTF(sc, ATH_DEBUG_RESET, "%s DMA map: %p (%lu) -> %08llx (%lu)\n",
 		dd->dd_name, ds, (u_long) dd->dd_desc_len,
-		(u_int64_t)dd->dd_desc_paddr, /*XXX*/ (u_long) dd->dd_desc_len);
+		(unsigned long long)dd->dd_desc_paddr,
+		/*XXX*/ (u_long) dd->dd_desc_len);
 
 	/* allocate buffers */
 	bsize = sizeof(struct ath_buf) * nbuf;
@@ -6334,7 +6318,7 @@ ath_node_move_data(const struct ieee80211_node *ni)
 				DPRINTF(sc, ATH_DEBUG_XMIT, 
 						"link[%u]=%08llx (%p)\n",
 						wmeq->axq_qnum, 
-						(u_int64_t)bf_tmp->bf_daddr, 
+						(unsigned long long)bf_tmp->bf_daddr,
 						bf_tmp->bf_desc);
 
 				/* Update the rate information. (?) */
@@ -6638,15 +6622,18 @@ ath_recv_mgmt(struct ieee80211vap * vap, struct ieee80211_node *ni_or_null,
 					"Beacon transmitted at %10llx, "
 					"received at %10llx(%lld), hw TSF "
 					"%10llx(%lld)\n",
-					beacon_tsf,
-					rtsf, rtsf - beacon_tsf,
-					hw_tsf, hw_tsf - beacon_tsf);
+					(unsigned long long)beacon_tsf,
+					(unsigned long long)rtsf,
+					(long long)(rtsf - beacon_tsf),
+					(unsigned long long)hw_tsf,
+					(long long)(hw_tsf - beacon_tsf));
 
 			if (beacon_tsf > rtsf) {
 				DPRINTF(sc, ATH_DEBUG_BEACON,
 						"IBSS merge: rtsf %10llx "
 						"beacon's tsf %10llx\n",
-						rtsf, beacon_tsf);
+						(unsigned long long)rtsf,
+						(unsigned long long)beacon_tsf);
 				do_merge = 1;
 			}
 
@@ -7842,12 +7829,12 @@ ath_tx_start(struct net_device *dev, struct ieee80211_node *ni,
 	bf->bf_skbaddr = bus_map_single(sc->sc_bdev,
 		skb->data, pktlen, BUS_DMA_TODEVICE);
 	DPRINTF(sc, ATH_DEBUG_XMIT, "skb %p [data %p len %u] skbaddr %08llx\n",
-		skb, skb->data, skb->len, (u_int64_t)bf->bf_skbaddr);
+		skb, skb->data, skb->len, (unsigned long long)bf->bf_skbaddr);
 #else /* ATH_SUPERG_FF case */
 	bf->bf_skbaddr = bus_map_single(sc->sc_bdev,
 		skb->data, skb->len, BUS_DMA_TODEVICE);
 	DPRINTF(sc, ATH_DEBUG_XMIT, "skb %p [data %p len %u] skbaddr %08llx\n",
-		skb, skb->data, skb->len, (u_int64_t)bf->bf_skbaddr);
+		skb, skb->data, skb->len, (unsigned long long)bf->bf_skbaddr);
 	/* NB: ensure skb->len had been updated for each skb so we don't need pktlen */
 	{
 		struct sk_buff *skbtmp = skb;
@@ -7859,7 +7846,7 @@ ath_tx_start(struct net_device *dev, struct ieee80211_node *ni,
 			DPRINTF(sc, ATH_DEBUG_XMIT, "skb%d (FF) %p "
 				"[data %p len %u] skbaddr %08llx\n", 
 				i, skbtmp, skbtmp->data, skbtmp->len,
-				(u_int64_t)bf->bf_skbaddrff[i]);
+				(unsigned long long)bf->bf_skbaddrff[i]);
 			i++;
 		}
 		bf->bf_numdescff = i;
@@ -8937,7 +8924,7 @@ ath_chan_set(struct ath_softc *sc, struct ieee80211_channel *chan)
 		ath_hal_mhz2ieee(ah, hchan.channel, hchan.channelFlags),
 		hchan.channel,
 		tv.tv_sec,
-		tv.tv_usec
+		(long)tv.tv_usec
 		);
 
 	/* check if it is turbo mode switch */
@@ -9030,7 +9017,7 @@ ath_chan_set(struct ath_softc *sc, struct ieee80211_channel *chan)
 					"channel %u -- Time: %ld.%06ld\n", 
 					ieee80211_mhz2ieee(sc->sc_curchan.channel, 
 						sc->sc_curchan.channelFlags), 
-					tv.tv_sec, tv.tv_usec);
+					tv.tv_sec, (long)tv.tv_usec);
 			/* set the timeout to normal */
 			dev->watchdog_timeo = 120 * HZ;
 			/* Disable beacons and beacon miss interrupts */
@@ -9060,7 +9047,7 @@ ath_chan_set(struct ath_softc *sc, struct ieee80211_channel *chan)
 				"%d -- Time: %ld.%06ld\n", 
 				ieee80211_mhz2ieee(sc->sc_curchan.channel, 
 					sc->sc_curchan.channelFlags), 
-				tv.tv_sec, tv.tv_usec);
+				tv.tv_sec, (long)tv.tv_usec);
 	return 0;
 }
 
@@ -9575,7 +9562,7 @@ ath_dfs_cac_completed(unsigned long data )
 					"completed" : "not applicable", 
 					ieee80211_mhz2ieee(sc->sc_curchan.channel, 
 						sc->sc_curchan.channelFlags), 
-					tv.tv_sec, tv.tv_usec);
+					tv.tv_sec, (long)tv.tv_usec);
 		sc->sc_dfs_cac = 0;
 		if (sc->sc_curchan.privFlags & CHANNEL_INTERFERENCE) {
 			DPRINTF(sc, ATH_DEBUG_DOTH, 
@@ -9607,7 +9594,7 @@ ath_dfs_cac_completed(unsigned long data )
 				DPRINTF(sc, ATH_DEBUG_STATE | ATH_DEBUG_DOTH, 
 						"VAP DFSWAIT_PENDING "
 						"-> RUN -- Time: %ld.%06ld\n", 
-						tv.tv_sec, tv.tv_usec);
+						tv.tv_sec, (long)tv.tv_usec);
 				/* re alloc beacons to update new channel info */
 				error = ath_beacon_alloc(sc, vap->iv_bss);
 				if (error < 0) {
@@ -9642,14 +9629,14 @@ ath_dfs_cac_completed(unsigned long data )
 					"indefinitely.  dfs_testmode is "
 					"enabled.  Waiting again. -- Time: "
 					"%ld.%06ld\n",
-					tv.tv_sec, tv.tv_usec);
+					tv.tv_sec, (long)tv.tv_usec);
 			mod_timer(&sc->sc_dfs_cac_timer,
 				  jiffies + (sc->sc_dfs_cac_period * HZ));
 		} else {
 			DPRINTF(sc, ATH_DEBUG_STATE | ATH_DEBUG_DOTH, 
 					"VAP DFSWAIT_PENDING still.  "
 					"Waiting again. -- Time: %ld.%06ld\n", 
-					tv.tv_sec, tv.tv_usec);
+					tv.tv_sec, (long)tv.tv_usec);
 			mod_timer(&sc->sc_dfs_cac_timer,
 				  jiffies + (ATH_DFS_WAIT_SHORT_POLL_PERIOD * HZ));
 		}
@@ -10489,7 +10476,7 @@ ath_printrxbuf(const struct ath_buf *bf, int done)
 	const struct ath_desc *ds = bf->bf_desc;
 	u_int8_t status = done ? rs->rs_status : 0;
 	printk("R (%p %08llx) %08x %08x %08x %08x %08x %08x%s%s%s%s%s%s%s%s%s\n",
-		ds, (u_int64_t)bf->bf_daddr,
+		ds, (unsigned long long)bf->bf_daddr,
 		ds->ds_link, ds->ds_data,
 		ds->ds_ctl0, ds->ds_ctl1,
 		ds->ds_hw[0], ds->ds_hw[1],
@@ -10514,7 +10501,7 @@ ath_printtxbuf(const struct ath_buf *bf, int done)
 
 	DPRINTF(sc, ATH_DEBUG_ANY, 
 		"T (%p %08llx) %08x %08x %08x %08x %08x %08x %08x %08x%s%s%s%s%s%s\n",
-		ds, (u_int64_t)bf->bf_daddr,
+		ds, (unsigned long long)bf->bf_daddr,
 		ds->ds_link, ds->ds_data,
 		ds->ds_ctl0, ds->ds_ctl1,
 		ds->ds_hw[0], ds->ds_hw[1], ds->ds_hw[2], ds->ds_hw[3],
@@ -11691,7 +11678,7 @@ static int set_cca_mode(struct ath_softc *sc)
 #define	AR5K_AR5212_DCU_CHAN_TIME_DUR			0x000ffff
 
   
-	if (ar_device(sc->devid) == 5212 || ar_device(sc->devid) == 5213) {
+	if (ar_device(sc) == 5212 || ar_device(sc) == 5213) {
 		/* registers taken from openhal */
 		if ((mask & 0x01) > 0) {
 			if ((changed & 0x01) > 0) {
@@ -11992,7 +11979,7 @@ txcont_configure_radio(struct ieee80211com *ic)
 		ath_set_ack_bitrate(sc, sc->sc_ackrate);
 		netif_wake_queue(dev);		/* restart xmit */
 
-		if (ar_device(sc->devid) == 5212 || ar_device(sc->devid) == 5213) {
+		if (ar_device(sc) == 5212) {
 			/* registers taken from openhal */
 #define AR5K_AR5212_TXCFG				0x0030
 #define AR5K_AR5212_TXCFG_TXCONT_ENABLE			0x00000080
@@ -12488,7 +12475,7 @@ ath_interrupt_dfs_cac(struct ath_softc *sc, const char *reason)
 				reason,
 				ieee80211_mhz2ieee(sc->sc_curchan.channel,
 					sc->sc_curchan.channelFlags),
-				tv.tv_sec, tv.tv_usec);
+				tv.tv_sec, (long)tv.tv_usec);
 	}
 	sc->sc_dfs_cac = 0;
 }
@@ -12561,7 +12548,7 @@ ath_radar_detected(struct ath_softc *sc, const char *cause)
 				"ichan=%3d (%4d MHz), ichan.icflags=0x%08X "
 				"-- Time: %ld.%06ld\n", 
 				ichan.ic_ieee, ichan.ic_freq, ichan.ic_flags, 
-				tv.tv_sec, tv.tv_usec);
+				tv.tv_sec, (long)tv.tv_usec);
 			/* Mark the channel */
 			sc->sc_curchan.privFlags &= ~CHANNEL_DFS_CLEAR;
 			sc->sc_curchan.privFlags |= CHANNEL_INTERFERENCE;
@@ -12596,194 +12583,6 @@ ath_rcv_dev_event(struct notifier_block *this, unsigned long event,
 	}
 	return 0;
 }
-
-/* A filter for hiding the addresses we don't think are very interesting or
- * which have adverse side effects. Return AH_TRUE if the address should be
- * exlucded, and AH_FALSE otherwise. */
-#ifdef ATH_REVERSE_ENGINEERING
-static HAL_BOOL
-ath_regdump_filter(struct ath_softc *sc, u_int32_t address)
-{
-#ifndef ATH_REVERSE_ENGINEERING_WITH_NO_FEAR
-	char buf[MAX_REGISTER_NAME_LEN];
-#endif
-	if ((ar_device(sc->devid) != 5212) && (ar_device(sc->devid) != 5213)) 
-		return AH_TRUE;
-	/* Addresses with side effects are never dumped out by bulk debug 
-	 * dump routines. */
-	if ((address >= 0x00c0) && (address <= 0x00df)) return AH_TRUE;
-	if ((address >= 0x143c) && (address <= 0x143f)) return AH_TRUE;
-	/* PCI timing registers are not interesting */
-	if ((address >= 0x4000) && (address <= 0x5000)) return AH_TRUE;
-	/* Reading 0x0920-0x092c causes crashes in turbo A mode? */
-	if ((address >= 0x0920) && (address <= 0x092c)) return AH_TRUE;
-
-#ifndef ATH_REVERSE_ENGINEERING_WITH_NO_FEAR
-	/* We are being conservative, and do not want to access addresses that
-	 * may crash the system, so we will only consider addresses we know
-	 * the names of from previous reverse engineering efforts (AKA
-	 * openHAL). */
-	return (AH_TRUE == ath_hal_lookup_register_name(sc->sc_ah, buf, 
-				MAX_REGISTER_NAME_LEN, address)) ?
-		AH_FALSE : AH_TRUE;
-#else /* #ifndef ATH_REVERSE_ENGINEERING_WITH_NO_FEAR */
-
-	return AH_FALSE;
-#endif /* #ifndef ATH_REVERSE_ENGINEERING_WITH_NO_FEAR */
-}
-#endif /* #ifdef ATH_REVERSE_ENGINEERING */
-
-/* Dump any Atheros registers we think might be interesting. */
-#ifdef ATH_REVERSE_ENGINEERING
-static void
-ath_ar5212_registers_dump(struct ath_softc *sc)
-{
-	unsigned int address = MIN_REGISTER_ADDRESS;
-	unsigned int value   = 0;
-
-	do {
-		if (ath_regdump_filter(sc, address))
-			continue;
-		value = ath_reg_read(sc, address);
-		ath_hal_print_decoded_register(sc->sc_ah, SC_DEV_NAME(sc),
-				address, value, value, 
-				AH_FALSE);
-	} while ((address += 4) < MAX_REGISTER_ADDRESS);
-}
-#endif /* #ifdef ATH_REVERSE_ENGINEERING */
-
-/* Dump any changes that were made to Atheros registers we think might be
- * interesting, since the last call to ath_ar5212_registers_mark. */
-#ifdef ATH_REVERSE_ENGINEERING
-static void
-ath_ar5212_registers_dump_delta(struct ath_softc *sc)
-{
-	unsigned int address = MIN_REGISTER_ADDRESS;
-	unsigned int value   = 0;
-	unsigned int *p_old  = 0;
-
-	do {
-		if (ath_regdump_filter(sc, address))
-			continue;
-		value = ath_reg_read(sc, address);
-		p_old = (unsigned int *)&sc->register_snapshot[address];
-		if (*p_old != value) {
-			ath_hal_print_decoded_register(sc->sc_ah, SC_DEV_NAME(sc), 
-					address, *p_old, value, AH_FALSE);
-		}
-	} while ((address += 4) < MAX_REGISTER_ADDRESS);
-}
-#endif /* #ifdef ATH_REVERSE_ENGINEERING */
-
-/* Mark the current values of all Atheros registers we think might be
- * interesting, so any changes can be dumped out by a subsequent call to
- * ath_ar5212_registers_dump_delta. */
-#ifdef ATH_REVERSE_ENGINEERING
-static void
-ath_ar5212_registers_mark(struct ath_softc *sc)
-{
-	unsigned int address = MIN_REGISTER_ADDRESS;
-
-	do {
-		*((unsigned int *)&sc->register_snapshot[address]) =
-			ath_regdump_filter(sc, address) ?
-			0x0 : ath_reg_read(sc, address);
-	} while ((address += 4) < MAX_REGISTER_ADDRESS);
-}
-#endif /* #ifdef ATH_REVERSE_ENGINEERING */
-
-/* Read an Atheros register...for reverse engineering. */
-#ifdef ATH_REVERSE_ENGINEERING
-static unsigned int
-ath_read_register(struct ieee80211com *ic, unsigned int address, 
-		unsigned int *value)
-{
-	struct ath_softc *sc = netdev_priv(ic->ic_dev);
-	if (address >= MAX_REGISTER_ADDRESS) {
-		IPRINTF(sc, "Illegal Atheros register access "
-				"attempted: 0x%04x >= 0x%04x\n",
-				address, MAX_REGISTER_ADDRESS);
-		return 1;
-	}
-	if (address % 4) {
-		IPRINTF(sc, "Illegal Atheros register access "
-				"attempted: 0x%04x %% 4 != 0\n",
-				address);
-		return 1;
-	}
-	*value = ath_reg_read(sc, address);
-	IPRINTF(sc, "*0x%04x -> 0x%08x\n", address, *value);
-	return 0;
-}
-#endif /* #ifdef ATH_REVERSE_ENGINEERING */
-
-/* Write to a Atheros register...for reverse engineering.
- * XXX: known issue with iwpriv argument handling.  It only knows how to
- * handle signed 32-bit integers and seems to get confused if you are writing
- * 0xffffffff or something. Using the signed integer equivalent always works,
- * but for some reason 0xffffffff is just as likely to give you something else
- * at the moment. */
-#ifdef ATH_REVERSE_ENGINEERING
-static unsigned int
-ath_write_register(struct ieee80211com *ic, unsigned int address, 
-		unsigned int value)
-{
-	struct ath_softc *sc = netdev_priv(ic->ic_dev);
-	if (address >= MAX_REGISTER_ADDRESS) {
-		IPRINTF(sc, "Illegal Atheros register access "
-				"attempted: 0x%04x >= 0x%04x\n",
-				address,
-				MAX_REGISTER_ADDRESS);
-		return 1;
-	}
-	if (address % 4) {
-		IPRINTF(sc, "Illegal Atheros register access "
-				"attempted: 0x%04x %% 4 != 0\n",
-				address);
-		return 1;
-	}
-	ath_reg_write(sc, address, value);
-	IPRINTF(sc, "*0x%04x <- 0x%08x = 0x%08x\n", address, value,
-			ath_reg_read(sc, address));
-	return 0;
-}
-#endif /* #ifdef ATH_REVERSE_ENGINEERING */
-
-/* Dump out Atheros registers (excluding known duplicate mappings, 
- * unmapped zones, etc.) */
-#ifdef ATH_REVERSE_ENGINEERING
-static void
-ath_registers_dump(struct ieee80211com *ic)
-{
-	struct net_device *dev = ic->ic_dev;
-	struct ath_softc *sc = netdev_priv(dev);
-	ath_ar5212_registers_dump(sc);
-}
-#endif /* #ifdef ATH_REVERSE_ENGINEERING */
-
-/* Make a copy of significant registers in the Atheros chip for later
- * comparison and dump with ath_registers_dump_delta */
-#ifdef ATH_REVERSE_ENGINEERING
-static void
-ath_registers_mark(struct ieee80211com *ic)
-{
-	struct net_device *dev = ic->ic_dev;
-	struct ath_softc *sc = netdev_priv(dev);
-	ath_ar5212_registers_mark(sc);
-}
-#endif /* #ifdef ATH_REVERSE_ENGINEERING */
-
-/* Dump out any registers changed since the last call to 
- * ath_registers_mark */
-#ifdef ATH_REVERSE_ENGINEERING
-static void
-ath_registers_dump_delta(struct ieee80211com *ic)
-{
-	struct net_device *dev = ic->ic_dev;
-	struct ath_softc *sc = netdev_priv(dev);
-	ath_ar5212_registers_dump_delta(sc);
-}
-#endif /* #ifdef ATH_REVERSE_ENGINEERING */
 
 /* Caller must have the TXBUF_LOCK */
 static void

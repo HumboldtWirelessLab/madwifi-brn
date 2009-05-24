@@ -24,7 +24,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $Id: ieee80211_linux.c 4002 2009-04-15 04:21:12Z proski $
+ * $Id: ieee80211_linux.c 4024 2009-05-24 01:09:25Z proski $
  */
 #ifndef EXPORT_SYMTAB
 #define	EXPORT_SYMTAB
@@ -288,7 +288,7 @@ ieee80211_notify_sta_stats(struct ieee80211_node *ni)
 	static const char *tag = "STA-TRAFFIC-STAT";
 	struct net_device *dev = vap->iv_dev;
 	union iwreq_data wreq;
-	char buf[1024];
+	char buf[256];
 
 	snprintf(buf, sizeof(buf), "%s\nmac=" MAC_FMT "\nrx_packets=%u\nrx_bytes=%llu\n"
 			"tx_packets=%u\ntx_bytes=%llu\n", tag,
@@ -420,7 +420,8 @@ proc_read_nodes(struct ieee80211vap *vap, char *buf, int space)
 			p += sprintf(p, " last_rx %ld.%06ld\n",
 				     t.tv_sec, t.tv_nsec / 1000);
 			p += sprintf(p, " ni_tstamp %10llu ni_rtsf %10llu\n",
-				     le64_to_cpu(ni->ni_tstamp.tsf), ni->ni_rtsf);
+				     (unsigned long long)le64_to_cpu(ni->ni_tstamp.tsf),
+				     (unsigned long long)ni->ni_rtsf);
 		}
         }
 	IEEE80211_NODE_TABLE_UNLOCK_IRQ(nt);

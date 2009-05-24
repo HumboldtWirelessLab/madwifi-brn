@@ -29,7 +29,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $Id: ieee80211_var.h 3962 2009-04-01 19:44:05Z proski $
+ * $Id: ieee80211_var.h 4008 2009-04-22 22:05:57Z proski $
  */
 
 #ifndef _NET80211_IEEE80211_VAR_H_
@@ -511,14 +511,6 @@ struct ieee80211com {
 	/* MHz to IEEE channel conversion */
 	u_int (*ic_mhz2ieee)(struct ieee80211com *, u_int, u_int);
 
-#ifdef ATH_REVERSE_ENGINEERING
-	/* debug and reverse engineering hooks */
-	void (*ic_registers_dump)(struct ieee80211com *);
-	void (*ic_registers_mark)(struct ieee80211com *);
-	void (*ic_registers_dump_delta)(struct ieee80211com *);
-	unsigned int (*ic_write_register)(struct ieee80211com *, unsigned int, unsigned int);
-	unsigned int (*ic_read_register)(struct ieee80211com *, unsigned int, unsigned int*);
-#endif /* #ifdef ATH_REVERSE_ENGINEERING */
 	int (*ic_debug_ath_iwpriv)(struct ieee80211com *, unsigned int param, unsigned int value);
 };
 

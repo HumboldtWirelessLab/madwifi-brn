@@ -33,7 +33,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $Id: ah_os.h 3978 2009-04-07 01:26:53Z proski $
+ * $Id: ah_os.h 4020 2009-05-07 21:11:03Z proski $
  */
 #ifndef _ATH_AH_OS_H_
 #define _ATH_AH_OS_H_
@@ -120,16 +120,6 @@ void __ahdecl ath_hal_free(void *p);
 #ifndef labs
 #define	labs(_a)		__builtin_labs(_a)
 #endif
-
-#define HAL_DEBUG_OFF			0
-/* Show register accesses */
-#define HAL_DEBUG_REGOPS 		1
-/* Show decoded register dump (include name, etc) */
-#define HAL_DEBUG_REGOPS_DECODED 	2
-/* Show bit-fields where we put decode logic in */
-#define HAL_DEBUG_REGOPS_BITFIELDS    	3
-/* Add a read before a write to show 'changes', may have side-effects */
-#define HAL_DEBUG_REGOPS_DELTAS	 	4
 
 /* XXX: This should be stored per-device for proper multi-radio support */
 extern const char *ath_hal_func;

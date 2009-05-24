@@ -33,7 +33,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $Id: sample.h 3808 2008-07-18 21:50:53Z proski $
+ * $Id: sample.h 4015 2009-04-28 05:59:25Z proski $
  */
 
 /*
@@ -134,6 +134,16 @@ struct sample_node {
 #define	AR_XmitRate2_S		10
 #define	AR_XmitRate3		0x000f8000	/* series 3 tx rate */
 #define	AR_XmitRate3_S		15
+
+/* TX ds_ctl3 for 5416 */
+#define	AR5416_XmitRate0	0x000000ff	/* series 0 tx rate */
+#define	AR5416_XmitRate0_S	0
+#define	AR5416_XmitRate1	0x0000ff00	/* series 1 tx rate */
+#define	AR5416_XmitRate1_S	8
+#define	AR5416_XmitRate2	0x00ff0000	/* series 2 tx rate */
+#define	AR5416_XmitRate2_S	16
+#define	AR5416_XmitRate3	0xff000000	/* series 3 tx rate */
+#define	AR5416_XmitRate3_S	24
 
 #define MS(_v, _f)	(((_v) & (_f)) >> _f##_S)
 

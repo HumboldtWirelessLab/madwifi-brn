@@ -33,7 +33,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $Id: ah_osdep.h 3987 2009-04-08 08:52:59Z proski $
+ * $Id: ah_osdep.h 4029 2009-05-24 06:30:27Z proski $
  */
 #ifndef _ATH_AH_OSDEP_H_
 #define _ATH_AH_OSDEP_H_
@@ -56,8 +56,6 @@
 
 /* Linker-assisted set support */
 #define	__STRING(x)	#x
-#define __CONCAT1(x,y)	x ## y
-#define __CONCAT(x,y)	__CONCAT1(x,y)
 
 #define DECLARE_ah_chips \
 struct ath_hal_chip *AR5210_chip_ptr __attribute__((__weak__));	\
@@ -84,7 +82,7 @@ struct ath_hal_rf *RF2425_rf_ptr __attribute__((__weak__));	\
 struct ath_hal_rf *RF5111_rf_ptr __attribute__((__weak__));	\
 struct ath_hal_rf *RF5112_rf_ptr __attribute__((__weak__));	\
 struct ath_hal_rf *RF5413_rf_ptr __attribute__((__weak__));	\
-struct ath_hal_rf *const *ah_rfs_ptrs[] = {				\
+struct ath_hal_rf *const *ah_rfs_ptrs[] = {			\
 	&RF2316_rf_ptr,						\
 	&RF2317_rf_ptr,						\
 	&RF2413_rf_ptr,						\
@@ -96,13 +94,13 @@ struct ath_hal_rf *const *ah_rfs_ptrs[] = {				\
 }
 
 #define OS_SET_DECLARE(set, ptype)				\
-	__CONCAT(DECLARE_,set)
+	DECLARE_##set
 
 #define OS_DATA_SET(set, sym)					\
-	typeof(sym) *__CONCAT(sym,_ptr) = &sym
+	typeof(sym) *sym##_ptr = &sym
 
 #define OS_SET_FOREACH(pvar, set)				\
-	typeof(pvar) *ppvar = __CONCAT(set,_ptrs);		\
+	typeof(pvar) *ppvar = set##_ptrs;			\
 	for (pvar = *ppvar; pvar; pvar = *++ppvar) if (*pvar)
 
 /* Byte order/swapping support. */
@@ -125,6 +123,16 @@ struct ath_hal_rf *const *ah_rfs_ptrs[] = {				\
 #endif
 #endif				/* AH_BYTE_ORDER */
 
+/* 32-bit sparc gets iowrite32() and ioread32() in Linux 2.6.18 */
+#if (defined(CONFIG_SPARC32) && (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,18)))
+#ifndef iowrite32
+#define iowrite32(_val, _addr) writel(_val, _addr)
+#endif
+#ifndef ioread32
+#define ioread32(_addr) readl(_addr)
+#endif
+#endif
+
 /*
  * The HAL programs big-endian platforms to use byte-swapped hardware registers.
  * This is done to avoid the byte swapping needed to access PCI devices.
@@ -144,7 +152,10 @@ struct ath_hal_rf *const *ah_rfs_ptrs[] = {				\
     !defined(CONFIG_PARISC) && \
     !(defined(CONFIG_PPC64) && \
       (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,14))) && \
-    !defined(CONFIG_PPC_MERGE) && \
+    !(defined(CONFIG_PPC_MERGE) && \
+      (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,20))) && \
+    !(defined(CONFIG_PPC32) && \
+      (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,27))) && \
     !(defined(CONFIG_MIPS) && \
       (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,21)))
 # ifndef iowrite32be
@@ -216,6 +227,7 @@ struct ath_hal_rf *const *ah_rfs_ptrs[] = {				\
 #if defined(AH_DEBUG) || defined(AH_REGOPS_FUNC) || defined(AH_DEBUG_ALQ)
 #define OS_REG_WRITE(_ah, _reg, _val)	ath_hal_reg_write(_ah, _reg, _val)
 #define OS_REG_READ(_ah, _reg)		ath_hal_reg_read(_ah, _reg)
+struct ath_hal;
 extern void __ahdecl ath_hal_reg_write(struct ath_hal *ah, u_int reg,
 				       u_int32_t val);
 extern u_int32_t __ahdecl ath_hal_reg_read(struct ath_hal *ah, u_int reg);
@@ -227,6 +239,9 @@ extern u_int32_t __ahdecl ath_hal_reg_read(struct ath_hal *ah, u_int reg);
 /* Delay n microseconds. */
 extern void __ahdecl ath_hal_delay(int);
 #define OS_DELAY(_n)		ath_hal_delay(_n)
+
+/* Uptime in milliseconds, used by debugging code only */
+#define OS_GETUPTIME(_ah)	((int)(1000 * jiffies / HZ))
 
 #define OS_INLINE	__inline
 #define OS_MEMZERO(_a, _n)	ath_hal_memzero((_a), (_n))

@@ -33,7 +33,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $Id: wlanconfig.c 3710 2008-06-06 20:32:29Z mentor $
+ * $Id: wlanconfig.c 4008 2009-04-22 22:05:57Z proski $
  */
 
 /*
@@ -974,8 +974,6 @@ do80211priv(struct iwreq *iwr, const char *ifname, int op, void *data, size_t le
 			IOCTL_ERR(IEEE80211_IOCTL_DELMAC),
 			IOCTL_ERR(IEEE80211_IOCTL_WDSADDMAC),
 			IOCTL_ERR(IEEE80211_IOCTL_WDSDELMAC),
-			IOCTL_ERR(IEEE80211_IOCTL_READREG),
-			IOCTL_ERR(IEEE80211_IOCTL_WRITEREG),
 		};
 		op -= SIOCIWFIRSTPRIV;
 		if (0 <= op && op < ARRAY_SIZE(opnames))
