@@ -136,16 +136,59 @@ ieee80211_setup_macclone(struct ieee80211vap *vap, const char* addr) {
 #endif
 
 #ifdef OPERATIONPACKETS
+static int
+ieee80211_is_operation( struct sk_buff *skb)
+{
+    struct ath2_header *ath2_h;
+    
+    if ( skb->dev->type != ARPHRD_IEEE80211_ATHDESC2 ) return 1;
+
+    ath2_h = (struct ath2_header *)(skb->data + ATHDESC_HEADER_SIZE);
+    if ( ( ath2_h->ath2_version != ATHDESC2_VERSION ) && ( ath2_h->madwifi_version != MADWIFI_TRUNK ) ) return 1;
+
+    return ( (ath2_h->flags & ATH2_FLAGS_IS_OPERATION) == ATH2_FLAGS_IS_OPERATION );
+}
+
+static void
+ieee80211_handle_operation( struct sk_buff *skb, struct net_device *dev)
+{
+	struct ieee80211vap *vap = netdev_priv(dev);
+	struct ieee80211com *ic = vap->iv_ic;
+	struct ieee80211_channel *chan;
+	struct ath2_header *ath2_h;
+
+    if ( skb->dev->type != ARPHRD_IEEE80211_ATHDESC2 ) return;
+  	
+    ath2_h = (struct ath2_header *)(skb->data + ATHDESC_HEADER_SIZE);
+
+  	if ( ( (vap->iv_flags_ext & IEEE80211_FEXT_CHANNELSWITCH) != 0 ) && ( (ath2_h->anno.tx_anno.operation & ATH2_OPERATION_SETCHANNEL) == ATH2_OPERATION_SETCHANNEL ) )
+    {
+	  /*I edit the current channel structure, the other option is to create new structure*/
+	  chan = ic->ic_curchan;
+			
+	  if ( ( ath2_h->anno.tx_anno.channel != 0 ) && ( ath2_h->anno.tx_anno.channel != chan->ic_ieee ) ) {
+  				//printk("channelswitch: %d to %d\n",chan->ic_ieee,ath2_h->anno.tx_anno.channel);
+				chan->ic_ieee = ath2_h->anno.tx_anno.channel;
+				chan->ic_freq = ieee80211_ieee2mhz( chan->ic_ieee , chan->ic_flags);
+				//see ieee80211_input.c and what is done here						       
+				ic->ic_set_channel(ic);
+      }
+            /*end of channel switching*/
+	}
+}
+
 static void
 ieee80211_feedback_operation( struct sk_buff *skb, struct net_device *dev) {
-        skb->dev = dev; /* NB: deliver to wlanX */
-        skb_reset_mac_header(skb);
+
+
+    skb->dev = dev; /* NB: deliver to wlanX */
+    skb_reset_mac_header(skb);
 	skb->ip_summed = CHECKSUM_NONE;
 	skb->pkt_type = PACKET_OTHERHOST;
 	skb->protocol = __constant_htons(0x0019); /* ETH_P_80211_RAW */
 						                 
-       if (SKB_NI(skb) != NULL)
-          ieee80211_unref_node(&SKB_NI(skb));
+    if (SKB_NI(skb) != NULL)
+      ieee80211_unref_node(&SKB_NI(skb));
 
 	if (netif_rx(skb) == NET_RX_DROP)
 		printk("%s:%d %s: Unable to feedback operation\n", __FILE__, __LINE__, __func__);
@@ -321,6 +364,13 @@ ieee80211_hardstart(struct sk_buff *skb, struct net_device *dev)
 	
 	if (vap->iv_opmode == IEEE80211_M_MONITOR) {
 
+#ifdef OPERATIONPACKETS
+		if ( ieee80211_is_operation(skb) ) {
+		  ieee80211_handle_operation(skb,dev);
+		  ieee80211_feedback_operation(skb,dev);
+		  return NETDEV_TX_OK;
+		}
+#endif
 #ifdef MACCLONE		
 		if ( ( (vap->iv_flags_ext & IEEE80211_FEXT_MACCLONE) != 0 ) && ( ( skb->dev->type == ARPHRD_IEEE80211_ATHDESC ) || ( skb->dev->type == ARPHRD_IEEE80211_ATHDESC2 ) ) ) {
 		
@@ -358,10 +408,6 @@ ieee80211_hardstart(struct sk_buff *skb, struct net_device *dev)
         		/*end of channel switching*/
 	
 		}
-#endif
-#ifdef OPERATIONPACKETS
-		ieee80211_feedback_operation(skb,dev);
-		return NETDEV_TX_OK;
 #endif
 		ieee80211_monitor_encap(vap, skb);
 		ieee80211_parent_queue_xmit(skb);
