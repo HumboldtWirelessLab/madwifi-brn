@@ -135,6 +135,22 @@ ieee80211_setup_macclone(struct ieee80211vap *vap, const char* addr) {
 }
 #endif
 
+#ifdef OPERATIONPACKETS
+static void
+ieee80211_feedback_operation( struct sk_buff *skb) {
+	skb->ip_summed = CHECKSUM_NONE;
+	skb->pkt_type = PACKET_OTHERHOST;
+	skb->protocol = __constant_htons(0x0019); /* ETH_P_80211_RAW */
+
+	if (netif_rx(skb) == NET_RX_DROP)
+		printk("%s:%d %s: Unable to feedback operation\n", __FILE__, __LINE__, __func__);
+	else
+		printk("%s:%d %s: Feedback operation\n", __FILE__, __LINE__, __func__);
+	
+//	return 0;
+}
+#endif
+
 /*
  * Determine the priority based on VLAN and/or IP TOS. Priority is
  * written into the skb->priority field. On success, returns 0. Failure
@@ -337,6 +353,11 @@ ieee80211_hardstart(struct sk_buff *skb, struct net_device *dev)
         		/*end of channel switching*/
 	
 		}
+#endif
+#ifdef OPERATIONPACKETS
+		ieee80211_feedback_operation(skb);
+		skb = NULL;
+		goto bad; 
 #endif
 		ieee80211_monitor_encap(vap, skb);
 		ieee80211_parent_queue_xmit(skb);
