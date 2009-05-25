@@ -137,10 +137,15 @@ ieee80211_setup_macclone(struct ieee80211vap *vap, const char* addr) {
 
 #ifdef OPERATIONPACKETS
 static void
-ieee80211_feedback_operation( struct sk_buff *skb) {
+ieee80211_feedback_operation( struct sk_buff *skb, struct net_device *dev) {
+        skb->dev = dev; /* NB: deliver to wlanX */
+        skb_reset_mac_header(skb);
 	skb->ip_summed = CHECKSUM_NONE;
 	skb->pkt_type = PACKET_OTHERHOST;
 	skb->protocol = __constant_htons(0x0019); /* ETH_P_80211_RAW */
+						                 
+       if (SKB_NI(skb) != NULL)
+          ieee80211_unref_node(&SKB_NI(skb));
 
 	if (netif_rx(skb) == NET_RX_DROP)
 		printk("%s:%d %s: Unable to feedback operation\n", __FILE__, __LINE__, __func__);
@@ -355,9 +360,8 @@ ieee80211_hardstart(struct sk_buff *skb, struct net_device *dev)
 		}
 #endif
 #ifdef OPERATIONPACKETS
-		ieee80211_feedback_operation(skb);
-		skb = NULL;
-		goto bad; 
+		ieee80211_feedback_operation(skb,dev);
+		return NETDEV_TX_OK;
 #endif
 		ieee80211_monitor_encap(vap, skb);
 		ieee80211_parent_queue_xmit(skb);
