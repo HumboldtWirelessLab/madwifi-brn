@@ -161,8 +161,12 @@ ieee80211_handle_operation( struct sk_buff *skb, struct net_device *dev)
   	
     ath2_h = (struct ath2_header *)(skb->data + ATHDESC_HEADER_SIZE);
 
+				printk("%s:%d %s:  handle operation\n", __FILE__, __LINE__, __func__);
+
   	if ( ( (vap->iv_flags_ext & IEEE80211_FEXT_CHANNELSWITCH) != 0 ) && ( (ath2_h->anno.tx_anno.operation & ATH2_OPERATION_SETCHANNEL) == ATH2_OPERATION_SETCHANNEL ) )
     {
+				printk("%s:%d %s:  cs operation\n", __FILE__, __LINE__, __func__);
+
 	  /*I edit the current channel structure, the other option is to create new structure*/
 	  chan = ic->ic_curchan;
 			
@@ -175,6 +179,8 @@ ieee80211_handle_operation( struct sk_buff *skb, struct net_device *dev)
       }
             /*end of channel switching*/
 	}
+					printk("%s:%d %s:  operation end\n", __FILE__, __LINE__, __func__);
+
 }
 
 static void
@@ -366,10 +372,14 @@ ieee80211_hardstart(struct sk_buff *skb, struct net_device *dev)
 
 #ifdef OPERATIONPACKETS
 		if ( ieee80211_is_operation(skb) ) {
+				printk("%s:%d %s:  operation\n", __FILE__, __LINE__, __func__);
+
 		  ieee80211_handle_operation(skb,dev);
 		  ieee80211_feedback_operation(skb,dev);
 		  return NETDEV_TX_OK;
 		}
+				printk("%s:%d %s: no operation\n", __FILE__, __LINE__, __func__);
+
 #endif
 #ifdef MACCLONE		
 		if ( ( (vap->iv_flags_ext & IEEE80211_FEXT_MACCLONE) != 0 ) && ( ( skb->dev->type == ARPHRD_IEEE80211_ATHDESC ) || ( skb->dev->type == ARPHRD_IEEE80211_ATHDESC2 ) ) ) {
