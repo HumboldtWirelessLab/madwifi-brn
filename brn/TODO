@@ -3,3 +3,7 @@ CCA: * fixed
              sysctl -w dev.wifi1.disable_cca=1 causes segfault
 	     
 TSF: reset the mactime (TSF) on request (using iwpriv or so e.g. on start the device). So it's easier to handle dump 
+	     
+CWMIN/CWMAX-Annotation	     
+HAL_TXQ_INFO - struktur fuer queue
+
