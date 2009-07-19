@@ -33,7 +33,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $Id: ah_osdep.h 4029 2009-05-24 06:30:27Z proski $
+ * $Id: ah_osdep.h 4061 2009-06-26 01:31:05Z proski $
  */
 #ifndef _ATH_AH_OSDEP_H_
 #define _ATH_AH_OSDEP_H_
@@ -184,8 +184,9 @@ struct ath_hal_rf *const *ah_rfs_ptrs[] = {			\
 			   (0x7000 <= (__reg) && (__reg) < 0x8000))
 # if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,12)
 #  define _OS_REG_WRITE(_ah, _reg, _val) do {			\
-	 is_reg_le(_reg) ?					\
-	  iowrite32((_val), (_ah)->ah_sh + (_reg)) :		\
+	 if (is_reg_le(_reg))					\
+	  iowrite32((_val), (_ah)->ah_sh + (_reg));		\
+	 else							\
 	  iowrite32be((_val), (_ah)->ah_sh + (_reg));		\
 	} while (0)
 #  define _OS_REG_READ(_ah, _reg)				\

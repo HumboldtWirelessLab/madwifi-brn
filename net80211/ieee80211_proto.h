@@ -29,7 +29,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $Id: ieee80211_proto.h 3713 2008-06-08 01:43:53Z mentor $
+ * $Id: ieee80211_proto.h 4076 2009-07-11 17:20:58Z benoit $
  */
 #ifndef _NET80211_IEEE80211_PROTO_H_
 #define _NET80211_IEEE80211_PROTO_H_
@@ -77,6 +77,12 @@ int ieee80211_hardstart(struct sk_buff *, struct net_device *);
 void ieee80211_parent_queue_xmit(struct sk_buff *);
 int ieee80211_send_nulldata(struct ieee80211_node *);
 int ieee80211_send_qosnulldata(struct ieee80211_node *, int);
+void ieee80211_start_new_csa(struct ieee80211vap *vap, u_int8_t csa_mode,
+	struct ieee80211_channel *csa_chan, u_int8_t csa_count,
+	int is_beacon_frame);
+void ieee80211_send_csa_frame(struct ieee80211vap *vap, u_int8_t csa_mode,
+	u_int8_t csa_chan, u_int8_t csa_count);
+void ieee80211_doth_switch_channel_tmr(unsigned long arg);
 int ieee80211_send_mgmt(struct ieee80211_node *, int, int);
 int ieee80211_send_probereq(struct ieee80211_node *,
 	const u_int8_t sa[IEEE80211_ADDR_LEN],

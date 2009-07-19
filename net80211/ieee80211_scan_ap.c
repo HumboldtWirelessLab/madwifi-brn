@@ -29,7 +29,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $Id: ieee80211_scan_ap.c 3627 2008-05-14 19:11:57Z mentor $
+ * $Id: ieee80211_scan_ap.c 4076 2009-07-11 17:20:58Z benoit $
  */
 #ifndef EXPORT_SYMTAB
 #define	EXPORT_SYMTAB
@@ -828,7 +828,8 @@ pick_channel(struct ieee80211_scan_state *ss, struct ieee80211vap *vap,
 			continue;
 
 		/* Verify channel is not marked for non-occupancy */
-		if (IEEE80211_IS_CHAN_RADAR(c->chan))
+		if (IEEE80211_IS_CHAN_RADAR(c->chan) &&
+		    (ic->ic_flags & IEEE80211_F_DOTH))
 			continue;
 
 		/* Do not select 802.11a ST if mode is specified and is not 
@@ -851,6 +852,12 @@ pick_channel(struct ieee80211_scan_state *ss, struct ieee80211vap *vap,
 				!IEEE80211_ARE_CHANS_SAME_MODE(c->chan,
 					ic->ic_bsschan))
 				/* break the loop as the subsequent chans won't be 
+				 * better */
+				break;
+
+			if (!IEEE80211_ARE_CHANS_SAME_MODE(c->chan,
+				ic->ic_bsschan))
+				/* break the loop as the subsequent chans won't be
 				 * better */
 				break;
 		}

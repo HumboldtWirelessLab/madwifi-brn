@@ -29,7 +29,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $Id: ieee80211.h 3749 2008-07-05 01:00:32Z mentor $
+ * $Id: ieee80211.h 4076 2009-07-11 17:20:58Z benoit $
  */
 #ifndef _NET80211_IEEE80211_H_
 #define _NET80211_IEEE80211_H_
@@ -419,6 +419,22 @@ struct ieee80211_ie_csa {
 	u_int8_t csa_count;	/* TBTTs until Channel Switch happens */
 } __packed;
 
+/* for Action Category. Table 19a in 802.11h $7.3.1.11 */
+#define IEEE80211_ACTION_SPECTRUM_MANAGEMENT 0
+
+/* for Spectrum Management Actions. Table 20e in 802.11h $7.4.1 */
+#define IEEE80211_ACTION_S_MEASUREMENT_REQUEST 0
+#define IEEE80211_ACTION_S_MEASUREMENT_REPORT  1
+#define IEEE80211_ACTION_S_TPC_REQUEST         2
+#define IEEE80211_ACTION_S_TPC_REPORT          3
+#define IEEE80211_ACTION_S_CHANSWITCHANN       4
+
+/* for csa_mode. It must be either 0 or 1. 1 means that the receiver shall stop
+ * sending until CS. 0 imposes no requirement. See 7.3.2.20 */
+
+#define IEEE80211_CSA_CAN_STOP_TX	0
+#define IEEE80211_CSA_MUST_STOP_TX	1
+
 /* minimal Channel Switch Count in the initial announcement */
 #define IEEE80211_CSA_PROTECTION_PERIOD 3
 
@@ -753,7 +769,6 @@ enum {
 	IEEE80211_ELEMID_VENDOR		= 221,	/* vendor private */
 };
 
-#define IEEE80211_CHANSWITCHANN_BYTES 	5
 #define BITCTL_BUFD_MCAST       	1
 #define BITCTL_BUFD_UCAST_AID_MASK 	((u_int8_t)~(BITCTL_BUFD_MCAST))
 #define BITCTL_BUFD_UCAST_AID_SHIFT 	1

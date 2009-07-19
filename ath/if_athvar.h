@@ -33,7 +33,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $Id: if_athvar.h 4008 2009-04-22 22:05:57Z proski $
+ * $Id: if_athvar.h 4076 2009-07-11 17:20:58Z benoit $
  */
 
 /*
@@ -691,7 +691,6 @@ struct ath_softc {
 	unsigned int	sc_stagbeacons:1;	/* use staggered beacons */
 	unsigned int	sc_dfswait:1;		/* waiting on channel for radar detect */
 	unsigned int	sc_ackrate:1;		/* send acks at high bitrate */
-	unsigned int	sc_dfs_cac:1;		/* waiting on channel for radar detect */
 	unsigned int	sc_hasintmit:1;		/* Interference mitigation */
 	unsigned int	sc_useintmit:1;		/* Interference mitigation enabled? */
 	unsigned int	sc_txcont:1;		/* Is continuous transmit enabled? */
@@ -847,7 +846,9 @@ struct ath_softc {
 						 * received pulses */
 	int sc_radar_ignored;			/* if set, we ignored all 
 						 * detected radars */
-	u_int32_t sc_nexttbtt;
+	u_int32_t sc_nexttbtt;	/* TBTT following the next SWBA, updated only
+				 * by ath_beacon_config() to avoid race
+				 * conditions */
 	u_int64_t sc_last_tsf;
 #ifdef COLORADO_CCA
 #define ATH_CCA_BITMASK 0x7F
@@ -1034,6 +1035,5 @@ void ath_sysctl_unregister(void);
 	  "MadWifi" : \
 	  DEV_NAME(_v->iv_ic->ic_dev))
 
-void ath_radar_detected(struct ath_softc *sc, const char *message);
 
 #endif /* _DEV_ATH_ATHVAR_H */

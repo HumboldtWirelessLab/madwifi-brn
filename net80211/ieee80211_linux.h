@@ -24,7 +24,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $Id: ieee80211_linux.h 4000 2009-04-15 03:11:34Z proski $
+ * $Id: ieee80211_linux.h 4059 2009-06-25 22:22:58Z proski $
  */
 #ifndef _NET80211_IEEE80211_LINUX_H_
 #define _NET80211_IEEE80211_LINUX_H_
@@ -636,4 +636,8 @@ int ieee80211_ioctl_create_vap(struct ieee80211com *, struct ifreq *,
 	struct net_device *);
 struct ieee80211vap *ieee80211_create_vap(struct ieee80211com *, char *,
 	struct net_device *, int, int);
+void ieee80211_vlan_register(struct net_device *dev, struct vlan_group *grp);
+void ieee80211_vlan_add_vid(struct net_device *dev, unsigned short vid);
+void ieee80211_vlan_kill_vid(struct net_device *dev, unsigned short vid);
+
 #endif /* _NET80211_IEEE80211_LINUX_H_ */

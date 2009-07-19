@@ -29,7 +29,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $Id: ieee80211_var.h 4008 2009-04-22 22:05:57Z proski $
+ * $Id: ieee80211_var.h 4076 2009-07-11 17:20:58Z benoit $
  */
 
 #ifndef _NET80211_IEEE80211_VAR_H_
@@ -131,10 +131,16 @@
  * will directly convert it to TU. The rest is truncated to fit into 32 bit.
  */
 #define	IEEE80211_TSF_TO_TU(_tsf)	((u_int32_t)((_tsf) >> 10))
+#define	IEEE80211_TU_TO_TSF(_tu)	(((u_int64_t)(_tu)) << 10)
+
 #define	IEEE80211_MS_TO_TU(x)	(((x) * 1000) / 1024)
 #define	IEEE80211_TU_TO_MS(x)	(((x) * 1024) / 1000)
 #define	IEEE80211_TU_TO_JIFFIES(x) ((IEEE80211_TU_TO_MS(x) * HZ) / 1000)
 #define	IEEE80211_JIFFIES_TO_TU(x) IEEE80211_MS_TO_TU((x) * 1000 / HZ)
+
+#define	IEEE80211_TU_TO_MS_UP(x) (((x) * 1024 + 1000 - 1) / 1000)
+#define	IEEE80211_TU_TO_JIFFIES_UP(x)	\
+	((IEEE80211_TU_TO_MS_UP(x) * HZ + 1000 - 1) / 1000)
 
 #define	IEEE80211_APPIE_MAX	1024
 
@@ -228,12 +234,6 @@ struct ieee80211vap {
 	u_int iv_bgscanintvl;				/* bg scan min interval */
 	u_int iv_scanvalid;				/* scan cache valid threshold */
 	struct ieee80211_roam iv_roam;			/* sta-mode roaming state */
-
-	unsigned long iv_csa_jiffies;			/* last csa recv jiffies */
-	u_int8_t iv_csa_count;				/* last csa count */
-	struct ieee80211_channel *iv_csa_chan;		/* last csa channel */
-	u_int8_t iv_csa_mode;				/* last csa mode */
-	struct timer_list iv_csa_timer;			/* csa timer */
 	u_int32_t *iv_aid_bitmap;			/* association id map */
 	u_int16_t iv_max_aid;
 	u_int16_t iv_sta_assoc;				/* stations associated */
@@ -276,7 +276,6 @@ struct ieee80211vap {
 	struct ieee80211vap *iv_xrvap;			/* pointer to XR VAP , if XR is enabled */
 	u_int16_t iv_xrbcnwait;				/* SWBA count incremented until it reaches XR_BECON_FACTOR */
 	struct timer_list iv_xrvapstart;		/* timer to start xr */
-	u_int8_t iv_chanchange_count; 			/* 11h counter for channel change */
 	int iv_mcast_rate; 				/* Multicast rate (Kbps) */
 
 	const struct ieee80211_aclator *iv_acl;		/* aclator glue */
@@ -291,6 +290,8 @@ struct ieee80211vap {
 	struct ieee80211_spy iv_spy;         		/* IWSPY support */
 	struct ieee80211_app_ie app_ie[IEEE80211_APPIE_NUM_OF_FRAME]; /* app-specified IEs by frame type */
 	u_int32_t app_filter;				/* filters which management frames are forwarded to app */
+	u_int64_t (*iv_get_tsf)(struct ieee80211vap *);
+	u_int32_t (*iv_get_nexttbtt)(struct ieee80211vap *);
 };
 
 /* Debug functions need the definition of struct ieee80211vap because iv_debug
@@ -431,8 +432,13 @@ struct ieee80211com {
 	 *     know value until change to channel and detect).
 	 */
 	u_int8_t ic_curchanmaxpwr;
-	u_int8_t ic_chanchange_tbtt;
-	u_int8_t ic_chanchange_chan;
+
+	/* To handle Channel Switch Announcements, only valid if ic_flags has
+	 * IEEE80211_F_CHANSWITCH set. */
+	u_int8_t			ic_csa_mode;
+	struct ieee80211_channel *	ic_csa_chan;
+	u_int32_t			ic_csa_expires_tu;
+	struct timer_list		ic_csa_timer;
 
 	/* Global debug flags applicable to all VAPs */
 	int ic_debug;
@@ -491,9 +497,6 @@ struct ieee80211com {
 	void (*ic_set_dfs_testmode)(struct ieee80211com *, int);
 	int (*ic_get_dfs_testmode)(struct ieee80211com *);
 
-	/* inject a fake radar signal -- used while on a 802.11h DFS channels */
-	unsigned int (*ic_test_radar)(struct ieee80211com *);
-
 	/* dump HAL */
 	unsigned int (*ic_dump_hal_map)(struct ieee80211com *);
 
@@ -504,6 +507,14 @@ struct ieee80211com {
 	/* DFS non-occupancy period (in seconds) */
 	void (*ic_set_dfs_excl_period)(struct ieee80211com *, unsigned int);
 	unsigned int (*ic_get_dfs_excl_period)(struct ieee80211com *);
+
+	/* DFS flag manipulation */
+	void (*ic_set_dfs_clear)(struct ieee80211com *, int);
+	void (*ic_set_dfs_interference)(struct ieee80211com *, int);
+
+	/* DFS radar detection handling */
+	void (*ic_radar_detected)(struct ieee80211com *, const char *cause,
+			int switchChanRequested, u_int8_t switchChan);
 
 	/* Set coverage class */
 	void (*ic_set_coverageclass)(struct ieee80211com *);
