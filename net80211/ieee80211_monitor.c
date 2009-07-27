@@ -409,11 +409,7 @@ ieee80211_input_monitor(struct ieee80211com *ic, struct sk_buff *skb,
 			 * on the contents of the frame to set pkttype.
 			 */
 			if (tx)
-#ifdef TXFEEDBACK_BUGFIX
-				pkttype = PACKET_OTHERHOST;
-#else
 				pkttype = PACKET_OUTGOING;
-#endif
 			else if (IEEE80211_IS_MULTICAST(wh->i_addr1)) {
 				if (IEEE80211_ADDR_EQ(wh->i_addr1, dev->broadcast))
 					pkttype = PACKET_BROADCAST;
