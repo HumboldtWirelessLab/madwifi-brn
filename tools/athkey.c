@@ -33,7 +33,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $Id: athkey.c 4008 2009-04-22 22:05:57Z proski $
+ * $Id: athkey.c 4094 2009-09-02 20:01:52Z proski $
  */
 
 /*
@@ -63,7 +63,7 @@ static int s = -1;
 static const char *progname;
 
 static void
-checksocket()
+checksocket(void)
 {
 	if (s < 0 ? (s = socket(AF_INET, SOCK_DGRAM, 0)) == -1 : 0)
 		perror("socket(SOCK_DGRAM)");

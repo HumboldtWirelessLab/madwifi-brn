@@ -33,7 +33,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $Id: if_athvar.h 4076 2009-07-11 17:20:58Z benoit $
+ * $Id: if_athvar.h 4086 2009-08-13 17:00:26Z proski $
  */
 
 /*
@@ -79,7 +79,7 @@ typedef void *TQUEUE_ARG;
 #endif /* !DECLARE_TASKLET */
 
 #include <linux/sched.h>
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,5,41)
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(2,5,41)) && !defined(INIT_WORK)
 #include <linux/tqueue.h>
 #define work_struct			tq_struct
 #define schedule_work(t)		schedule_task((t))
