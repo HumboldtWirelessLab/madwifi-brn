@@ -91,6 +91,7 @@ struct ath2_rx_anno {
 #define MADWIFI_FLAGS_CHANNELSWITCH_ENABLED 1 << 3
 #define MADWIFI_FLAGS_MACCLONE_ENABLED      1 << 4
 
+#define MADWIFI_FLAGS_SET                   1 << 30
 #define MADWIFI_FLAGS_IS_OPERATION          1 << 31
 
 struct ath2_header {
@@ -120,7 +121,7 @@ struct ath2_header {
 #define ATH2_OPERATION_NONE        0
 #define ATH2_OPERATION_SETVACLIENT 1
 #define ATH2_OPERATION_SETCHANNEL  2
-#define ATH2_OPERATION_SETFLAGS    3
+#define ATH2_OPERATION_SETMAC      4
 
 #ifndef ARPHRD_IEEE80211_ATHDESC2
 #define ARPHRD_IEEE80211_ATHDESC2  805 /* IEEE 802.11 + atheros (long) descriptor */
