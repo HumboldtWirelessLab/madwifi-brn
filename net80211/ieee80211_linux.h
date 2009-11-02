@@ -24,7 +24,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $Id: ieee80211_linux.h 4059 2009-06-25 22:22:58Z proski $
+ * $Id: ieee80211_linux.h 4099 2009-09-28 23:06:53Z proski $
  */
 #ifndef _NET80211_IEEE80211_LINUX_H_
 #define _NET80211_IEEE80211_LINUX_H_
@@ -595,12 +595,18 @@ static __inline unsigned long msecs_to_jiffies(const unsigned int m)
 	  void __user *buffer, size_t *lenp)
 #define	IEEE80211_SYSCTL_PROC_DOINTVEC(ctl, write, filp, buffer, lenp, ppos) \
 	proc_dointvec(ctl, write, filp, buffer, lenp)
-#else
+#elif LINUX_VERSION_CODE < KERNEL_VERSION(2,6,32)
 #define	IEEE80211_SYSCTL_DECL(f, ctl, write, filp, buffer, lenp, ppos) \
 	f(ctl_table *ctl, int write, struct file *filp, \
 	  void __user *buffer, size_t *lenp, loff_t *ppos)
 #define	IEEE80211_SYSCTL_PROC_DOINTVEC(ctl, write, filp, buffer, lenp, ppos) \
 	proc_dointvec(ctl, write, filp, buffer, lenp, ppos)
+#else /* Linux 2.6.32+ */
+#define	IEEE80211_SYSCTL_DECL(f, ctl, write, filp, buffer, lenp, ppos) \
+	f(ctl_table *ctl, int write, \
+	  void __user *buffer, size_t *lenp, loff_t *ppos)
+#define	IEEE80211_SYSCTL_PROC_DOINTVEC(ctl, write, filp, buffer, lenp, ppos) \
+	proc_dointvec(ctl, write, buffer, lenp, ppos)
 #endif
 
 void ieee80211_virtfs_latevattach(struct ieee80211vap *);
