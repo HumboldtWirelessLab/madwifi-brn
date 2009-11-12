@@ -1,0 +1,240 @@
+[[PageOutline(2)]]
+
+= Atheros Chipsets =
+
+This page was created to address the lack of easily obtainable information about Atheros chipsets. It may not be entirely correct, but was taken from information on [http://www.atheros.com Atheros'] site.
+NOTE: this is '''not''' a list of supported chipsets. The list of supported chipsets can be found on the [wiki:About/OpenHAL OpenHAL] page. USB dongles are not supported, and will probably not be supported in the near future.
+
+== 2413 ==
+ * 2413 -- part of the 5th Generation [http://www.atheros.com/pt/AR5005G.htm AR5005G]
+   * Support for b/g modes
+   * Support for DFS/TPC
+   * Support for sleep modes
+   * Support AES(OCB and CCM), TKIP and WEP hardware encryption.
+   * Support for draft IEEE 802.11e, h, and j standards
+   * Support for Priority based QoS (WME)
+   * Supports Atheros XR™
+
+== 2414 ==
+ * 2414 -- part of the 5th Generation [http://www.atheros.com/pt/AR5005GS.htm AR5005GS]
+   * Support for b/g modes
+   * Support for DFS/TPC
+   * Support for sleep modes
+   * Support AES(OCB and CCM), TKIP and WEP hardware encryption.
+   * Support for draft IEEE 802.11e, h, and j standards
+   * Support for Priority based QoS (WME)
+   * Supports [wiki:ChipsetFeatures/SuperAG SuperG™]
+   * Supports Atheros XR™
+
+== 2424 ==
+ * 2424 -- part of the 6th Generation [http://www.atheros.com/pt/AR5006EGS.htm AR5006EGS]
+   * PCI-Express
+   * Support for b/g modes
+   * Support for DFS/TPC
+   * Support for sleep modes
+   * Support AES(OCB and CCM), TKIP and WEP hardware encryption.
+   * Support for draft IEEE 802.11e, h, and j standards
+   * Support for Priority based QoS (WME)
+   * Supports [wiki:ChipsetFeatures/SuperAG SuperG™]
+   * Supports Atheros XR™
+
+== 2425 ==
+ * 2425 --part of the 7th Generation [http://www.atheros.com/pt/AR5007EG.htm AR5007EG]
+   * PCI-Express
+   * Support for b/g modes
+   * Support for sleep modes
+   * Support AES(OCB and CCM), TKIP and WEP hardware encryption.
+   * Support for draft IEEE 802.11e, h, and j standards
+   * Support for Priority based QoS (WME)
+
+== 5210 ==
+ * 5210 -- part of the AR5000 chipset.
+   * Supports a mode only (actually it was the first complete 802.11a solution)
+   * Support for WEP in hardware.
+   * Support for X2 (turbo) mode -> doubled data rates using 2 channels in parallel (part of [wiki:ChipsetFeatures/SuperAG SuperAG™])
+   * Comes with RF5110 Chip
+   * It's deprecated now, not much documentation out there
+   * You can find some infos about 5210 internals on an Atheros [http://nova.stanford.edu/~bbaas/ps/isscc2002_slides.pdf presentation at International Solid-State Circuits Conference] and also in a [http://www.it.iitb.ac.in/~janak/wifire/01222734.pdf IEEE presentation]
+
+== 5211 ==
+ * 5211 -- part of the [http://www.atheros.com/pt/AR5001Bulletins.htm AR5001A] chipset. [[br]]
+   * Support a/b/g (only OFDM) modes
+   * Support for X2 mode as AR5210.
+   * Support for DFS/TPC
+   * Supports SmartSelect™
+   * Support for sleep modes
+   * Support AES/OCB (WRAP) and WEP hardware encryption.
+   * Support for Priority based QoS (WME)
+   * Comes with RF5211 Chip for a operation or RF5211 + RF2111 for a/b/g (only OFDM) operation
+   * You can find some infos about 5211 internals on a Atheros [http://www.hotchips.org/archives/hc14/3_Tue/16_mcfarland.pdf presentation on Hot Chips symposium]
+
+== 5212 ==
+ * 5212 -- part of the [http://www.atheros.com/pt/AR5001Bulletins.htm AR5001X] and [http://www.atheros.com/pt/AR5002Bulletins.htm AR5002] chipsets.
+   * Support for a/b/g modes
+   * Support for DFS/TPC
+   * Support for sleep modes
+   * Support AES (OCB and CCM), TKIP and WEP hardware encryption.
+   * Support for draft IEEE 802.11e, h, and j standards
+   * Support for Priority based QoS (WME) EDCF with 12 (?) Priority Queues
+   * Supports [wiki:ChipsetFeatures/SuperAG SuperAG™]
+   * Comes with RF5111/RF5112 for a/b/g operation and RF2112 for b/g operation
+
+== 5213 ==
+ * 5213 -- part of the [http://www.atheros.com/pt/AR5004Bulletins.htm AR5004] chipset.
+   * Support for a/b/g modes
+   * Support for DFS/TPC
+   * Support for sleep modes
+   * Support AES (OCB and CCM), TKIP and WEP hardware encryption.
+   * Support for draft IEEE 802.11e, h, and j standards
+   * Support for Priority based QoS (WME)
+   * Supports [wiki:ChipsetFeatures/SuperAG SuperAG™]
+   * Supports Atheros XR™
+   * Comes with RF5111/RF5112 for a/b/g operation and RF2112 for b/g operation
+
+== 5214 ==
+ * 5214 -- probably part of the [http://www.atheros.com/pt/AR5005Bulletins.htm AR5005] chipset, but I can't find any reference to it.
+   * Although not explicitly mentioned in the sources, this chipset is supported by the code from trunk. No support for this chipset in madwifi-old.
+
+== 5413 ==
+ * 5413 -- part of the 6th Generation [http://www.atheros.com/pt/AR5006X.htm AR5006X] chipsets
+   * Support for a/b/g modes
+   * Support for DFS/TPC
+   * Support for sleep modes
+   * Support AES (OCB and CCM), TKIP and WEP hardware encryption.
+   * Support for draft IEEE 802.11e, h, and j standards
+   * Support for Priority based QoS (WME)
+   * Supports Atheros XR™
+
+== 5414 ==
+ * 5414 -- part of the 6th Generation [http://www.atheros.com/pt/AR5006XS.htm AR5006XS] chipsets
+   * Support for a/b/g modes
+   * Support for DFS/TPC
+   * Support for sleep modes
+   * Support AES (OCB and CCM), TKIP and WEP hardware encryption.
+   * Support for draft IEEE 802.11e, h, and j standards
+   * Support for Priority based QoS (WME)
+   * Supports [wiki:ChipsetFeatures/SuperAG SuperAG™]
+   * Supports Atheros XR™
+
+== 5416 ==
+ * 5416 -- part of the 8th Generation (MIMO - XSPAN™)[http://www.atheros.com/pt/AR5008Bulletins.htm AR5008]
+   * Intelligent MIMO spatial multiplexing techniques
+   * Backwards compatibility with legacy 802.11 (a/b/g)
+   * Enables bandwidth of up to 300 Mbps PHY rate
+   * Support for up to 3x3 MIMO with spatial multiplexing
+   * Support for DFS/TPC
+   * Support for sleep modes
+   * Support AES (OCB and CCM), TKIP and WEP hardware encryption.
+   * Support for draft IEEE 802.11e, h, j and n standards
+   * Support for Priority based QoS (WME)
+   * Comes with 2x RF2122 or 3x RF2133 for 2Ghz (b/g modes) and 2x RF5122 or 3x RF5133 for 5Ghz (a mode)
+
+== 5418 ==
+ * 5418 -- part of the 8th Generation (MIMO - XSPAN™)[http://www.atheros.com/pt/AR5008Bulletins.htm AR5008E]
+   * PCI-Express
+   * Intelligent MIMO spatial multiplexing techniques
+   * Backwards compatibility with legacy 802.11 (a/b/g)
+   * Enables bandwidth of up to 300 Mbps PHY rate
+   * Support for up to 3x3 MIMO with spatial multiplexing
+   * Support for DFS/TPC
+   * Support for sleep modes
+   * Support AES (OCB and CCM), TKIP and WEP hardware encryption.
+   * Support for draft IEEE 802.11e, h, j and n standards
+   * Support for Priority based QoS (WME)
+   * Comes with 2x RF2122 or 3x RF2133 for 2Ghz (b/g modes) and 2x RF5122 or 3x RF5133 for 5Ghz (a mode)
+
+== 5424 ==
+ * 5424 -- part of the 6th Generation [http://www.atheros.com/pt/AR5006EXS.htm AR5006EXS]
+   * PCI-Express
+   * Support for a/b/g modes
+   * Support for DFS/TPC
+   * Support for sleep modes
+   * Support AES (OCB and CCM), TKIP and WEP hardware encryption.
+   * Support for draft IEEE 802.11e, h, and j standards
+   * Support for Priority based QoS (WME) EDCF with 12 (HAL says 10) Priority Queues
+   * Supports [wiki:ChipsetFeatures/SuperAG SuperAG™]
+   * Supports Atheros XR™
+
+== 5513 ==
+ * 5513 -- part of the 5th Generation[http://www.atheros.com/pt/AR5005Bulletins.htm AR5005] chipsets
+   * Multi-Radio Smart Antenna Video Processor for video over 802.11
+   * Interoperable with all 802.11a, 11b, 11g wireless networks.
+   * Support for draft IEEE 802.11e, h, and j standards
+   * Comes with 2X (MIMO) RF5112
+   * Supports [wiki:ChipsetFeatures/SuperAG SuperAG™]
+   * Integrated video/audio controller support with direct interfaces, host capability, MPEG and DMA acceleration to popular HDTV, SDTV, DVR, STB chipsets
+
+== 5523 ==
+ * 5523 -- Used in USB dongles, part of the 5th Generation [http://www.atheros.com/pt/AR5005UX.htm AR5005UX]
+   * USB
+   * Integrated MIPS processor
+   * Support for a/b/g modes
+   * Support for DFS/TPC
+   * Support for sleep modes
+   * Support AES (OCB and CCM), TKIP and WEP hardware encryption.
+   * Support for draft IEEE 802.11e, h, and j standards
+   * Support for Priority based QoS (WME)
+   * Supports [wiki:ChipsetFeatures/SuperAG SuperAG™]
+   * Supports Atheros XR™
+   * Comes with RF5112 for a/b/g operation and RF2112 for b/g operation
+   * Supports Wake on Wireless and Wake on Theft
+
+== RF2111 ==
+ * RF2111
+   * Operates on 2GHz Band
+   * Connects to RF5111 as a frequency converter (g has the same modulation as a)
+   * Adds support for b operation (CCK)
+
+== RF2112 ==
+ * RF2112
+   * Operates from 2.300 - 2.500 GHz
+   * Advanced wideband receiver with best path sequencer for better range and multipath resistance than conventional equalizer-based designs
+   * Integrated second-generation power amplifier (PA) and low-noise amplifier (LNA)
+   * Eliminates many RF and IF filters; no external voltage-controlled oscillators (VCOs) or surface acoustic wave (SAW) filters needed
+
+== RF2122 ==
+ * RF2122 (MIMO)
+   * Two integrated single-band 2.4 GHz radios
+   * Eliminates all IF filters and most RF filters; no external voltage-controlled oscillators (VCOs) or surface acoustic wave (SAW) filters needed
+   * Support for 20 and 40 MHz channels
+
+== RF2133 ==
+ * RF2133 (MIMO)
+   * Three integrated single-band 2.4 GHz radios
+   * Eliminates all IF filters and most RF filters; no external voltage-controlled oscillators (VCOs) or surface acoustic wave (SAW) filters needed
+   * Support for 20 and 40 MHz channels
+
+== RF5110 ==
+ * RF5110
+
+== RF5111 ==
+ * RF5111
+   * Operates on 5GHz Band
+   * Dynamic IF Dual Conversion architecture provides super-heterodyne performance at Zero IF prices
+   * Integrated second-generation power amplifier (PA) +16dbm and low-noise amplifier (LNA) with 5db Noise Floor
+   * Eliminates many RF and IF filters; no external voltage-controlled oscillators (VCOs) or surface acoustic wave (SAW) filters needed
+   * Ultra wide tuning range 4.9 - 6GHz
+
+== RF5112 ==
+ * RF5112
+   * All CMOS dual band radio chip
+   * Dynamic IF Dual Conversion architecture provides super-heterodyne performance at Zero IF prices
+   * Integrated second-generation power amplifier (PA) and low-noise amplifier (LNA)
+   * Eliminates many RF and IF filters; no external voltage-controlled oscillators (VCOs) or surface acoustic wave (SAW) filters needed
+   * Ultra wide tuning range 2.300-2.500 GHz and 4.900-5.850 GHz
+   * Increased sensitivity and multipath tolerance
+
+== RF5122 ==
+ * RF5122 (MIMO)
+   * Two integrated dual-band 2.4/5 GHz radios
+   * Eliminates all IF filters and most RF filters; no external voltage-controlled oscillators (VCOs) or surface acoustic wave (SAW) filters needed
+   * Support for 5, 10, 20 and 40 MHz channels. Rx filter supports blocking specifications for half and quarter rate channels.
+
+== RF5133 ==
+ * RF5133 (MIMO)
+   * Three integrated single-band 2.4/5 GHz radios
+   * Eliminates all IF filters and most RF filters; no external voltage-controlled oscillators (VCOs) or surface acoustic wave (SAW) filters needed
+   * Support for 5, 10, 20 and 40 MHz channels. Rx filter supports blocking specifications for half and quarter rate channels.
+
+
+A list of Atheros' partners along with their products and chipsets can be found on the [http://customerproducts.atheros.com/customerproducts/ Atheros] web site.  The list seems to be missing some of the very latest products but serves as a handy reference for comparing products between manufacturers.
