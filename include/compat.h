@@ -33,7 +33,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $Id: compat.h 3995 2009-04-12 05:53:23Z proski $
+ * $Id: compat.h 4131 2010-06-19 18:26:01Z proski $
  */
 #ifndef _ATH_COMPAT_H_
 #define _ATH_COMPAT_H_
@@ -75,6 +75,19 @@
 #ifndef NETDEV_TX_OK
 #define NETDEV_TX_OK    0
 #define NETDEV_TX_BUSY  1
+#endif
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,34)
+#define netdev_for_each_mc_addr(mclist, dev) \
+	for (mclist = dev->mc_list; mclist; mclist = mclist->next)
+#endif
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,35)
+#define ath_netdev_hw_addr dev_mc_list
+#define ath_ha_addr(ha) ha->dmi_addr
+#else
+#define ath_netdev_hw_addr netdev_hw_addr
+#define ath_ha_addr(ha) ha->addr
 #endif
 
 /*
@@ -175,7 +188,9 @@ typedef unsigned long resource_size_t;
 #define IRQF_SHARED SA_SHIRQ
 #endif
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,4,27)
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(2,4,27)) || \
+    ((LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,0)) && \
+     ((LINUX_VERSION_CODE < KERNEL_VERSION(2,6,3))))
 #define netdev_priv(_netdev) ((_netdev)->priv)
 #endif
 
@@ -197,6 +212,14 @@ typedef unsigned long resource_size_t;
 #else
 #define CTL_AUTO CTL_UNNUMBERED
 #define DEV_ATH CTL_UNNUMBERED
+#endif
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,33)
+#define ATH_INIT_CTL_NAME(val)
+#define ATH_SET_CTL_NAME(ctl, val)
+#else
+#define ATH_INIT_CTL_NAME(val) .ctl_name = val,
+#define ATH_SET_CTL_NAME(ctl, val) ctl.ctl_name = val
 #endif
 
 /* __skb_append got a third parameter in 2.6.14 */

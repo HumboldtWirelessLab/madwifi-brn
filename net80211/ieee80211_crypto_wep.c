@@ -28,7 +28,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $Id: ieee80211_crypto_wep.c 3710 2008-06-06 20:32:29Z mentor $
+ * $Id: ieee80211_crypto_wep.c 4125 2010-03-23 22:49:56Z proski $
  */
 
 /*
@@ -185,7 +185,7 @@ wep_encap(struct ieee80211_key *k, struct sk_buff *skb, u_int8_t keyid)
 	ivp[3] = keyid;
 
 	/*
-	 * Finally, do software encrypt if neeed.
+	 * Finally, do software encrypt if needed.
 	 */
 	if ((k->wk_flags & IEEE80211_KEY_SWCRYPT) &&
 	    !wep_encrypt(k, skb, hdrlen))

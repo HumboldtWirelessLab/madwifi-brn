@@ -34,7 +34,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $Id: if_ath_pci.c 3989 2009-04-08 21:42:36Z proski $
+ * $Id: if_ath_pci.c 4111 2010-01-18 14:18:05Z proski $
  */
 #include "opt_ah.h"
 
@@ -114,6 +114,10 @@ static struct pci_device_id ath_pci_id_table[] __devinitdata = {
 	{ 0x168c, 0x0023, PCI_ANY_ID, PCI_ANY_ID },
 	{ 0x168c, 0x0024, PCI_ANY_ID, PCI_ANY_ID },
 	{ 0x168c, 0x0027, PCI_ANY_ID, PCI_ANY_ID },
+#if 0 /* PCI based AR9280 doesn't work yet */
+	{ 0x168c, 0x0029, PCI_ANY_ID, PCI_ANY_ID }, /* AR9280 PCI */
+#endif
+	{ 0x168c, 0x002a, PCI_ANY_ID, PCI_ANY_ID }, /* AR9280 PCI Express */
 	{ 0x168c, 0x9013, PCI_ANY_ID, PCI_ANY_ID }, /* sonicwall */
 	{ 0 }
 };

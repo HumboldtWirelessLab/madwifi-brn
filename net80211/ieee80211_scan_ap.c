@@ -29,7 +29,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $Id: ieee80211_scan_ap.c 4076 2009-07-11 17:20:58Z benoit $
+ * $Id: ieee80211_scan_ap.c 4132 2010-06-19 18:27:20Z proski $
  */
 #ifndef EXPORT_SYMTAB
 #define	EXPORT_SYMTAB
@@ -48,7 +48,7 @@
 #include <linux/init.h>
 #include <linux/delay.h>
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,11)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,12)
 /* Copied from Linux lib/sort.c */
 static void u32_swap(void *a, void *b, int size)
 {

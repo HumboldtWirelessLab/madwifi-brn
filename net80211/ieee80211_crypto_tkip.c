@@ -28,7 +28,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $Id: ieee80211_crypto_tkip.c 3734 2008-06-19 16:58:07Z proski $
+ * $Id: ieee80211_crypto_tkip.c 4125 2010-03-23 22:49:56Z proski $
  */
 
 /*
@@ -188,7 +188,7 @@ tkip_encap(struct ieee80211_key *k, struct sk_buff *skb, u_int8_t keyid)
 	ivp[7] = k->wk_keytsc >> 40;		/* TSC5 */
 
 	/*
-	 * Finally, do software encrypt if neeed.
+	 * Finally, do software encrypt if needed.
 	 */
 	if (k->wk_flags & IEEE80211_KEY_SWCRYPT) {
 		if (!tkip_encrypt(ctx, k, skb, hdrlen))

@@ -33,14 +33,14 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $Id: release.h 3083 2007-12-26 02:00:04Z br1 $
+ * $Id: release.h 4116 2010-01-25 22:53:37Z proski $
  */
 #include "svnversion.h"
 
 #define	RELEASE_TYPE	"BETA"
 
 #ifdef SVNVERSION
-#define RELEASE_VERSION	SVNVERSION
+#define RELEASE_VERSION	SVNVERSION " (trunk)"
 #else
 #define RELEASE_VERSION	"trunk"
 #endif

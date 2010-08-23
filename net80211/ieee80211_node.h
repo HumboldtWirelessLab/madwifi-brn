@@ -29,7 +29,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $Id: ieee80211_node.h 3960 2009-04-01 19:34:57Z proski $
+ * $Id: ieee80211_node.h 4125 2010-03-23 22:49:56Z proski $
  */
 #ifndef _NET80211_IEEE80211_NODE_H_
 #define _NET80211_IEEE80211_NODE_H_
@@ -114,7 +114,7 @@ struct ieee80211_node {
 	u_int8_t ni_ath_flags;			/* Atheros feature flags */
 	/* NB: These must have the same values as IEEE80211_ATHC_* */
 #define IEEE80211_NODE_TURBOP	0x0001		/* Turbo prime enable */
-#define IEEE80211_NODE_COMP	0x0002		/* Compresssion enable */
+#define IEEE80211_NODE_COMP	0x0002		/* Compression enable */
 #define IEEE80211_NODE_FF	0x0004          /* Fast Frame capable */
 #define IEEE80211_NODE_XR	0x0008		/* Atheros WME enable */
 #define IEEE80211_NODE_AR	0x0010		/* AR capable */

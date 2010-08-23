@@ -28,7 +28,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $Id: ieee80211_crypto_ccmp.c 3734 2008-06-19 16:58:07Z proski $
+ * $Id: ieee80211_crypto_ccmp.c 4125 2010-03-23 22:49:56Z proski $
  */
 
 /*
@@ -107,6 +107,7 @@ ccmp_attach(struct ieee80211vap *vap, struct ieee80211_key *k)
 	if (ctx == NULL) {
 		vap->iv_stats.is_crypto_nomem++;
 		status = 0;
+		goto out;
 	}
 
 /* This function crypto_alloc_foo might sleep. Therefore:
@@ -122,11 +123,9 @@ ccmp_attach(struct ieee80211vap *vap, struct ieee80211_key *k)
 #endif
 	
 		if (ctx->cc_tfm == NULL) {
-			IEEE80211_DPRINTF(vap, IEEE80211_MSG_CRYPTO,
-					"%s: kernel support for AES "
-					"cryptography is not available; the "
-					"module may not be loaded.\n", 
-					__func__);
+			printk(KERN_ERR "%s: kernel AES support is missing; "
+			       "some modules may need to be loaded\n",
+			       vap->iv_dev->name);
 			FREE(ctx, M_DEVBUF);
 			ctx = NULL;
 			vap->iv_stats.is_crypto_nocipher++;
@@ -134,6 +133,7 @@ ccmp_attach(struct ieee80211vap *vap, struct ieee80211_key *k)
 		}
 	}
 
+out:
 	if (!status)
 		_MOD_DEC_USE(THIS_MODULE);
 	else {
@@ -209,7 +209,7 @@ ccmp_encap(struct ieee80211_key *k, struct sk_buff *skb, u_int8_t keyid)
 	ivp[7] = k->wk_keytsc >> 40;		/* PN5 */
 
 	/*
-	 * Finally, do software encrypt if neeed.
+	 * Finally, do software encrypt if needed.
 	 */
 	if ((k->wk_flags & IEEE80211_KEY_SWCRYPT) &&
 	    !ccmp_encrypt(k, skb, hdrlen))
