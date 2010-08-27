@@ -32,3 +32,9 @@ cflags-y                        += -msoft-float
 
 Please change tothe following
 cflags-y                        += -msoft-float -Wa,--trap,-relax-branch
+
+
+
+
+Copy the modules
+find . -name "*.ko" -print0 | xargs -0 cp --target=/targetdir
