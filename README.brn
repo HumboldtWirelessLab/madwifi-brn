@@ -1,0 +1,34 @@
+BUILD
+
+For host (no cross compiler)
+make KERNELPATH=/PATH/TO/KERNEL
+
+
+For other (cross compiler) e.g. mips
+make KERNELPATH=/PATH/TO/KERNEL/ ARCH=mips CROSS_COMPILE=mipsel-linux-
+
+Known Problems
+ 
+on mips there is following error:
+  CC [M]  /madwifi-brn/ath/if_ath.o
+  {standard input}: Assembler messages:
+  {standard input}:1562: Error: Branch out of range
+  {standard input}:7405: Error: Branch out of range
+  {standard input}:7471: Error: Branch out of range
+  {standard input}:20183: Error: Branch out of range
+  {standard input}:20336: Error: Branch out of range
+  {standard input}:21100: Error: Branch out of range
+  {standard input}:21617: Error: Branch out of range
+  {standard input}:21685: Error: Branch out of range
+  {standard input}:22809: Error: Branch out of range
+  {standard input}:24623: Error: Branch out of range
+  
+Please edit the following file
+
+/PATH/TO/YOUR/MIPSKERNEL/arch/mips/Makefile
+
+there is a line like (near Line 83 for linux-2.6.26.5)
+cflags-y                        += -msoft-float
+
+Please change tothe following
+cflags-y                        += -msoft-float -Wa,--trap,-relax-branch
