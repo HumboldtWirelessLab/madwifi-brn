@@ -11892,6 +11892,7 @@ static int set_cca_mode(struct ath_softc *sc)
 
   
 	if (ar_device(sc) == 5212 || ar_device(sc) == 5213) {
+	        printk("CCA: Found Atheros %d.Setup CCA.\n",ar_device(sc)); 
 		/* registers taken from openhal */
 		if ((mask & 0x01) > 0) {
 			if ((changed & 0x01) > 0) {
@@ -12006,11 +12007,12 @@ static int set_cca_mode(struct ath_softc *sc)
 			ath_hal_intrset(ah, sc->sc_imask);
 		} /* mask 0x08 */
 		ret = 0;
+		sc->sc_prev_disable_cca_mask = sc->sc_disable_cca_mask;
 	}  else {
+	        printk("CCA: Found Atheros %d. Unable to setup CCA.\n",ar_device(sc)); 
 		ret = 1;
 	}
 
-	sc->sc_prev_disable_cca_mask = sc->sc_disable_cca_mask;
 	return ret;
 
 #undef AR5K_AR5212_TXCFG

@@ -82,8 +82,8 @@ static int
 ieee80211_setup_macclone(struct ieee80211vap *vap, const char* addr) {
 	struct net_device *dev = NULL;
 	struct ieee80211com *ic = vap->iv_ic;
-	struct ath_softc *sc = netdev_priv(dev);
-	//struct ath_softc *sc = ic->ic_dev->priv;
+	//struct ath_softc *sc = netdev_priv(dev);
+	struct ath_softc *sc = ic->ic_dev->priv;
 	struct ath_hal *ah = sc->sc_ah;
 
 	/*Search for device with given addr ( for_each_dev and memcmp)
