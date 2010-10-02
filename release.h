@@ -44,3 +44,5 @@
 #else
 #define RELEASE_VERSION	"trunk"
 #endif
+
+#include "brn/brn.h"

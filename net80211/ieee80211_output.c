@@ -86,6 +86,10 @@ ieee80211_setup_macclone(struct ieee80211vap *vap, const char* addr) {
 	struct ath_softc *sc = ic->ic_dev->priv;
 	struct ath_hal *ah = sc->sc_ah;
 
+#ifdef MACCLONEDEBUG
+	printk("MACclone: Set new mac address.\n");
+#endif
+
 	/*Search for device with given addr ( for_each_dev and memcmp)
 	 * if none is found ( if (!dev) ) then addr is set
 	 * if there is a device with the given mac, then nothing to do.
@@ -318,13 +322,15 @@ ieee80211_hardstart(struct sk_buff *skb, struct net_device *dev)
 			ath2_h = ( struct ath2_header*)(skb->data + ATHDESC_HEADER_SIZE);
 			
 			if ( ( ath2_h->anno.tx_anno.channel != 0 ) && ( ath2_h->anno.tx_anno.channel != chan->ic_ieee ) ) {
-				//printk("channelswitch: %d to %d\n",chan->ic_ieee,ath2_h->anno.tx_anno.channel);
+#ifdef CHANNELSWITCHDEBUG
+				printk("channelswitch: %d to %d\n",chan->ic_ieee,ath2_h->anno.tx_anno.channel);
+#endif
 				chan->ic_ieee = ath2_h->anno.tx_anno.channel;
 				chan->ic_freq = ieee80211_ieee2mhz( chan->ic_ieee , chan->ic_flags);
 				//see ieee80211_input.c and what is done here						       
 				ic->ic_set_channel(ic);
-            }
-            /*end of channel switching*/
+        		}
+        		/*end of channel switching*/
 	
 		}
 #endif

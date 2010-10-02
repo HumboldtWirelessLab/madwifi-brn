@@ -2864,6 +2864,7 @@ ieee80211_ioctl_setparam(struct net_device *dev, struct iw_request_info *info,
 		if (value)
 			vap->iv_flags_ext |= IEEE80211_FEXT_MACCLONE;
 		else {
+			vap->iv_flags_ext &= ~IEEE80211_FEXT_MACCLONE;
 		        //struct ath_softc *sc = netdev_priv(dev);
 			struct ath_softc *sc = ic->ic_dev->priv;
 			struct ath_hal *ah = sc->sc_ah;
