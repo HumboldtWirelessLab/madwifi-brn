@@ -2276,6 +2276,12 @@ ieee80211_ioctl_setparam(struct net_device *dev, struct iw_request_info *info,
 	const struct ieee80211_authenticator *auth;
 	const struct ieee80211_aclator *acl;
 
+#ifdef MACCLONE
+	struct ath_softc *sc = ic->ic_dev->priv;
+	struct ath_hal *ah = sc->sc_ah;
+	//struct ath_softc *sc = netdev_priv(dev);
+#endif
+
 	switch (param) {
 	case IEEE80211_PARAM_AUTHMODE:
 		switch (value) {
@@ -2864,10 +2870,6 @@ ieee80211_ioctl_setparam(struct net_device *dev, struct iw_request_info *info,
 		if (value)
 			vap->iv_flags_ext |= IEEE80211_FEXT_MACCLONE;
 		else {
-			vap->iv_flags_ext &= ~IEEE80211_FEXT_MACCLONE;
-		        //struct ath_softc *sc = netdev_priv(dev);
-			struct ath_softc *sc = ic->ic_dev->priv;
-			struct ath_hal *ah = sc->sc_ah;
 			vap->iv_flags_ext &= ~IEEE80211_FEXT_MACCLONE;
 			ATH_LOCK(sc);
 			IEEE80211_ADDR_COPY(ic->ic_myaddr, dev->dev_addr);
