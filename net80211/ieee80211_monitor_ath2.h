@@ -45,6 +45,7 @@ struct ath2_tx_status {
     int8_t	reserved[2];
 
 } __attribute__ ((packed));
+	     
 
 struct ath2_tx_anno {
 
@@ -72,6 +73,13 @@ struct ath2_rx_anno {
 
 } __attribute__ ((packed));
 
+
+#define MADWIFI_FLAGS_CCA_ENABLED           1 << 0
+#define MADWIFI_FLAGS_SMALLBACKOFF_ENABLED  1 << 1
+#define MADWIFI_FLAGS_BURST_ENABLED         1 << 2
+#define MADWIFI_FLAGS_CHANNELSWITCH_ENABLED 1 << 3
+#define MADWIFI_FLAGS_MACCLONE_ENABLED      1 << 4
+
 struct ath2_header {
     u_int16_t ath2_version;
     u_int16_t madwifi_version;
@@ -91,14 +99,15 @@ struct ath2_header {
 
 #define MADWIFI_0940	0x03ac
 #define MADWIFI_3869	0x0f1d
-#define MADWIFI_3880  0x0f28
+#define MADWIFI_3880    0x0f28
+#define MADWIFI_4133    0x1025
 
-#define MADWIFI_TRUNK MADWIFI_3880
+#define MADWIFI_TRUNK MADWIFI_4133
 
 #define ATH2_OPERATION_NONE        0
 #define ATH2_OPERATION_SETVACLIENT 1
 #define ATH2_OPERATION_SETCHANNEL  2
-#define ATH2_OPERATION_SETMAC      3
+#define ATH2_OPERATION_SETFLAGS    3
 
 #ifndef ARPHRD_IEEE80211_ATHDESC2
 #define ARPHRD_IEEE80211_ATHDESC2  805 /* IEEE 802.11 + atheros (long) descriptor */

@@ -80,10 +80,14 @@ doprint(struct ieee80211vap *vap, int subtype)
 #ifdef MACCLONE
 static int
 ieee80211_setup_macclone(struct ieee80211vap *vap, const char* addr) {
-	struct net_device *dev = NULL;
 	struct ieee80211com *ic = vap->iv_ic;
-	//struct ath_softc *sc = netdev_priv(dev);
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,24))
+	struct net_device *dev = NULL;
 	struct ath_softc *sc = ic->ic_dev->priv;
+#else
+	struct net_device *dev = ic->ic_dev;
+	struct ath_softc *sc = netdev_priv(dev);
+#endif
 	struct ath_hal *ah = sc->sc_ah;
 
 #ifdef MACCLONEDEBUG

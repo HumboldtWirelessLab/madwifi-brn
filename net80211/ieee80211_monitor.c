@@ -626,6 +626,23 @@ ieee80211_input_monitor(struct ieee80211com *ic, struct sk_buff *skb,
 			
 			ath2_h.ath2_version = ATHDESC2_VERSION;
 			ath2_h.madwifi_version = MADWIFI_TRUNK;
+			
+			/* Flags */
+#ifdef COLORADO_CCA
+			ath2_h.flags = sc->sc_disable_cca_mask;
+#else			
+			ath2_h.flags = 0;	
+#endif
+
+#ifdef CHANNELSWITCH
+			 if ( (vap->iv_flags_ext & IEEE80211_FEXT_CHANNELSWITCH) != 0 )
+			   ath2_h.flags |= MADWIFI_FLAGS_CHANNELSWITCH_ENABLED;
+#endif
+
+#ifdef MACCLONE
+                        if ( (vap->iv_flags_ext & IEEE80211_FEXT_MACCLONE) != 0 )
+			   ath2_h.flags |= MADWIFI_FLAGS_MACCLONE_ENABLED;
+#endif
 
 			if (tx)
 			{
