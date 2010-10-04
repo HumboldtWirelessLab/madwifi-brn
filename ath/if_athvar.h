@@ -807,6 +807,9 @@ struct ath_softc {
 	unsigned long sc_lastcal;		/* last time the calibration was performed */
 	struct timer_list sc_cal_ch;		/* calibration timer */
 	HAL_NODE_STATS sc_halstats;		/* station-mode rssi stats */
+#ifdef UPDATECCA
+        int sc_cca_thresh;			/* configured CCA threshold */
+#endif
 
 	struct ctl_table_header *sc_sysctl_header;
 	struct ctl_table *sc_sysctls;

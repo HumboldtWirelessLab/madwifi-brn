@@ -268,6 +268,11 @@ static void ath_return_txbuf_locked(struct ath_softc *sc, struct ath_buf **buf);
 static void ath_return_txbuf_list(struct ath_softc *sc, ath_bufhead *bfhead);
 static void ath_return_txbuf_list_locked(struct ath_softc *sc, ath_bufhead *bfhead);
 
+#ifdef UPDATECCA
+static void ath_update_cca_thresh(struct ath_softc *sc);
+//static int ath_hw_read_nf(struct ath_softc *sc);
+#endif
+
 static struct ath_buf *cleanup_ath_buf(struct ath_softc *sc,
 		struct ath_buf *buf, int direction);
 
@@ -2840,7 +2845,13 @@ ath_init(struct net_device *dev)
 	ath_chan_change(sc, ic->ic_curchan);
 	ath_set_ack_bitrate(sc, sc->sc_ackrate);
 	dev->flags |= IFF_RUNNING;		/* we are ready to go */
-	
+
+#ifdef UPDATECCA	
+        ath_hal_process_noisefloor(ah);
+	ic->ic_channoise = ath_hal_get_channel_noise(ah, &(sc->sc_curchan));
+	ath_update_cca_thresh(sc);
+#endif
+
 #ifdef COLORADO_CCA
 	//if(sc->sc_disable_cca){
 	sc->sc_disable_cca_mask = 0;
@@ -3010,6 +3021,12 @@ ath_reset(struct net_device *dev)
 	if (!ath_hw_reset(sc, sc->sc_opmode, &sc->sc_curchan, AH_TRUE, &status))
 		EPRINTF(sc, "Unable to reset hardware: '%s' (HAL status %u)\n",
 			ath_get_hal_status_desc(status), status);
+
+#ifdef UPDATECCA
+        ath_hal_process_noisefloor(ah);
+	ic->ic_channoise = ath_hal_get_channel_noise(ah, &(sc->sc_curchan));
+	ath_update_cca_thresh(sc);
+#endif
 
 #ifdef COLORADO_CCA 
 //This is moved down a few lines in GVY version, but the surrounding code is different.  Don't know what's best.
@@ -9260,6 +9277,9 @@ ath_calibrate(unsigned long arg)
 
 	ath_hal_process_noisefloor(ah);
 	ic->ic_channoise = ath_hal_get_channel_noise(ah, &(sc->sc_curchan));
+#ifdef UPDATECCA
+	ath_update_cca_thresh(sc);
+#endif
 
 	if (ath_hal_getrfgain(ah) == HAL_RFGAIN_NEED_CHANGE) {
 		/*
@@ -10967,6 +10987,9 @@ enum {
 #ifdef COLORADO_CCA
 	ATH_NOCCA               = 29,
 #endif
+#ifdef UPDATECCA
+	ATH_CCA_THRESH		= 30,
+#endif
 };
 
 static inline int 
@@ -11023,6 +11046,67 @@ ath_distance2timeout(struct ath_softc *sc, int distance)
 	return ath_slottime2timeout(sc, ath_distance2slottime(sc, distance));
 }
 
+#ifdef UPDATECCA
+#define AR_PHY_CCA              0x9864
+#define AR_PHY_MINCCA_PWR       0x0FF80000
+#define AR_PHY_MINCCA_PWR_S     19
+#define AR_PHY_CCA_THRESH62     0x0007F000
+#define AR_PHY_CCA_THRESH62_S   12
+
+static int
+ath_nf_from_cca(u32 phy_cca)
+{
+	int nf = (phy_cca >> 19) & 0x1ff;
+	nf = -((nf ^ 0x1ff) + 1);
+	return nf;
+}
+
+/*static int
+ath_hw_read_nf(struct ath_softc *sc)
+{
+	return ath_nf_from_cca(OS_REG_READ(sc->sc_ah, AR_PHY_CCA));
+} */
+
+static void
+ath_update_cca_thresh(struct ath_softc *sc)
+{
+	struct ath_hal *ah = sc->sc_ah;
+	int newthr = 0;
+	u32 phy_cca;
+//	int nf;
+
+	phy_cca = OS_REG_READ(ah, AR_PHY_CCA);
+	if (sc->sc_cca_thresh < 0) {
+		newthr = sc->sc_cca_thresh - ath_nf_from_cca(phy_cca);
+
+		/* 0xf is a typical eeprom value for thresh62,
+		 * use it as minimum for signal based thresholds
+		 * to prevent complete connection drops */
+		if (newthr < 0xf)
+			newthr = 0xf;
+	} else {
+		newthr = sc->sc_cca_thresh;
+	}
+
+	if ((newthr < 4) || (newthr >= 127))
+		return;
+
+	phy_cca &= ~AR_PHY_CCA_THRESH62;
+	phy_cca |= newthr << AR_PHY_CCA_THRESH62_S;
+	OS_REG_WRITE(ah, AR_PHY_CCA, phy_cca);
+}
+
+static int
+ath_get_cca_thresh(struct ath_softc *sc)
+{
+	struct ath_hal *ah = sc->sc_ah;
+	u32 phy_cca;
+
+	phy_cca = OS_REG_READ(ah, AR_PHY_CCA);
+	return ath_nf_from_cca(phy_cca) +
+		((phy_cca & AR_PHY_CCA_THRESH62) >> AR_PHY_CCA_THRESH62_S);
+}
+#endif //UPDATECCA
 static int
 ATH_SYSCTL_DECL(ath_sysctl_halparam, ctl, write, filp, buffer, lenp, ppos)
 {
@@ -11293,6 +11377,12 @@ ATH_SYSCTL_DECL(ath_sysctl_halparam, ctl, write, filp, buffer, lenp, ppos)
 					ath_reset(sc->sc_dev);
 				break;
 #endif //COLORADO_CCA
+#ifdef UPDATECCA
+			case ATH_CCA_THRESH:
+				sc->sc_cca_thresh = val;
+				ath_update_cca_thresh(sc);
+				break;
+#endif
 			default:
 				ret = -EINVAL;
 				break;
@@ -11371,6 +11461,11 @@ ATH_SYSCTL_DECL(ath_sysctl_halparam, ctl, write, filp, buffer, lenp, ppos)
 			printk(KERN_INFO "sc->sc_disable_cca_mask = 0x%x\n", sc->sc_disable_cca_mask);
  			break;
 #endif //COLORADO_CCA
+#ifdef UPDATECCA
+		case ATH_CCA_THRESH:
+			val = ath_get_cca_thresh(sc);
+			break;
+#endif
 		default:
 			ret = -EINVAL;
 			break;
@@ -11558,13 +11653,21 @@ static const ctl_table ath_sysctl_template[] = {
 	  .extra2       = (void *)ATH_INTMIT,
 	},
 #ifdef COLORADO_CCA
-	{ .ctl_name	= CTL_AUTO,
+	{ ATH_INIT_CTL_NAME(CTL_AUTO)
 	  .procname     = "disable_cca",
 	  .mode         = 0644,
 	  .proc_handler = ath_sysctl_halparam,
 	  .extra2	= (void *)ATH_NOCCA,
 	},
 #endif //COLORADO_CCA
+#ifdef UPDATECCA
+	{ ATH_INIT_CTL_NAME(CTL_AUTO)
+	  .procname     = "cca_thresh",
+	  .mode         = 0644,
+	  .proc_handler = ath_sysctl_halparam,
+	  .extra2	= (void *)ATH_CCA_THRESH,
+	},
+#endif
 	{ 0 }
 };
 
