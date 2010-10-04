@@ -11052,6 +11052,12 @@ ath_distance2timeout(struct ath_softc *sc, int distance)
 #define AR_PHY_MINCCA_PWR_S     19
 #define AR_PHY_CCA_THRESH62     0x0007F000
 #define AR_PHY_CCA_THRESH62_S   12
+#define AR5K_AR5212_DIAG_SW     0x8048
+#define AR5K_AR5212_RSSI_THR    0x8018
+
+
+//#define AR5K_AR5212_MIN_RSSI    0xf
+#define AR5K_AR5212_MIN_RSSI    1
 
 static int
 ath_nf_from_cca(u32 phy_cca)
@@ -11073,27 +11079,48 @@ ath_update_cca_thresh(struct ath_softc *sc)
 	struct ath_hal *ah = sc->sc_ah;
 	int newthr = 0;
 	u32 phy_cca;
-//	int nf;
+	int nf;
+	u_int32_t rssi_thresh = -1;
+	u_int32_t diag_sw = -1;
 
 	phy_cca = OS_REG_READ(ah, AR_PHY_CCA);
+	nf = ath_nf_from_cca(phy_cca);
+	
+	if (ar_device(sc) == 5212 || ar_device(sc) == 5213) {
+		rssi_thresh = OS_REG_READ(ah, AR5K_AR5212_RSSI_THR);
+		diag_sw = OS_REG_READ(ah, AR5K_AR5212_DIAG_SW);
+	}
+
+	printk("Update cca (Old values): phy_cca: %d nf: %d rssi_thresh: %d, diag_sw: %d\n",phy_cca, nf, rssi_thresh, diag_sw);
+
 	if (sc->sc_cca_thresh < 0) {
 		newthr = sc->sc_cca_thresh - ath_nf_from_cca(phy_cca);
 
 		/* 0xf is a typical eeprom value for thresh62,
 		 * use it as minimum for signal based thresholds
 		 * to prevent complete connection drops */
-		if (newthr < 0xf)
-			newthr = 0xf;
+		if (newthr < AR5K_AR5212_MIN_RSSI)
+			newthr = AR5K_AR5212_MIN_RSSI;
 	} else {
 		newthr = sc->sc_cca_thresh;
 	}
 
-	if ((newthr < 4) || (newthr >= 127))
+//	if ((newthr < 4) || (newthr >= 127))
+	if ((newthr < AR5K_AR5212_MIN_RSSI) || (newthr >= 127))
 		return;
 
 	phy_cca &= ~AR_PHY_CCA_THRESH62;
 	phy_cca |= newthr << AR_PHY_CCA_THRESH62_S;
 	OS_REG_WRITE(ah, AR_PHY_CCA, phy_cca);
+
+	nf = ath_nf_from_cca(phy_cca);
+	
+	if (ar_device(sc) == 5212 || ar_device(sc) == 5213) {
+		rssi_thresh = OS_REG_READ(ah, AR5K_AR5212_RSSI_THR);
+		diag_sw = OS_REG_READ(ah, AR5K_AR5212_DIAG_SW);
+	}
+	
+	printk("Update cca: phy_cca: %d nf: %d rssi_thresh: %d, diag_sw: %d\n",phy_cca, nf, rssi_thresh, diag_sw);
 }
 
 static int
@@ -11106,6 +11133,8 @@ ath_get_cca_thresh(struct ath_softc *sc)
 	return ath_nf_from_cca(phy_cca) +
 		((phy_cca & AR_PHY_CCA_THRESH62) >> AR_PHY_CCA_THRESH62_S);
 }
+#undef AR5K_AR5212_RSSI_THR
+#undef AR5K_AR5212_DIAG_SW
 #endif //UPDATECCA
 static int
 ATH_SYSCTL_DECL(ath_sysctl_halparam, ctl, write, filp, buffer, lenp, ppos)
