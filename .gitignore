@@ -1,0 +1,12 @@
+.gitignore
+.svn
+ath_hal/i386-elf.bin
+*.o
+*.cmd
+.tmp/*
+.tmp*
+*.mod.c
+*.ko
+Module.symvers
+*modules.order
+svnversion.h
