@@ -624,8 +624,8 @@ ieee80211_input_monitor(struct ieee80211com *ic, struct sk_buff *skb,
 				break;
 			}
 			
-			ath2_h.ath2_version = ATHDESC2_VERSION;
-			ath2_h.madwifi_version = MADWIFI_TRUNK;
+			ath2_h.ath2_version = cpu_to_le16(ATHDESC2_VERSION);
+			ath2_h.madwifi_version = cpu_to_le16(MADWIFI_TRUNK);
 			
 			/* Flags */
 #ifdef COLORADO_CCA
@@ -644,6 +644,8 @@ ieee80211_input_monitor(struct ieee80211com *ic, struct sk_buff *skb,
 			   ath2_h.flags |= MADWIFI_FLAGS_MACCLONE_ENABLED;
 #endif
 
+			ath2_h.flags = cpu_to_le32(ath2_h.flags);
+			
 			if (tx)
 			{
 				ath2_h.anno.tx.ts_seqnum = bf->bf_dsstatus.ds_txstat.ts_seqnum;
