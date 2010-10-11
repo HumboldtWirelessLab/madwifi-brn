@@ -1,6 +1,10 @@
 #ifndef _NET80211_IEEE80211_MONITOR_ATH2_H_
 #define _NET80211_IEEE80211_MONITOR_ATH2_H_
 
+
+#define MADWIFI_RXTX_FLAGS_SHORT_PREAMBLE   1 << 0
+
+
 struct ath2_rx_status {
     u_int16_t	rs_datalen; /* rx frame length */
     u_int8_t	rs_status;  /* rx status, 0 => recv ok */
@@ -19,7 +23,8 @@ struct ath2_rx_status {
 
     int8_t	rs_noise;
     int8_t	rs_channel;
-    int8_t	reserved[2];
+    int8_t	rs_flags;   /* preample len,... */
+    int8_t	reserved[1];
 
 } __attribute__ ((packed));
 
@@ -42,7 +47,8 @@ struct ath2_tx_status {
 
     int8_t	ts_noise;
     int8_t	ts_channel;
-    int8_t	reserved[2];
+    int8_t	ts_flags;     /*short preamble,....*/
+    int8_t	reserved[1];
 
 } __attribute__ ((packed));
 	     
@@ -74,6 +80,11 @@ struct ath2_rx_anno {
 } __attribute__ ((packed));
 
 
+/*************************************************/
+/***************** DRIVER FLAGS ******************/
+/*************************************************/
+
+
 #define MADWIFI_FLAGS_CCA_ENABLED           1 << 0
 #define MADWIFI_FLAGS_SMALLBACKOFF_ENABLED  1 << 1
 #define MADWIFI_FLAGS_BURST_ENABLED         1 << 2
@@ -84,7 +95,7 @@ struct ath2_header {
     u_int16_t ath2_version;
     u_int16_t madwifi_version;
 
-    u_int32_t flags;
+    u_int32_t flags;                        //driver flags
 
     union {
       struct ath2_rx_status rx;             //info of received packets
