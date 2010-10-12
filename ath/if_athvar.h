@@ -100,6 +100,10 @@ typedef void *TQUEUE_ARG;
 
 #endif /* KERNEL_VERSION < 2.5.41 */
 
+#ifdef CHANNEL_UTILITY
+#include <ath_channel_utility.h>
+#endif
+
 /*
  * Guess how the interrupt handler should work.
  */
@@ -879,6 +883,11 @@ struct ath_softc {
 
 
 #endif //COLORADO_CCA
+#ifdef CHANNEL_UTILITY
+    	struct ath_cycle_counters cc_ani;
+    	struct ath_cycle_counters cc_survey;
+    	spinlock_t cc_lock;
+##endif
 };
 
 typedef void (*ath_callback) (struct ath_softc *);

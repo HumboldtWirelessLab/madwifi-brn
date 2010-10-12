@@ -126,6 +126,10 @@
 #define DEF_RATE_CTL "sample"
 #endif
 
+#ifdef CHANNEL_UTILITY
+#include <ath_channel_utility.h>
+#endif
+
 enum {
 	ATH_LED_TX,
 	ATH_LED_RX,
@@ -10990,6 +10994,9 @@ enum {
 #ifdef UPDATECCA
 	ATH_CCA_THRESH		= 30,
 #endif
+#ifdef CHANNEL_UTILITY
+  ATH_CHANNEL_UTILITY = 31,
+#endif
 };
 
 static inline int 
@@ -11493,6 +11500,11 @@ ATH_SYSCTL_DECL(ath_sysctl_halparam, ctl, write, filp, buffer, lenp, ppos)
 #ifdef UPDATECCA
 		case ATH_CCA_THRESH:
 			val = ath_get_cca_thresh(sc);
+			break;
+#endif
+#ifdef CHANNEL_UTILITY
+      ath_hw_cycle_counters_update(sc);
+      val = get_channel_utility(sc);
 			break;
 #endif
 		default:
@@ -12177,6 +12189,61 @@ static int set_cca_mode(struct ath_softc *sc)
 	
 }
 #endif //COLORADO_CCA
+
+#ifdef CHANNEL_UTILITY
+
+uint8_t get_channel_utility(struct ath_softc *sc)
+{
+  u32 utility;
+  if ( sc->cc_ani.cycles == 0 ) return 0;
+  
+  utility = (100*sc->cc_ani.rx_busy)/sc->cc_ani.cycles;
+  
+  return utility;
+}
+
+/**
+ * ath_hw_cycle_counters_update - common function to update cycle counters
+ *
+ * @common: the ath_common struct for the device.
+ *
+ * This function is used to update all cycle counters in one place.
+ * It has to be called while holding common->cc_lock!
+ */
+void ath_hw_cycle_counters_update(struct ath_softc *sc)
+{
+	struct ath_hal *ah = sc->sc_ah;
+	
+  u32 cycles, busy, rx, tx;
+
+  /* freeze */
+  OS_REG_WRITE(ah, AR_MIBC, AR_MIBC_FMC);
+  /* read */
+  cycles = OS_REG_READ(ah, AR_CCCNT);
+  busy = OS_REG_READ(ah, AR_RCCNT);
+  rx = OS_REG_READ(ah, AR_RFCNT);
+  tx = OS_REG_READ(ah, AR_TFCNT);
+  /* clear */
+  OS_REG_WRITE(ah, AR_CCCNT, 0);
+  OS_REG_WRITE(ah, AR_RFCNT, 0);
+  OS_REG_WRITE(ah, AR_RCCNT, 0);
+  OS_REG_WRITE(ah, AR_TFCNT, 0);
+  /* unfreeze */
+  OS_REG_WRITE(ah, AR_MIBC, 0);
+
+  /* update all cycle counters here */
+  sc->cc_ani.cycles += cycles;
+  sc->cc_ani.rx_busy += busy;
+  sc->cc_ani.rx_frame += rx;
+  sc->cc_ani.tx_frame += tx;
+
+  sc->cc_survey.cycles += cycles;
+  sc->cc_survey.rx_busy += busy;
+  sc->cc_survey.rx_frame += rx;
+  sc->cc_survey.tx_frame += tx;
+}
+
+#endif
 
 /*
 Configure the radio for continuous transmission
