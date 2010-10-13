@@ -12263,7 +12263,7 @@ uint8_t get_channel_utility_busy(struct ath_softc *sc)
 
   utility = (sc->cc_survey.rx_busy)/(sc->cc_survey.cycles/100);
 
-  printk("Busy: %d  Cycle: %d RX: %d TX: %d BT: %d\n", sc->cc_survey.rx_busy, sc->cc_survey.cycles, sc->cc_survey.rx_frame, sc->cc_survey.tx_frame, utility);
+//  printk("Busy: %d  Cycle: %d RX: %d TX: %d BT: %d\n", sc->cc_survey.rx_busy, sc->cc_survey.cycles, sc->cc_survey.rx_frame, sc->cc_survey.tx_frame, utility);
 
   return utility;
 }
@@ -12294,7 +12294,7 @@ void ath_hw_cycle_counters_update(struct ath_softc *sc)
 
   u32 cycles, busy, rx, tx;
 
-  printk("Set spinlock\n");
+//  printk("Set spinlock\n");
   spin_lock(&sc->cc_lock);
 
   /* freeze */
@@ -12313,7 +12313,7 @@ void ath_hw_cycle_counters_update(struct ath_softc *sc)
   OS_REG_WRITE(ah, AR_MIBC, 0);
 
   spin_unlock(&sc->cc_lock);
-  printk("unlock spinlock\n");
+//  printk("unlock spinlock\n");
 
   /* update all cycle counters here */
   sc->cc_cum.cycles += cycles;
