@@ -3,6 +3,8 @@
 
 #ifdef CHANNEL_UTILITY
 
+#define DEFAULT_CC_PKT_UPDATE_THRESHOLD 20
+
 struct ath_cycle_counters {
 	u32 cycles;
 	u32 rx_busy; /* register is called "rx clear" but it's the inverse */
@@ -12,16 +14,6 @@ struct ath_cycle_counters {
 
 void ath_hw_cycle_counters_update(struct ath_softc *sc);
 uint8_t get_channel_utility(struct ath_softc *sc);
-
-static inline void ath_hw_cycle_counters_lock(struct ath_softc *sc)
-{
-	spin_lock_bh(&sc->cc_lock);
-}
-
-static inline void ath_hw_cycle_counters_unlock(struct ath_softc *sc)
-{
-	spin_unlock_bh(&sc->cc_lock);
-}
 
 #endif
 

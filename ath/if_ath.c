@@ -127,7 +127,12 @@
 #endif
 
 #ifdef CHANNEL_UTILITY
-#include <ath_channel_utility.h>
+#include <ath_hal/ar5212/ar5212reg.h>
+#include "ath_channel_utility.h"
+
+uint8_t get_channel_utility_busy(struct ath_softc *sc);
+uint8_t get_channel_utility_rx(struct ath_softc *sc);
+uint8_t get_channel_utility_tx(struct ath_softc *sc);
 #endif
 
 enum {
@@ -596,6 +601,14 @@ ath_attach(u_int16_t devid, struct net_device *dev, HAL_BUS_TAG tag)
 	ATH_RXBUF_LOCK_INIT(sc);
 	ATH_BBUF_LOCK_INIT(sc);
 	ATH_GBUF_LOCK_INIT(sc);
+
+#ifdef CHANNEL_UTILITY
+        spin_lock_init(&(sc)->cc_lock);
+        memset(&(sc->cc_cum), 0, sizeof(struct ath_cycle_counters));
+        memset(&(sc->cc_survey), 0, sizeof(struct ath_cycle_counters));
+        sc->cc_pkt_counter = 0;
+        sc->cc_pkt_update_threshold = DEFAULT_CC_PKT_UPDATE_THRESHOLD;
+#endif
 
 	atomic_set(&sc->sc_txbuf_counter, 0);
 
@@ -7006,6 +7019,14 @@ rx_accept:
 		sc->sc_devstats.rx_packets++;
 		sc->sc_devstats.rx_bytes += len;
 
+#ifdef CHANNEL_UTILITY
+		sc->cc_pkt_counter++;
+		if ( sc->cc_pkt_counter == sc->cc_pkt_update_threshold ) {
+			ath_hw_cycle_counters_update(sc);
+			sc->cc_pkt_counter = 0;
+		}
+#endif
+
 		skb_put(skb, len);
 		skb->protocol = __constant_htons(ETH_P_CONTROL);
 
@@ -10995,7 +11016,10 @@ enum {
 	ATH_CCA_THRESH		= 30,
 #endif
 #ifdef CHANNEL_UTILITY
-  ATH_CHANNEL_UTILITY = 31,
+	ATH_CHANNEL_UTILITY_RX_BUSY	= 31,
+	ATH_CHANNEL_UTILITY_RX_FRAME	= 32,
+	ATH_CHANNEL_UTILITY_TX_FRAME	= 33,
+	ATH_CHANNEL_UTILITY_PKT_THRESHOLD = 34,
 #endif
 };
 
@@ -11419,6 +11443,11 @@ ATH_SYSCTL_DECL(ath_sysctl_halparam, ctl, write, filp, buffer, lenp, ppos)
 				ath_update_cca_thresh(sc);
 				break;
 #endif
+#ifdef CHANNEL_UTILITY
+			case ATH_CHANNEL_UTILITY_PKT_THRESHOLD:
+				sc->cc_pkt_update_threshold = val;
+				break;
+#endif
 			default:
 				ret = -EINVAL;
 				break;
@@ -11503,8 +11532,17 @@ ATH_SYSCTL_DECL(ath_sysctl_halparam, ctl, write, filp, buffer, lenp, ppos)
 			break;
 #endif
 #ifdef CHANNEL_UTILITY
-      ath_hw_cycle_counters_update(sc);
-      val = get_channel_utility(sc);
+		case ATH_CHANNEL_UTILITY_RX_BUSY:
+			val = get_channel_utility_busy(sc);
+			break;
+		case ATH_CHANNEL_UTILITY_RX_FRAME:
+			val = get_channel_utility_rx(sc);
+			break;
+		case ATH_CHANNEL_UTILITY_TX_FRAME:
+			val = get_channel_utility_tx(sc);
+			break;
+		case ATH_CHANNEL_UTILITY_PKT_THRESHOLD:
+			val = sc->cc_pkt_update_threshold;
 			break;
 #endif
 		default:
@@ -11707,6 +11745,32 @@ static const ctl_table ath_sysctl_template[] = {
 	  .mode         = 0644,
 	  .proc_handler = ath_sysctl_halparam,
 	  .extra2	= (void *)ATH_CCA_THRESH,
+	},
+#endif
+#ifdef CHANNEL_UTILITY
+	{ ATH_INIT_CTL_NAME(CTL_AUTO)
+	  .procname     = "cutil_rx_busy",
+	  .mode         = 0444,
+	  .proc_handler = ath_sysctl_halparam,
+	  .extra2	= (void *)ATH_CHANNEL_UTILITY_RX_BUSY,
+	},
+	{ ATH_INIT_CTL_NAME(CTL_AUTO)
+	  .procname     = "cutil_rx_frame",
+	  .mode         = 0444,
+	  .proc_handler = ath_sysctl_halparam,
+	  .extra2	= (void *)ATH_CHANNEL_UTILITY_RX_FRAME,
+	},
+	{ ATH_INIT_CTL_NAME(CTL_AUTO)
+	  .procname     = "cutil_tx_frame",
+	  .mode         = 0444,
+	  .proc_handler = ath_sysctl_halparam,
+	  .extra2	= (void *)ATH_CHANNEL_UTILITY_TX_FRAME,
+	},
+	{ ATH_INIT_CTL_NAME(CTL_AUTO)
+	  .procname     = "cutil_pkt_threshold",
+	  .mode         = 0644,
+	  .proc_handler = ath_sysctl_halparam,
+	  .extra2	= (void *)ATH_CHANNEL_UTILITY_PKT_THRESHOLD,
 	},
 #endif
 	{ 0 }
@@ -12192,14 +12256,28 @@ static int set_cca_mode(struct ath_softc *sc)
 
 #ifdef CHANNEL_UTILITY
 
-uint8_t get_channel_utility(struct ath_softc *sc)
+uint8_t get_channel_utility_busy(struct ath_softc *sc)
 {
   u32 utility;
-  if ( sc->cc_ani.cycles == 0 ) return 0;
-  
-  utility = (100*sc->cc_ani.rx_busy)/sc->cc_ani.cycles;
-  
+  if ( sc->cc_survey.cycles == 0 ) return 0;
+
+  utility = (sc->cc_survey.rx_busy)/(sc->cc_survey.cycles/100);
+
+  printk("Busy: %d  Cycle: %d RX: %d TX: %d BT: %d\n", sc->cc_survey.rx_busy, sc->cc_survey.cycles, sc->cc_survey.rx_frame, sc->cc_survey.tx_frame, utility);
+
   return utility;
+}
+
+uint8_t get_channel_utility_rx(struct ath_softc *sc)
+{
+  if ( sc->cc_survey.cycles == 0 ) return 0;
+  return (sc->cc_survey.rx_frame)/(sc->cc_survey.cycles/100);
+}
+
+uint8_t get_channel_utility_tx(struct ath_softc *sc)
+{
+  if ( sc->cc_survey.cycles == 0 ) return 0;
+  return (sc->cc_survey.tx_frame)/(sc->cc_survey.cycles/100);
 }
 
 /**
@@ -12212,9 +12290,12 @@ uint8_t get_channel_utility(struct ath_softc *sc)
  */
 void ath_hw_cycle_counters_update(struct ath_softc *sc)
 {
-	struct ath_hal *ah = sc->sc_ah;
-	
+  struct ath_hal *ah = sc->sc_ah;
+
   u32 cycles, busy, rx, tx;
+
+  printk("Set spinlock\n");
+  spin_lock(&sc->cc_lock);
 
   /* freeze */
   OS_REG_WRITE(ah, AR_MIBC, AR_MIBC_FMC);
@@ -12231,16 +12312,25 @@ void ath_hw_cycle_counters_update(struct ath_softc *sc)
   /* unfreeze */
   OS_REG_WRITE(ah, AR_MIBC, 0);
 
-  /* update all cycle counters here */
-  sc->cc_ani.cycles += cycles;
-  sc->cc_ani.rx_busy += busy;
-  sc->cc_ani.rx_frame += rx;
-  sc->cc_ani.tx_frame += tx;
+  spin_unlock(&sc->cc_lock);
+  printk("unlock spinlock\n");
 
-  sc->cc_survey.cycles += cycles;
-  sc->cc_survey.rx_busy += busy;
-  sc->cc_survey.rx_frame += rx;
-  sc->cc_survey.tx_frame += tx;
+  /* update all cycle counters here */
+  sc->cc_cum.cycles += cycles;
+  sc->cc_cum.rx_busy += busy;
+  sc->cc_cum.rx_frame += rx;
+  sc->cc_cum.tx_frame += tx;
+
+  sc->cc_survey.cycles = cycles;
+  sc->cc_survey.rx_busy = busy;
+  sc->cc_survey.rx_frame = rx;
+  sc->cc_survey.tx_frame = tx;
+}
+
+
+void ath_cycle_counters_reset(struct ath_softc *sc)
+{
+    memset(&(sc->cc_cum), 0, sizeof(struct ath_cycle_counters));
 }
 
 #endif

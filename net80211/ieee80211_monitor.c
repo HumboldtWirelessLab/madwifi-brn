@@ -60,6 +60,9 @@
 #include <net80211/ieee80211_monitor.h>
 #include <ath/if_athvar.h>
 
+#ifdef CHANNEL_UTILITY
+uint8_t get_channel_utility_busy(struct ath_softc *sc);
+#endif
 
 static int
 ratecode_to_dot11(int ratecode)
@@ -664,7 +667,12 @@ ieee80211_input_monitor(struct ieee80211com *ic, struct sk_buff *skb,
 				ath2_h.anno.tx.ts_noise = (int8_t) noise;
 				ath2_h.anno.tx.ts_channel = (int8_t) ieee80211_mhz2ieee(ic->ic_curchan->ic_freq, ic->ic_curchan->ic_flags);
 				ath2_h.anno.tx.ts_flags = 0;
-
+#ifdef CHANNEL_UTILITY
+				if ( sc->cc_survey.cycles == 0 ) ath2_h.anno.tx.ts_channel_utility = 0;
+				else ath2_h.anno.tx.ts_channel_utility = (sc->cc_survey.rx_busy)/(sc->cc_survey.cycles/100);
+#else
+				ath2_h.anno.tx.ts_channel_utility = 0;
+#endif
 			}
 			else
 			{
@@ -688,6 +696,12 @@ ieee80211_input_monitor(struct ieee80211com *ic, struct sk_buff *skb,
 				} else {
 					ath2_h.anno.rx.rs_flags = 0;
 				}
+#ifdef CHANNEL_UTILITY
+				if ( sc->cc_survey.cycles == 0 ) ath2_h.anno.rx.rs_channel_utility = 0;
+				else ath2_h.anno.rx.rs_channel_utility = (sc->cc_survey.rx_busy)/(sc->cc_survey.cycles/100);
+#else
+				ath2_h.anno.rx.rs_channel_utility = 0;
+#endif
 			}
 
 			skb1_data = skb_push(skb1, ATHDESC2_HEADER_SIZE);
