@@ -91,7 +91,7 @@ struct ath2_rx_anno {
 #define MADWIFI_FLAGS_CHANNELSWITCH_ENABLED 1 << 3
 #define MADWIFI_FLAGS_MACCLONE_ENABLED      1 << 4
 
-#define MADWIFI_FLAGS_SET                   1 << 30
+#define MADWIFI_FLAGS_SET_CONFIG            1 << 30
 #define MADWIFI_FLAGS_IS_OPERATION          1 << 31
 
 struct ath2_header {
