@@ -9,7 +9,7 @@
 #define CC_MODE_RX_FRAME	2
 #define CC_MODE_TX_FRAME	3
 #define CC_MODE_DEFAULT 	CC_MODE_RX_BUSY
-#define CC_MODE_MAX	 	CC_MODE_TX_FRAMES
+#define CC_MODE_MAX	 	CC_MODE_TX_FRAME
 
 struct ath_cycle_counters {
 	u32 cycles;
