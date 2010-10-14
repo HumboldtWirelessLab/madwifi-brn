@@ -889,6 +889,7 @@ struct ath_softc {
     	spinlock_t cc_lock;
     	u_int32_t cc_pkt_counter;
     	u_int32_t cc_pkt_update_threshold;
+	u_int8_t cc_mode;
 #endif
 };
 

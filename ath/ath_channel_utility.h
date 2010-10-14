@@ -5,6 +5,12 @@
 
 #define DEFAULT_CC_PKT_UPDATE_THRESHOLD 20
 
+#define CC_MODE_RX_BUSY	1
+#define CC_MODE_RX_FRAME	2
+#define CC_MODE_TX_FRAME	3
+#define CC_MODE_DEFAULT 	CC_MODE_RX_BUSY
+#define CC_MODE_MAX	 	CC_MODE_TX_FRAMES
+
 struct ath_cycle_counters {
 	u32 cycles;
 	u32 rx_busy; /* register is called "rx clear" but it's the inverse */

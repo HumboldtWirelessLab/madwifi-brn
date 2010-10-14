@@ -669,7 +669,19 @@ ieee80211_input_monitor(struct ieee80211com *ic, struct sk_buff *skb,
 				ath2_h.anno.tx.ts_flags = 0;
 #ifdef CHANNEL_UTILITY
 				if ( sc->cc_survey.cycles == 0 ) ath2_h.anno.tx.ts_channel_utility = 0;
-				else ath2_h.anno.tx.ts_channel_utility = (sc->cc_survey.rx_busy)/(sc->cc_survey.cycles/100);
+				else {
+				  switch ( sc->cc_mode ) {
+				    case CC_MODE_RX_BUSY:
+				      ath2_h.anno.tx.ts_channel_utility = (sc->cc_survey.rx_busy)/(sc->cc_survey.cycles/100);
+				      break;
+				    case CC_MODE_RX_FRAME:
+				      ath2_h.anno.tx.ts_channel_utility = (sc->cc_survey.rx_frame)/(sc->cc_survey.cycles/100);
+				      break;
+				    case CC_MODE_TX_FRAME:
+				      ath2_h.anno.tx.ts_channel_utility = (sc->cc_survey.tx_frame)/(sc->cc_survey.cycles/100);
+				      break;
+				  }
+				}				      
 #else
 				ath2_h.anno.tx.ts_channel_utility = 0;
 #endif
@@ -698,7 +710,19 @@ ieee80211_input_monitor(struct ieee80211com *ic, struct sk_buff *skb,
 				}
 #ifdef CHANNEL_UTILITY
 				if ( sc->cc_survey.cycles == 0 ) ath2_h.anno.rx.rs_channel_utility = 0;
-				else ath2_h.anno.rx.rs_channel_utility = (sc->cc_survey.rx_busy)/(sc->cc_survey.cycles/100);
+				else {
+				  switch ( sc->cc_mode ) {
+				    case CC_MODE_RX_BUSY:
+				      ath2_h.anno.tx.ts_channel_utility = (sc->cc_survey.rx_busy)/(sc->cc_survey.cycles/100);
+				      break;
+				    case CC_MODE_RX_FRAME:
+				      ath2_h.anno.tx.ts_channel_utility = (sc->cc_survey.rx_frame)/(sc->cc_survey.cycles/100);
+				      break;
+				    case CC_MODE_TX_FRAME:
+				      ath2_h.anno.tx.ts_channel_utility = (sc->cc_survey.tx_frame)/(sc->cc_survey.cycles/100);
+				      break;
+				  }
+				}				      
 #else
 				ath2_h.anno.rx.rs_channel_utility = 0;
 #endif

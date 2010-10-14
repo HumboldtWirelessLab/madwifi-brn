@@ -608,6 +608,7 @@ ath_attach(u_int16_t devid, struct net_device *dev, HAL_BUS_TAG tag)
         memset(&(sc->cc_survey), 0, sizeof(struct ath_cycle_counters));
         sc->cc_pkt_counter = 0;
         sc->cc_pkt_update_threshold = DEFAULT_CC_PKT_UPDATE_THRESHOLD;
+	sc->cc_mode = CC_MODE_DEFAULT;
 #endif
 
 	atomic_set(&sc->sc_txbuf_counter, 0);
@@ -11020,6 +11021,7 @@ enum {
 	ATH_CHANNEL_UTILITY_RX_FRAME	= 32,
 	ATH_CHANNEL_UTILITY_TX_FRAME	= 33,
 	ATH_CHANNEL_UTILITY_PKT_THRESHOLD = 34,
+	ATH_CHANNEL_UTILITY_MODE = 35,
 #endif
 };
 
@@ -11447,6 +11449,10 @@ ATH_SYSCTL_DECL(ath_sysctl_halparam, ctl, write, filp, buffer, lenp, ppos)
 			case ATH_CHANNEL_UTILITY_PKT_THRESHOLD:
 				sc->cc_pkt_update_threshold = val;
 				break;
+			case ATH_CHANNEL_UTILITY_MODE:
+				if ( val > 0 && val <= CC_MODE_MAX )
+				  sc->cc_mode = val;
+				break;
 #endif
 			default:
 				ret = -EINVAL;
@@ -11543,6 +11549,9 @@ ATH_SYSCTL_DECL(ath_sysctl_halparam, ctl, write, filp, buffer, lenp, ppos)
 			break;
 		case ATH_CHANNEL_UTILITY_PKT_THRESHOLD:
 			val = sc->cc_pkt_update_threshold;
+			break;
+		case ATH_CHANNEL_UTILITY_MODE:
+			val = sc->cc_mode;
 			break;
 #endif
 		default:
@@ -11771,6 +11780,12 @@ static const ctl_table ath_sysctl_template[] = {
 	  .mode         = 0644,
 	  .proc_handler = ath_sysctl_halparam,
 	  .extra2	= (void *)ATH_CHANNEL_UTILITY_PKT_THRESHOLD,
+	},
+	{ ATH_INIT_CTL_NAME(CTL_AUTO)
+	  .procname     = "cutil_mode",
+	  .mode         = 0644,
+	  .proc_handler = ath_sysctl_halparam,
+	  .extra2	= (void *)ATH_CHANNEL_UTILITY_MODE,
 	},
 #endif
 	{ 0 }
