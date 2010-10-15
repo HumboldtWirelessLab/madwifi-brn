@@ -2277,13 +2277,12 @@ ieee80211_ioctl_setparam(struct net_device *dev, struct iw_request_info *info,
 	const struct ieee80211_aclator *acl;
 
 #ifdef MACCLONE
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,24)) 
-//        struct net_device *dev = NULL;
-	struct ath_softc *sc = ic->ic_dev->priv;
-#else 
-//        struct net_device *dev = ic->ic_dev;
-        struct ath_softc *sc = netdev_priv(dev);
-#endif 
+//#if (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,24)) 
+//	struct ath_softc *sc = ic->ic_dev->priv;
+//#else 
+	struct ath_softc *sc = netdev_priv(vap->iv_ic->ic_dev);  //this can be used for all versions ??
+//        struct ath_softc *sc = netdev_priv(dev);
+//#endif 
 	struct ath_hal *ah = sc->sc_ah;
 #endif
 

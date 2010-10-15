@@ -85,8 +85,9 @@ ieee80211_setup_macclone(struct ieee80211vap *vap, const char* addr) {
 	struct net_device *dev = NULL;
 	struct ath_softc *sc = ic->ic_dev->priv;
 #else
-	struct net_device *dev = ic->ic_dev;
-	struct ath_softc *sc = netdev_priv(dev);
+	struct ath_softc *sc = netdev_priv(vap->iv_ic->ic_dev);  //this can be used for all versions ??
+	struct net_device *dev = sc->sc_dev;
+	//struct net_device *dev = ic->ic_dev;
 #endif
 	struct ath_hal *ah = sc->sc_ah;
 
