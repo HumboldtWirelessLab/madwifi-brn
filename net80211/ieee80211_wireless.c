@@ -2875,6 +2875,8 @@ ieee80211_ioctl_setparam(struct net_device *dev, struct iw_request_info *info,
 			vap->iv_flags_ext |= IEEE80211_FEXT_MACCLONE;
 		else {
 			vap->iv_flags_ext &= ~IEEE80211_FEXT_MACCLONE;
+			sc = netdev_priv(dev);
+
 			ATH_LOCK(sc);
 			IEEE80211_ADDR_COPY(ic->ic_myaddr, dev->dev_addr);
 			IEEE80211_ADDR_COPY(ic->ic_dev->dev_addr, ic->ic_myaddr);
