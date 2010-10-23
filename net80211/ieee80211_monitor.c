@@ -740,9 +740,14 @@ ieee80211_input_monitor(struct ieee80211com *ic, struct sk_buff *skb,
 			break;
 		}
 		if (skb1 != NULL) {
+#ifdef KEEP_CRC
+			if (!tx && (skb1->len >= IEEE80211_CRC_LEN) && 
+					((vap->iv_dev->type != ARPHRD_IEEE80211_RADIOTAP) || ( sc->keep_crc != 0 )) ) {
+#else
 			if (!tx && (skb1->len >= IEEE80211_CRC_LEN) && 
 					(vap->iv_dev->type != 
 					 ARPHRD_IEEE80211_RADIOTAP)) {
+#endif
 				/* Remove FCS from end of RX frames when
 				 * delivering to non-Radiotap VAPs. */
 				skb_trim(skb1, skb1->len - IEEE80211_CRC_LEN);

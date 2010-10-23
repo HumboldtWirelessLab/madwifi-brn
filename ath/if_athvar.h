@@ -891,6 +891,9 @@ struct ath_softc {
     	u_int32_t cc_pkt_update_threshold;
 	u_int8_t cc_mode;
 #endif
+#ifdef KEEP_CRC
+	u_int8_t keep_crc;
+#endif
 };
 
 typedef void (*ath_callback) (struct ath_softc *);

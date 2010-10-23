@@ -610,6 +610,9 @@ ath_attach(u_int16_t devid, struct net_device *dev, HAL_BUS_TAG tag)
         sc->cc_pkt_update_threshold = DEFAULT_CC_PKT_UPDATE_THRESHOLD;
 	sc->cc_mode = CC_MODE_DEFAULT;
 #endif
+#ifdef KEEP_CRC
+	sc->keep_crc = 0;
+#endif
 
 	atomic_set(&sc->sc_txbuf_counter, 0);
 
@@ -11023,6 +11026,12 @@ enum {
 	ATH_CHANNEL_UTILITY_PKT_THRESHOLD = 34,
 	ATH_CHANNEL_UTILITY_MODE = 35,
 #endif
+#ifdef KEEP_CRC
+	ATH_KEEP_CRC = 36,
+#endif
+#ifdef SYSCTL_NOISE
+	ATH_NOISE_FLOOR = 37,
+#endif
 };
 
 static inline int 
@@ -11174,6 +11183,9 @@ ATH_SYSCTL_DECL(ath_sysctl_halparam, ctl, write, filp, buffer, lenp, ppos)
 {
 	struct ath_softc *sc = ctl->extra1;
 	struct ath_hal *ah = sc->sc_ah;
+#ifdef SYSCTL_NOISE
+	struct ieee80211com *ic = &sc->sc_ic;
+#endif
 	u_int val;
 	u_int tab_3_val[3];
 	int ret = 0;
@@ -11454,6 +11466,12 @@ ATH_SYSCTL_DECL(ath_sysctl_halparam, ctl, write, filp, buffer, lenp, ppos)
 				  sc->cc_mode = val;
 				break;
 #endif
+#ifdef KEEP_CRC
+			case ATH_KEEP_CRC:
+				if ( val > 0 ) sc->keep_crc = 1;
+				else sc->keep_crc = 0;
+				break;
+#endif
 			default:
 				ret = -EINVAL;
 				break;
@@ -11552,6 +11570,16 @@ ATH_SYSCTL_DECL(ath_sysctl_halparam, ctl, write, filp, buffer, lenp, ppos)
 			break;
 		case ATH_CHANNEL_UTILITY_MODE:
 			val = sc->cc_mode;
+			break;
+#endif
+#ifdef KEEP_CRC
+		case ATH_KEEP_CRC:
+			val = sc->keep_crc;
+			break;
+#endif
+#ifdef SYSCTL_NOISE
+		case ATH_NOISE_FLOOR:
+			val = ic->ic_channoise;
 			break;
 #endif
 		default:
@@ -11786,6 +11814,22 @@ static const ctl_table ath_sysctl_template[] = {
 	  .mode         = 0644,
 	  .proc_handler = ath_sysctl_halparam,
 	  .extra2	= (void *)ATH_CHANNEL_UTILITY_MODE,
+	},
+#endif
+#ifdef KEEP_CRC
+	{ ATH_INIT_CTL_NAME(CTL_AUTO)
+	  .procname     = "keep_crc",
+	  .mode         = 0644,
+	  .proc_handler = ath_sysctl_halparam,
+	  .extra2	= (void *)ATH_KEEP_CRC,
+	},
+#endif
+#ifdef SYSCTL_NOISE
+	{ ATH_INIT_CTL_NAME(CTL_AUTO)
+	  .procname     = "noisefloor",
+	  .mode         = 0444,
+	  .proc_handler = ath_sysctl_halparam,
+	  .extra2	= (void *)ATH_NOISE_FLOOR,
 	},
 #endif
 	{ 0 }
