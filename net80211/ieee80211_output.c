@@ -140,6 +140,147 @@ ieee80211_setup_macclone(struct ieee80211vap *vap, const char* addr) {
 }
 #endif
 
+#ifdef OPERATIONPACKETS
+static int
+ieee80211_is_operation( struct sk_buff *skb)
+{
+    struct ath2_header *ath2_h;
+    
+    if ( skb->dev->type != ARPHRD_IEEE80211_ATHDESC2 ) return 1;
+
+    ath2_h = (struct ath2_header *)(skb->data + ATHDESC_HEADER_SIZE);
+    if ( ( ath2_h->ath2_version != ATHDESC2_VERSION ) && ( ath2_h->madwifi_version != MADWIFI_TRUNK ) ) return 1;
+
+    return ( ((ath2_h->flags & MADWIFI_FLAGS_IS_OPERATION) == MADWIFI_FLAGS_IS_OPERATION) || ((ath2_h->flags & MADWIFI_FLAGS_SET_CONFIG) == MADWIFI_FLAGS_SET_CONFIG) );
+}
+
+static void
+ieee80211_set_ath_flags( struct sk_buff *skb, struct net_device *dev)
+{
+    struct ieee80211vap *vap = netdev_priv(dev);
+    struct ieee80211com *ic = vap->iv_ic;
+    struct ieee80211_channel *chan;
+    struct ath2_header *ath2_h;
+
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,24))
+    struct net_device *dev = NULL;
+    struct ath_softc *sc = ic->ic_dev->priv;
+#else
+    struct net_device *dev = ic->ic_dev;
+    struct ath_softc *sc = netdev_priv(dev);
+#endif
+
+    if ( skb->dev->type != ARPHRD_IEEE80211_ATHDESC2 ) return;
+  	
+    ath2_h = (struct ath2_header *)(skb->data + ATHDESC_HEADER_SIZE);
+
+    printk("%s:%d %s:  handle flags\n", __FILE__, __LINE__, __func__);
+    
+    if ( (ath2_h->flags & MADWIFI_FLAGS_SET_CONFIG) == MADWIFI_FLAGS_SET_CONFIG )
+    {
+#ifdef COLORADO_CCA
+        /* CCA */
+	sc->sc_disable_cca_mask = val & ATH_CCA_BITMASK;
+						      
+	/* Only do a reset if device is valid and UP 
+	 * and we just made a change to the settings. */
+	if (sc->sc_dev && !sc->sc_invalid && (sc->sc_dev->flags & IFF_RUNNING))
+	    ath_reset(sc->sc_dev);
+#endif
+
+#ifdef 
+	/* CHANNELSWITCH */
+	if ((ath2_h->flags & MADWIFI_FLAGS_CHANNELSWITCH_ENABLED) == MADWIFI_FLAGS_CHANNELSWITCH_ENABLED)
+	    vap->iv_flags_ext |= IEEE80211_FEXT_CHANNELSWITCH;
+	else
+	    vap->iv_flags_ext &= ~IEEE80211_FEXT_CHANNELSWITCH;
+#endif
+
+#ifdef MACCLONE
+	/* MACCLONE */
+	if ((ath2_h->flags & MADWIFI_FLAGS_MACCLONE_ENABLED) == MADWIFI_FLAGS_MACCLONE_ENABLED)
+	    vap->iv_flags_ext |= IEEE80211_FEXT_MACCLONE;
+	else
+	    vap->iv_flags_ext &= ~IEEE80211_FEXT_MACCLONE;											     
+#endif
+    }
+
+    printk("%s:%d %s:  flags end\n", __FILE__, __LINE__, __func__);
+}
+
+static void
+ieee80211_handle_operation( struct sk_buff *skb, struct net_device *dev)
+{
+    struct ieee80211vap *vap = netdev_priv(dev);
+    struct ieee80211com *ic = vap->iv_ic;
+    struct ieee80211_channel *chan;
+    struct ath2_header *ath2_h;
+
+    if ( skb->dev->type != ARPHRD_IEEE80211_ATHDESC2 ) return;
+  	
+    ath2_h = (struct ath2_header *)(skb->data + ATHDESC_HEADER_SIZE);
+
+    printk("%s:%d %s:  handle operation\n", __FILE__, __LINE__, __func__);
+
+#ifdef CHANNELSWITCH
+    /* CHANNELSWITCH */
+
+    if ( ( (vap->iv_flags_ext & IEEE80211_FEXT_CHANNELSWITCH) != 0 ) && ( (ath2_h->anno.tx_anno.operation & ATH2_OPERATION_SETCHANNEL) == ATH2_OPERATION_SETCHANNEL ) )
+    {
+	printk("%s:%d %s:  cs operation\n", __FILE__, __LINE__, __func__);
+
+	/*I edit the current channel structure, the other option is to create new structure*/
+	chan = ic->ic_curchan;
+			
+	if ( ( ath2_h->anno.tx_anno.channel != 0 ) && ( ath2_h->anno.tx_anno.channel != chan->ic_ieee ) ) {
+  	    //printk("channelswitch: %d to %d\n",chan->ic_ieee,ath2_h->anno.tx_anno.channel);
+	    chan->ic_ieee = ath2_h->anno.tx_anno.channel;
+	    chan->ic_freq = ieee80211_ieee2mhz( chan->ic_ieee , chan->ic_flags);
+	    //see ieee80211_input.c and what is done here						       
+	    ic->ic_set_channel(ic);
+        }/*end of channel switching*/
+    }
+#endif
+
+#ifdef MACCLONE
+    
+    /* MAC ADDRESS */
+    if ( ( (vap->iv_flags_ext & IEEE80211_FEXT_MACCLONE) != 0 ) && ( (ath2_h->anno.tx_anno.operation & ATH2_OPERATION_SETMAC) == ATH2_OPERATION_SETMAC ) )
+    {
+	printk("%s:%d %s: mac operation\n", __FILE__, __LINE__, __func__);
+				
+	if ( memcmp(ath2_h.anno.tx_anno.mac, vap->iv_myaddr, ETH_ALEN) != 0 ) {
+	    if ( ieee80211_setup_macclone(vap, ath2_h.anno.tx_anno.mac) != 0 ) {
+		printk("error while setup macclone (operation)\n");
+	    }
+	}
+    }
+#endif
+	
+    printk("%s:%d %s:  operation end\n", __FILE__, __LINE__, __func__);
+
+}
+
+static void
+ieee80211_feedback_operation( struct sk_buff *skb, struct net_device *dev) {
+
+
+    skb->dev = dev; /* NB: deliver to wlanX */
+    skb_reset_mac_header(skb);
+    skb->ip_summed = CHECKSUM_NONE;
+    skb->pkt_type = PACKET_OTHERHOST;
+    skb->protocol = __constant_htons(0x0019); /* ETH_P_80211_RAW */
+						                 
+    if (SKB_NI(skb) != NULL)
+	ieee80211_unref_node(&SKB_NI(skb));
+
+	if (netif_rx(skb) == NET_RX_DROP)
+		printk("%s:%d %s: Unable to feedback operation\n", __FILE__, __LINE__, __func__);
+	else
+		printk("%s:%d %s: Feedback operation\n", __FILE__, __LINE__, __func__);
+}
+#endif
+
 /*
  * Determine the priority based on VLAN and/or IP TOS. Priority is
  * written into the skb->priority field. On success, returns 0. Failure
@@ -305,6 +446,19 @@ ieee80211_hardstart(struct sk_buff *skb, struct net_device *dev)
 	
 	if (vap->iv_opmode == IEEE80211_M_MONITOR) {
 
+#ifdef OPERATIONPACKETS
+		if ( ieee80211_is_operation(skb) ) {
+		    printk("%s:%d %s:  operation\n", __FILE__, __LINE__, __func__);
+
+		    ieee80211_set_ath_flags(skb, dev);
+		    ieee80211_handle_operation(skb, dev);
+		    ieee80211_feedback_operation(skb, dev);
+
+		    return NETDEV_TX_OK;
+		}
+		printk("%s:%d %s: no operation\n", __FILE__, __LINE__, __func__);
+
+#endif
 #ifdef MACCLONE		
 		if ( ( (vap->iv_flags_ext & IEEE80211_FEXT_MACCLONE) != 0 ) && ( ( skb->dev->type == ARPHRD_IEEE80211_ATHDESC ) || ( skb->dev->type == ARPHRD_IEEE80211_ATHDESC2 ) ) ) {
 		
