@@ -159,14 +159,12 @@ ieee80211_set_ath_flags( struct sk_buff *skb, struct net_device *dev)
 {
     struct ieee80211vap *vap = netdev_priv(dev);
     struct ieee80211com *ic = vap->iv_ic;
-    struct ieee80211_channel *chan;
+    //struct ieee80211_channel *chan;
     struct ath2_header *ath2_h;
 
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,24))
-    struct net_device *dev = NULL;
     struct ath_softc *sc = ic->ic_dev->priv;
 #else
-    struct net_device *dev = ic->ic_dev;
     struct ath_softc *sc = netdev_priv(dev);
 #endif
 
@@ -179,16 +177,18 @@ ieee80211_set_ath_flags( struct sk_buff *skb, struct net_device *dev)
     if ( (ath2_h->flags & MADWIFI_FLAGS_SET_CONFIG) == MADWIFI_FLAGS_SET_CONFIG )
     {
 #ifdef COLORADO_CCA
-        /* CCA */
-	sc->sc_disable_cca_mask = val & ATH_CCA_BITMASK;
+        if ( sc->sc_disable_cca_mask != (ath2_h->flags & ATH_CCA_BITMASK) ) {
+    	    /* CCA */
+	    sc->sc_disable_cca_mask = ath2_h->flags & ATH_CCA_BITMASK;
 						      
-	/* Only do a reset if device is valid and UP 
-	 * and we just made a change to the settings. */
-	if (sc->sc_dev && !sc->sc_invalid && (sc->sc_dev->flags & IFF_RUNNING))
-	    ath_reset(sc->sc_dev);
+	    /* Only do a reset if device is valid and UP 
+	    * and we just made a change to the settings. */
+	    if (sc->sc_dev && !sc->sc_invalid && (sc->sc_dev->flags & IFF_RUNNING))
+		ic->ic_reset(sc->sc_dev); //ath_reset(sc->sc_dev);
+	}
 #endif
 
-#ifdef 
+#ifdef CHANNELSWITCH 
 	/* CHANNELSWITCH */
 	if ((ath2_h->flags & MADWIFI_FLAGS_CHANNELSWITCH_ENABLED) == MADWIFI_FLAGS_CHANNELSWITCH_ENABLED)
 	    vap->iv_flags_ext |= IEEE80211_FEXT_CHANNELSWITCH;
@@ -224,7 +224,6 @@ ieee80211_handle_operation( struct sk_buff *skb, struct net_device *dev)
 
 #ifdef CHANNELSWITCH
     /* CHANNELSWITCH */
-
     if ( ( (vap->iv_flags_ext & IEEE80211_FEXT_CHANNELSWITCH) != 0 ) && ( (ath2_h->anno.tx_anno.operation & ATH2_OPERATION_SETCHANNEL) == ATH2_OPERATION_SETCHANNEL ) )
     {
 	printk("%s:%d %s:  cs operation\n", __FILE__, __LINE__, __func__);
@@ -243,14 +242,13 @@ ieee80211_handle_operation( struct sk_buff *skb, struct net_device *dev)
 #endif
 
 #ifdef MACCLONE
-    
     /* MAC ADDRESS */
     if ( ( (vap->iv_flags_ext & IEEE80211_FEXT_MACCLONE) != 0 ) && ( (ath2_h->anno.tx_anno.operation & ATH2_OPERATION_SETMAC) == ATH2_OPERATION_SETMAC ) )
     {
 	printk("%s:%d %s: mac operation\n", __FILE__, __LINE__, __func__);
 				
-	if ( memcmp(ath2_h.anno.tx_anno.mac, vap->iv_myaddr, ETH_ALEN) != 0 ) {
-	    if ( ieee80211_setup_macclone(vap, ath2_h.anno.tx_anno.mac) != 0 ) {
+	if ( memcmp(ath2_h->anno.tx_anno.mac, vap->iv_myaddr, ETH_ALEN) != 0 ) {
+	    if ( ieee80211_setup_macclone(vap, ath2_h->anno.tx_anno.mac) != 0 ) {
 		printk("error while setup macclone (operation)\n");
 	    }
 	}

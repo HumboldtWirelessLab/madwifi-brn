@@ -147,6 +147,9 @@ void
 ieee80211_monitor_encap(struct ieee80211vap *vap, struct sk_buff *skb)
 {
 	struct ieee80211_phy_params *ph = &(SKB_CB(skb)->phy);
+#ifdef QUEUECTRL
+	struct ath2_header *ath2_h;
+#endif
 	SKB_CB(skb)->flags = M_RAW;
 	SKB_NI(skb) = ieee80211_ref_node(vap->iv_bss);
 
@@ -327,8 +330,16 @@ ieee80211_monitor_encap(struct ieee80211vap *vap, struct sk_buff *skb)
 #ifdef EXTATHFLAGSDEBUG
 			printk("New PhyFlag in Monitor: %d\n",ph->flags);
 #endif
-#endif			
+#endif
+#ifdef QUEUECTRL
+			ath2_h = (struct ath2_header *)(skb->data + ATHDESC_HEADER_SIZE);
 			
+			printk("Anno Queue: %d\n",ath2_h->anno.tx_anno.queue & 0x3);
+			
+			if ( ath2_h->anno.tx_anno.queue != 0 ) {
+			  skb->priority = ath2_h->anno.tx_anno.queue & 0x3;  //set priority
+			}
+#endif			
 			if ( skb->dev->type == ARPHRD_IEEE80211_ATHDESC2 )
 				skb_pull(skb, ATHDESC2_HEADER_SIZE);
 			else

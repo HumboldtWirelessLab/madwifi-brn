@@ -3304,6 +3304,10 @@ ath_tx_startraw(struct net_device *dev, struct ath_buf *bf, struct sk_buff *skb)
 
 	flags |= HAL_TXDESC_INTREQ;
 
+#ifdef QUEUECTRL
+	printk("Priority: %d Flags: %d AXQ: %d\n",(skb->priority & 0x3), SKB_CB(skb)->flags, txq->axq_qnum);
+#endif
+
 #ifdef EXTATHFLAGS
 #ifdef EXTATHFLAGSDEBUG
 	printk("Flags in ath_if.c: %d\n",flags);
