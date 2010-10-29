@@ -11137,7 +11137,9 @@ ath_update_cca_thresh(struct ath_softc *sc)
 		diag_sw = OS_REG_READ(ah, AR5K_AR5212_DIAG_SW);
 	}
 
+#ifdef UPDATECCA_DEBUG
 	printk("Update cca (Old values): phy_cca: %d nf: %d rssi_thresh: %d, diag_sw: %d\n",phy_cca, nf, rssi_thresh, diag_sw);
+#endif
 
 	if (sc->sc_cca_thresh < 0) {
 		newthr = sc->sc_cca_thresh - ath_nf_from_cca(phy_cca);

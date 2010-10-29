@@ -145,11 +145,11 @@ static int
 ieee80211_is_operation( struct sk_buff *skb)
 {
     struct ath2_header *ath2_h;
-    
-    if ( skb->dev->type != ARPHRD_IEEE80211_ATHDESC2 ) return 1;
+
+    if ( skb->dev->type != ARPHRD_IEEE80211_ATHDESC2 ) return 0;
 
     ath2_h = (struct ath2_header *)(skb->data + ATHDESC_HEADER_SIZE);
-    if ( ( ath2_h->ath2_version != ATHDESC2_VERSION ) && ( ath2_h->madwifi_version != MADWIFI_TRUNK ) ) return 1;
+    if ( ( ath2_h->ath2_version != ATHDESC2_VERSION ) && ( ath2_h->madwifi_version != MADWIFI_TRUNK ) ) return 0;
 
     return ( ((ath2_h->flags & MADWIFI_FLAGS_IS_OPERATION) == MADWIFI_FLAGS_IS_OPERATION) || ((ath2_h->flags & MADWIFI_FLAGS_SET_CONFIG) == MADWIFI_FLAGS_SET_CONFIG) );
 }
@@ -169,18 +169,20 @@ ieee80211_set_ath_flags( struct sk_buff *skb, struct net_device *dev)
 #endif
 
     if ( skb->dev->type != ARPHRD_IEEE80211_ATHDESC2 ) return;
-  	
+
     ath2_h = (struct ath2_header *)(skb->data + ATHDESC_HEADER_SIZE);
 
+#ifdef OPERATIONPACKETS_DEBUG
     printk("%s:%d %s:  handle flags\n", __FILE__, __LINE__, __func__);
-    
+#endif
+
     if ( (ath2_h->flags & MADWIFI_FLAGS_SET_CONFIG) == MADWIFI_FLAGS_SET_CONFIG )
     {
 #ifdef COLORADO_CCA
         if ( sc->sc_disable_cca_mask != (ath2_h->flags & ATH_CCA_BITMASK) ) {
-    	    /* CCA */
+            /* CCA */
 	    sc->sc_disable_cca_mask = ath2_h->flags & ATH_CCA_BITMASK;
-						      
+
 	    /* Only do a reset if device is valid and UP 
 	    * and we just made a change to the settings. */
 	    if (sc->sc_dev && !sc->sc_invalid && (sc->sc_dev->flags & IFF_RUNNING))
@@ -205,7 +207,9 @@ ieee80211_set_ath_flags( struct sk_buff *skb, struct net_device *dev)
 #endif
     }
 
+#ifdef OPERATIONPACKETS_DEBUG
     printk("%s:%d %s:  flags end\n", __FILE__, __LINE__, __func__);
+#endif
 }
 
 static void
@@ -217,10 +221,12 @@ ieee80211_handle_operation( struct sk_buff *skb, struct net_device *dev)
     struct ath2_header *ath2_h;
 
     if ( skb->dev->type != ARPHRD_IEEE80211_ATHDESC2 ) return;
-  	
+
     ath2_h = (struct ath2_header *)(skb->data + ATHDESC_HEADER_SIZE);
 
+#ifdef OPERATIONPACKETS_DEBUG
     printk("%s:%d %s:  handle operation\n", __FILE__, __LINE__, __func__);
+#endif
 
 #ifdef CHANNELSWITCH
     /* CHANNELSWITCH */
@@ -245,8 +251,10 @@ ieee80211_handle_operation( struct sk_buff *skb, struct net_device *dev)
     /* MAC ADDRESS */
     if ( ( (vap->iv_flags_ext & IEEE80211_FEXT_MACCLONE) != 0 ) && ( (ath2_h->anno.tx_anno.operation & ATH2_OPERATION_SETMAC) == ATH2_OPERATION_SETMAC ) )
     {
+#ifdef MACCLONEDEBUG
 	printk("%s:%d %s: mac operation\n", __FILE__, __LINE__, __func__);
-				
+#endif
+
 	if ( memcmp(ath2_h->anno.tx_anno.mac, vap->iv_myaddr, ETH_ALEN) != 0 ) {
 	    if ( ieee80211_setup_macclone(vap, ath2_h->anno.tx_anno.mac) != 0 ) {
 		printk("error while setup macclone (operation)\n");
@@ -254,7 +262,8 @@ ieee80211_handle_operation( struct sk_buff *skb, struct net_device *dev)
 	}
     }
 #endif
-	
+
+
     printk("%s:%d %s:  operation end\n", __FILE__, __LINE__, __func__);
 
 }
