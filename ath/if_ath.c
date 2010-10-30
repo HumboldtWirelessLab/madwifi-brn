@@ -11036,6 +11036,9 @@ enum {
 #ifdef SYSCTL_NOISE
 	ATH_NOISE_FLOOR = 37,
 #endif
+#ifdef QUEUECTRL
+	ATH_NUMTXQUEUE = 38,
+#endif
 };
 
 static inline int 
@@ -11588,6 +11591,11 @@ ATH_SYSCTL_DECL(ath_sysctl_halparam, ctl, write, filp, buffer, lenp, ppos)
 			val = ic->ic_channoise;
 			break;
 #endif
+#ifdef QUEUECTRL
+		case ATH_NUMTXQUEUE:
+			ath_hal_getnumtxqueues(ah, &val);
+			break;
+#endif
 		default:
 			ret = -EINVAL;
 			break;
@@ -11836,6 +11844,14 @@ static const ctl_table ath_sysctl_template[] = {
 	  .mode         = 0444,
 	  .proc_handler = ath_sysctl_halparam,
 	  .extra2	= (void *)ATH_NOISE_FLOOR,
+	},
+#endif
+#ifdef QUEUECTRL
+	{ ATH_INIT_CTL_NAME(CTL_AUTO)
+	  .procname     = "numtxqueue",
+	  .mode         = 0444,
+	  .proc_handler = ath_sysctl_halparam,
+	  .extra2	= (void *)ATH_NUMTXQUEUE,
 	},
 #endif
 	{ 0 }
