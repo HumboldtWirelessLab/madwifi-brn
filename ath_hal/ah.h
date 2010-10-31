@@ -135,6 +135,12 @@ typedef enum {
 	HAL_TX_QUEUE_BEACON	= 2,		/* beacon xmit q */
 	HAL_TX_QUEUE_CAB	= 3,		/* "crap after beacon" xmit q */
 	HAL_TX_QUEUE_UAPSD	= 4,		/* u-apsd power save xmit q */
+#ifdef QUEUECTRL
+ HAL_TX_QUEUE_EX1  = 5,
+ HAL_TX_QUEUE_EX2  = 6,
+ HAL_TX_QUEUE_EX3  = 9,
+#endif
+
 } HAL_TX_QUEUE;
 
 #define	HAL_NUM_TX_QUEUES	10		/* max possible # of queues */

@@ -852,6 +852,13 @@ ath_attach(u_int16_t devid, struct net_device *dev, HAL_BUS_TAG tag)
 			IEEE80211_COM_UAPSD_ENABLE(ic);
 		}
 	}
+#ifdef QUEUECTRL
+  if ( ath_tx_setup(sc, HAL_TX_QUEUE_EX1, HAL_TX_QUEUE_EX1) ||
+       ath_tx_setup(sc, HAL_TX_QUEUE_EX2, HAL_TX_QUEUE_EX2) ||
+       ath_tx_setup(sc, HAL_TX_QUEUE_EX3, HAL_TX_QUEUE_EX3)) {
+    printk("Setup extra queues\n");
+  }
+#endif
 #ifdef ATH_SUPERG_XR
 	ath_xr_rate_setup(dev);
 	sc->sc_xrpollint = XR_DEFAULT_POLL_INTERVAL;
