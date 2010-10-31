@@ -577,6 +577,10 @@ ath_attach(u_int16_t devid, struct net_device *dev, HAL_BUS_TAG tag)
 	unsigned int i;
 	int autocreatemode = IEEE80211_M_STA;
 	u_int8_t csz;
+#ifdef QUEUECTRL
+  int q;
+  struct ath_txq *txq = NULL;
+#endif
 
 	sc->devid = devid;
 	ath_debug_global = (ath_debug & ATH_DEBUG_GLOBAL);
@@ -853,10 +857,19 @@ ath_attach(u_int16_t devid, struct net_device *dev, HAL_BUS_TAG tag)
 		}
 	}
 #ifdef QUEUECTRL
-  if ( ATH_TXQ_SETUP(sc, HAL_TX_QUEUE_EX1) ||
-       ATH_TXQ_SETUP(sc, HAL_TX_QUEUE_EX2) ||
-       ATH_TXQ_SETUP(sc, HAL_TX_QUEUE_EX3)) {
+  if ( ath_txq_setup(sc, HAL_TX_QUEUE_EX1, 0) ||
+       ath_txq_setup(sc, HAL_TX_QUEUE_EX2, 0) ||
+       ath_txq_setup(sc, HAL_TX_QUEUE_EX3, 0)) {
     printk("Setup extra queues\n");
+    for ( q = 0; q < HAL_NUM_TX_QUEUES; q++ ) {
+      txq = &(sc->sc_txq[q]);
+      if ( txq != NULL ) {
+        printk("Priority: %d AXQ: %d Depth: %d Intr: %d\n", q, txq->axq_qnum, txq->axq_depth, txq->axq_intrcnt);
+      } else {
+        printk("Priority: %d Queue: NULL\n",i);
+      }
+    }
+
   }
 #endif
 #ifdef ATH_SUPERG_XR
