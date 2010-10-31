@@ -11195,7 +11195,13 @@ ATH_SYSCTL_DECL(ath_sysctl_halparam, ctl, write, filp, buffer, lenp, ppos)
 #ifdef SYSCTL_NOISE
 	struct ieee80211com *ic = &sc->sc_ic;
 #endif
-	u_int val;
+#ifdef QUEUECTRL
+#ifdef QUEUECTRL_DEBUG
+    int i;
+    struct ath_txq *txq = NULL;
+#endif
+#endif
+  u_int val;
 	u_int tab_3_val[3];
 	int ret = 0;
 
@@ -11594,6 +11600,18 @@ ATH_SYSCTL_DECL(ath_sysctl_halparam, ctl, write, filp, buffer, lenp, ppos)
 #ifdef QUEUECTRL
 		case ATH_NUMTXQUEUE:
 			ath_hal_getnumtxqueues(ah, &val);
+#ifdef QUEUECTRL_DEBUG
+      printk("Queues: %d\n",val);
+
+      for ( i = 0; i < val; i++ ) {
+        txq = sc->sc_ac2q[i];
+        if ( txq != NULL ) {
+          printk("Priority: %d AXQ: %d Depth: %d Intr: %d\n", i, txq->axq_qnum, txq->axq_depth, txq->axq_intrcnt);
+        } else {
+          printk("Priority: %d Queue: NULL\n",i);
+        }
+      }
+#endif
 			break;
 #endif
 		default:
