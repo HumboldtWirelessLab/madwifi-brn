@@ -11613,6 +11613,7 @@ ATH_SYSCTL_DECL(ath_sysctl_halparam, ctl, write, filp, buffer, lenp, ppos)
           printk("Priority: %d Queue: NULL\n",i);
         }
       }
+
       no_q = HAL_NUM_TX_QUEUES;
       printk("SC-Queues (HW): %d\n",no_q);
       for ( i = 0; i < HAL_NUM_TX_QUEUES; i++ ) {
@@ -11623,6 +11624,14 @@ ATH_SYSCTL_DECL(ath_sysctl_halparam, ctl, write, filp, buffer, lenp, ppos)
           printk("Priority: %d Queue: NULL\n",i);
         }
       }
+
+      printk("Extra Queues\n");
+      if ( sc->sc_cabq != NULL ) printk("Extra 1: %d\n", sc->sc_cabq->axq_qnum);
+      else printk("Extra 1: NULL\n");
+      if ( sc->sc_xrtxq != NULL ) printk("Extra 2: %d\n", sc->sc_xrtxq->axq_qnum);
+      else printk("Extra 2: NULL\n");
+      if ( sc->sc_uapsdq != NULL ) printk("Extra 3: %d\n", sc->sc_uapsdq->axq_qnum);
+      else printk("Extra 3: NULL\n");
 #endif
 			break;
 #endif
