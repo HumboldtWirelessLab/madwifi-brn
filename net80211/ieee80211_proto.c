@@ -875,6 +875,9 @@ ieee80211_wme_updateparams_locked(struct ieee80211vap *vap)
 				break;
 			}
 		}
+#ifdef QUEUECTRL
+	    if ( ic->ic_opmode != IEEE80211_M_MONITOR ) {
+#endif
 		wme->wme_chanParams.cap_wmeParams[WME_AC_BE].wmep_aifsn =
 			phyParam[mode].aifsn;
 		wme->wme_chanParams.cap_wmeParams[WME_AC_BE].wmep_logcwmin =
@@ -891,6 +894,9 @@ ieee80211_wme_updateparams_locked(struct ieee80211vap *vap)
 			phyParam[mode].logcwmax;
 		wme->wme_bssChanParams.cap_wmeParams[WME_AC_BE].wmep_txopLimit =
 			burstEnabled ? phyParam[mode].txopLimit : 0;
+#ifdef QUEUECTRL
+	    }
+#endif
 	}
 
 	if (ic->ic_opmode == IEEE80211_M_HOSTAP &&

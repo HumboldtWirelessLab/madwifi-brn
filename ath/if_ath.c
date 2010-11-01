@@ -578,8 +578,10 @@ ath_attach(u_int16_t devid, struct net_device *dev, HAL_BUS_TAG tag)
 	int autocreatemode = IEEE80211_M_STA;
 	u_int8_t csz;
 #ifdef QUEUECTRL
+#ifdef QUEUECTRL_DEBUG
   int q;
   struct ath_txq *txq = NULL;
+#endif
 #endif
 
 	sc->devid = devid;
@@ -861,6 +863,9 @@ ath_attach(u_int16_t devid, struct net_device *dev, HAL_BUS_TAG tag)
        ath_txq_setup(sc, HAL_TX_QUEUE_EX2, 0) ||
        ath_txq_setup(sc, HAL_TX_QUEUE_EX3, 0)) {
     printk("Setup extra queues\n");
+  }
+
+#ifdef QUEUECTRL_DEBUG
     for ( q = 0; q < HAL_NUM_TX_QUEUES; q++ ) {
       txq = &(sc->sc_txq[q]);
       if ( txq != NULL ) {
@@ -869,8 +874,7 @@ ath_attach(u_int16_t devid, struct net_device *dev, HAL_BUS_TAG tag)
         printk("Priority: %d Queue: NULL\n",i);
       }
     }
-
-  }
+#endif
 #endif
 #ifdef ATH_SUPERG_XR
 	ath_xr_rate_setup(dev);
@@ -3324,7 +3328,7 @@ ath_tx_startraw(struct net_device *dev, struct ath_buf *bf, struct sk_buff *skb)
 
 	flags |= HAL_TXDESC_INTREQ;
 
-#ifdef QUEUECTRL
+#ifdef QUEUECTRL_DEBUG
 	printk("Priority: %d Flags: %d AXQ: %d\n",(skb->priority & 0x3), SKB_CB(skb)->flags, txq->axq_qnum);
 #endif
 
@@ -7680,6 +7684,9 @@ ath_txq_setup(struct ath_softc *sc, int qtype, int subtype)
 		 * NB: don't print a message, this happens
 		 * normally on parts with too few tx queues
 		 */
+#ifdef QUEUECTRL_DEBUG
+		printk("Not enough HW queues\n");
+#endif
 #ifdef ATH_SUPERG_COMP
 		if (compbuf) {
 			bus_free_consistent(sc->sc_bdev, compbufsz,
@@ -7693,6 +7700,9 @@ ath_txq_setup(struct ath_softc *sc, int qtype, int subtype)
 			    "  The highest queue number is %u!\n",
 			    qnum,
 			    (unsigned)ARRAY_SIZE(sc->sc_txq));
+#ifdef QUEUECTRL_DEBUG
+		printk("Qnum to high\n");
+#endif
 #ifdef ATH_SUPERG_COMP
 		if (compbuf) {
 			bus_free_consistent(sc->sc_bdev, compbufsz,
@@ -11219,6 +11229,7 @@ ATH_SYSCTL_DECL(ath_sysctl_halparam, ctl, write, filp, buffer, lenp, ppos)
 #ifdef QUEUECTRL_DEBUG
     int i,no_q;
     struct ath_txq *txq = NULL;
+    HAL_TXQ_INFO qi;
 #endif
 #endif
   u_int val;
@@ -11635,13 +11646,18 @@ ATH_SYSCTL_DECL(ath_sysctl_halparam, ctl, write, filp, buffer, lenp, ppos)
       }
 
       no_q = HAL_NUM_TX_QUEUES;
-      printk("SC-Queues (HW): %d\n",no_q);
+      printk("SC-Queues (HW): %d ; %d\n",no_q, sc->sc_txqsetup);
       for ( i = 0; i < HAL_NUM_TX_QUEUES; i++ ) {
         txq = &(sc->sc_txq[i]);
         if ( txq != NULL ) {
-          printk("Priority: %d AXQ: %d Depth: %d Intr: %d\n", i, txq->axq_qnum, txq->axq_depth, txq->axq_intrcnt);
-        } else {
-          printk("Priority: %d Queue: NULL\n",i);
+	  if ( (i > 3) && (i < 7)) {
+            printk("Priority: %d AXQ: %d Depth: %d Intr: %d\n", i, txq->axq_qnum, txq->axq_depth, txq->axq_intrcnt);
+	  } else {
+	    if ( ath_hal_gettxqueueprops(ah, i, &qi) )
+              printk("Priority: %d AXQ: %d Depth: %d Intr: %d CW_MIN: %d CW_MAX: %d AIFS: %d\n", i, txq->axq_qnum, txq->axq_depth, txq->axq_intrcnt, qi.tqi_cwmin, qi.tqi_cwmax, qi.tqi_aifs);
+	    else
+	      printk("Priority: %d AXQ: %d Depth: %d Intr: %d\n", i, txq->axq_qnum, txq->axq_depth, txq->axq_intrcnt);
+	  }
         }
       }
 

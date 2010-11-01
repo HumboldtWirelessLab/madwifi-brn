@@ -333,9 +333,9 @@ ieee80211_monitor_encap(struct ieee80211vap *vap, struct sk_buff *skb)
 #endif
 #ifdef QUEUECTRL
 			ath2_h = (struct ath2_header *)(skb->data + ATHDESC_HEADER_SIZE);
-			
+#ifdef QUEUECTRL_DEBUG
 			printk("Anno Queue: %d\n",ath2_h->anno.tx_anno.queue & 0x3);
-			
+#endif
 			if ( ath2_h->anno.tx_anno.queue != 0 ) {
 			  skb->priority = ath2_h->anno.tx_anno.queue & 0x3;  //set priority
 			}
