@@ -889,7 +889,11 @@ struct ath_softc {
     	spinlock_t cc_lock;
     	u_int32_t cc_pkt_counter;
     	u_int32_t cc_pkt_update_threshold;
-	u_int8_t cc_mode;
+	u_int8_t cc_update_mode;
+
+	u_int8_t cc_anno_mode;
+	
+	struct ath_channel_utility channel_utility;
 #endif
 #ifdef KEEP_CRC
 	u_int8_t keep_crc;

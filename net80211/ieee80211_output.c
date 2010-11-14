@@ -455,7 +455,9 @@ ieee80211_hardstart(struct sk_buff *skb, struct net_device *dev)
 
 #ifdef OPERATIONPACKETS
 		if ( ieee80211_is_operation(skb) ) {
+#ifdef OPERATIONPACKETS_DEBUG
 		    printk("%s:%d %s:  operation\n", __FILE__, __LINE__, __func__);
+#endif
 
 		    ieee80211_set_ath_flags(skb, dev);
 		    ieee80211_handle_operation(skb, dev);
@@ -463,7 +465,9 @@ ieee80211_hardstart(struct sk_buff *skb, struct net_device *dev)
 
 		    return NETDEV_TX_OK;
 		}
+#ifdef OPERATIONPACKETS_DEBUG
 		printk("%s:%d %s: no operation\n", __FILE__, __LINE__, __func__);
+#endif
 
 #endif
 #ifdef MACCLONE		

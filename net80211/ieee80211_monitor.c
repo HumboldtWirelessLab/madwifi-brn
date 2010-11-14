@@ -679,22 +679,24 @@ ieee80211_input_monitor(struct ieee80211com *ic, struct sk_buff *skb,
 				ath2_h.anno.tx.ts_channel = (int8_t) ieee80211_mhz2ieee(ic->ic_curchan->ic_freq, ic->ic_curchan->ic_flags);
 				ath2_h.anno.tx.ts_flags = 0;
 #ifdef CHANNEL_UTILITY
-				if ( sc->cc_survey.cycles == 0 ) ath2_h.anno.tx.ts_channel_utility = 0;
-				else {
-				  switch ( sc->cc_mode ) {
-				    case CC_MODE_RX_BUSY:
-				      ath2_h.anno.tx.ts_channel_utility = (sc->cc_survey.rx_busy)/(sc->cc_survey.cycles/100);
-				      break;
-				    case CC_MODE_RX_FRAME:
-				      ath2_h.anno.tx.ts_channel_utility = (sc->cc_survey.rx_frame)/(sc->cc_survey.cycles/100);
-				      break;
-				    case CC_MODE_TX_FRAME:
-				      ath2_h.anno.tx.ts_channel_utility = (sc->cc_survey.tx_frame)/(sc->cc_survey.cycles/100);
-				      break;
-				  }
-				}				      
+				if ( (sc->cc_pkt_counter == 0) && ((sc->cc_update_mode & CC_UPDATE_MODE_TXFEEDBACK) == CC_UPDATE_MODE_TXFEEDBACK )) { 
+				  switch ( sc->cc_anno_mode ) {
+				      case CC_ANNO_MODE_RX_BUSY:
+					ath2_h.anno.tx.ts_channel_utility = sc->channel_utility.busy;
+					break;
+				      case CC_ANNO_MODE_RX_FRAME:
+					ath2_h.anno.tx.ts_channel_utility = sc->channel_utility.rx;
+					break;
+				      case CC_ANNO_MODE_TX_FRAME:
+					ath2_h.anno.tx.ts_channel_utility = sc->channel_utility.tx;
+					break;
+				    
+				  }      
+				} else {
+				  ath2_h.anno.tx.ts_channel_utility = CHANNEL_UTILITY_INVALID;
+				}
 #else
-				ath2_h.anno.tx.ts_channel_utility = 0;
+				ath2_h.anno.tx.ts_channel_utility = CHANNEL_UTILITY_INVALID;
 #endif
 			}
 			else
@@ -720,22 +722,23 @@ ieee80211_input_monitor(struct ieee80211com *ic, struct sk_buff *skb,
 					ath2_h.anno.rx.rs_flags = 0;
 				}
 #ifdef CHANNEL_UTILITY
-				if ( sc->cc_survey.cycles == 0 ) ath2_h.anno.rx.rs_channel_utility = 0;
-				else {
-				  switch ( sc->cc_mode ) {
-				    case CC_MODE_RX_BUSY:
-				      ath2_h.anno.rx.rs_channel_utility = (sc->cc_survey.rx_busy)/(sc->cc_survey.cycles/100);
+				if ( (sc->cc_pkt_counter == 0) && ((sc->cc_update_mode & CC_UPDATE_MODE_RX) == CC_UPDATE_MODE_RX )) {
+				  switch ( sc->cc_anno_mode ) {
+				    case CC_ANNO_MODE_RX_BUSY:
+				      ath2_h.anno.rx.rs_channel_utility = sc->channel_utility.busy;
 				      break;
-				    case CC_MODE_RX_FRAME:
-				      ath2_h.anno.rx.rs_channel_utility = (sc->cc_survey.rx_frame)/(sc->cc_survey.cycles/100);
+				    case CC_ANNO_MODE_RX_FRAME:
+				      ath2_h.anno.rx.rs_channel_utility = sc->channel_utility.rx;
 				      break;
-				    case CC_MODE_TX_FRAME:
-				      ath2_h.anno.rx.rs_channel_utility = (sc->cc_survey.tx_frame)/(sc->cc_survey.cycles/100);
+				    case CC_ANNO_MODE_TX_FRAME:
+				      ath2_h.anno.rx.rs_channel_utility = sc->channel_utility.tx;
 				      break;
 				  }
-				}				      
+				} else {
+				  ath2_h.anno.rx.rs_channel_utility = CHANNEL_UTILITY_INVALID;
+				}
 #else
-				ath2_h.anno.rx.rs_channel_utility = 0;
+				ath2_h.anno.rx.rs_channel_utility = CHANNEL_UTILITY_INVALID;
 #endif
 			}
 

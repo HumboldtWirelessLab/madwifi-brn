@@ -614,7 +614,8 @@ ath_attach(u_int16_t devid, struct net_device *dev, HAL_BUS_TAG tag)
         memset(&(sc->cc_survey), 0, sizeof(struct ath_cycle_counters));
         sc->cc_pkt_counter = 0;
         sc->cc_pkt_update_threshold = DEFAULT_CC_PKT_UPDATE_THRESHOLD;
-	sc->cc_mode = CC_MODE_DEFAULT;
+	sc->cc_update_mode = CC_UPDATE_MODE_DEFAULT;
+	sc->cc_anno_mode = CC_ANNO_MODE_DEFAULT;
 #endif
 #ifdef KEEP_CRC
 	sc->keep_crc = 0;
@@ -7052,10 +7053,12 @@ rx_accept:
 		sc->sc_devstats.rx_bytes += len;
 
 #ifdef CHANNEL_UTILITY
-		sc->cc_pkt_counter++;
-		if ( sc->cc_pkt_counter == sc->cc_pkt_update_threshold ) {
+		if ( (sc->cc_update_mode & CC_UPDATE_MODE_RX) == CC_UPDATE_MODE_RX ) {
+		  sc->cc_pkt_counter++;
+		  if ( sc->cc_pkt_counter >= sc->cc_pkt_update_threshold ) {
 			ath_hw_cycle_counters_update(sc);
 			sc->cc_pkt_counter = 0;
+		  }
 		}
 #endif
 
@@ -8782,6 +8785,16 @@ ath_tx_processq(struct ath_softc *sc, struct ath_txq *txq)
 			struct sk_buff *tskb = NULL, *skb = bf->bf_skb;
 #ifdef ATH_SUPERG_FF
 			unsigned int i;
+#endif
+
+#ifdef CHANNEL_UTILITY
+			if ( (sc->cc_update_mode & CC_UPDATE_MODE_TXFEEDBACK) == CC_UPDATE_MODE_TXFEEDBACK ) {
+			  sc->cc_pkt_counter++;
+			  if ( sc->cc_pkt_counter >= sc->cc_pkt_update_threshold ) {
+			    ath_hw_cycle_counters_update(sc);
+			    sc->cc_pkt_counter = 0;
+			  }
+			}
 #endif
 
 			/* HW is now finished with the SKB, so it is safe to
@@ -11058,16 +11071,17 @@ enum {
 	ATH_CHANNEL_UTILITY_RX_FRAME	= 32,
 	ATH_CHANNEL_UTILITY_TX_FRAME	= 33,
 	ATH_CHANNEL_UTILITY_PKT_THRESHOLD = 34,
-	ATH_CHANNEL_UTILITY_MODE = 35,
+	ATH_CHANNEL_UTILITY_UPDATE_MODE = 35,
+	ATH_CHANNEL_UTILITY_ANNO_MODE = 36,
 #endif
 #ifdef KEEP_CRC
-	ATH_KEEP_CRC = 36,
+	ATH_KEEP_CRC = 37,
 #endif
 #ifdef SYSCTL_NOISE
-	ATH_NOISE_FLOOR = 37,
+	ATH_NOISE_FLOOR = 38,
 #endif
 #ifdef QUEUECTRL
-	ATH_NUMTXQUEUE = 38,
+	ATH_NUMTXQUEUE = 39,
 #endif
 };
 
@@ -11507,9 +11521,12 @@ ATH_SYSCTL_DECL(ath_sysctl_halparam, ctl, write, filp, buffer, lenp, ppos)
 			case ATH_CHANNEL_UTILITY_PKT_THRESHOLD:
 				sc->cc_pkt_update_threshold = val;
 				break;
-			case ATH_CHANNEL_UTILITY_MODE:
-				if ( val > 0 && val <= CC_MODE_MAX )
-				  sc->cc_mode = val;
+			case ATH_CHANNEL_UTILITY_UPDATE_MODE:
+				sc->cc_update_mode = val & CC_UPDATE_MODE_MASK;
+				break;
+			case ATH_CHANNEL_UTILITY_ANNO_MODE:
+				if ( val > 0 && val <= CC_ANNO_MODE_MAX )
+				  sc->cc_anno_mode = val;
 				break;
 #endif
 #ifdef KEEP_CRC
@@ -11614,8 +11631,11 @@ ATH_SYSCTL_DECL(ath_sysctl_halparam, ctl, write, filp, buffer, lenp, ppos)
 		case ATH_CHANNEL_UTILITY_PKT_THRESHOLD:
 			val = sc->cc_pkt_update_threshold;
 			break;
-		case ATH_CHANNEL_UTILITY_MODE:
-			val = sc->cc_mode;
+		case ATH_CHANNEL_UTILITY_UPDATE_MODE:
+			val = sc->cc_update_mode;
+			break;
+		case ATH_CHANNEL_UTILITY_ANNO_MODE:
+			val = sc->cc_anno_mode;
 			break;
 #endif
 #ifdef KEEP_CRC
@@ -11899,10 +11919,16 @@ static const ctl_table ath_sysctl_template[] = {
 	  .extra2	= (void *)ATH_CHANNEL_UTILITY_PKT_THRESHOLD,
 	},
 	{ ATH_INIT_CTL_NAME(CTL_AUTO)
-	  .procname     = "cutil_mode",
+	  .procname     = "cu_update_mode",
 	  .mode         = 0644,
 	  .proc_handler = ath_sysctl_halparam,
-	  .extra2	= (void *)ATH_CHANNEL_UTILITY_MODE,
+	  .extra2	= (void *)ATH_CHANNEL_UTILITY_UPDATE_MODE,
+	},
+	{ ATH_INIT_CTL_NAME(CTL_AUTO)
+	  .procname     = "cu_anno_mode",
+	  .mode         = 0644,
+	  .proc_handler = ath_sysctl_halparam,
+	  .extra2	= (void *)ATH_CHANNEL_UTILITY_ANNO_MODE,
 	},
 #endif
 #ifdef KEEP_CRC
@@ -12414,26 +12440,17 @@ static int set_cca_mode(struct ath_softc *sc)
 
 uint8_t get_channel_utility_busy(struct ath_softc *sc)
 {
-  u32 utility;
-  if ( sc->cc_survey.cycles == 0 ) return 0;
-
-  utility = (sc->cc_survey.rx_busy)/(sc->cc_survey.cycles/100);
-
-//  printk("Busy: %d  Cycle: %d RX: %d TX: %d BT: %d\n", sc->cc_survey.rx_busy, sc->cc_survey.cycles, sc->cc_survey.rx_frame, sc->cc_survey.tx_frame, utility);
-
-  return utility;
+  return sc->channel_utility.busy;
 }
 
 uint8_t get_channel_utility_rx(struct ath_softc *sc)
 {
-  if ( sc->cc_survey.cycles == 0 ) return 0;
-  return (sc->cc_survey.rx_frame)/(sc->cc_survey.cycles/100);
+  return sc->channel_utility.rx;
 }
 
 uint8_t get_channel_utility_tx(struct ath_softc *sc)
 {
-  if ( sc->cc_survey.cycles == 0 ) return 0;
-  return (sc->cc_survey.tx_frame)/(sc->cc_survey.cycles/100);
+  return sc->channel_utility.tx;
 }
 
 /**
@@ -12481,6 +12498,23 @@ void ath_hw_cycle_counters_update(struct ath_softc *sc)
   sc->cc_survey.rx_busy = busy;
   sc->cc_survey.rx_frame = rx;
   sc->cc_survey.tx_frame = tx;
+
+//  printk("Update CHannelstat\n");
+  if ( sc->cc_survey.cycles == 0 ) {
+    sc->channel_utility.busy = 0;
+    sc->channel_utility.rx = 0;
+    sc->channel_utility.tx = 0;
+  } else if ( sc->cc_survey.cycles < 100000 ) {
+    sc->channel_utility.busy = (100 * sc->cc_survey.rx_busy) / sc->cc_survey.cycles;
+    sc->channel_utility.rx = (100 * sc->cc_survey.rx_frame) / sc->cc_survey.cycles;
+    sc->channel_utility.tx = (100 * sc->cc_survey.tx_frame) / sc->cc_survey.cycles;
+  } else {
+    sc->channel_utility.busy = sc->cc_survey.rx_busy / (sc->cc_survey.cycles/100);
+    sc->channel_utility.rx = sc->cc_survey.rx_frame / (sc->cc_survey.cycles/100);
+    sc->channel_utility.tx = sc->cc_survey.tx_frame / (sc->cc_survey.cycles/100);
+  }
+  
+//  printk("CS: %d %d %d\n",sc->channel_utility.busy,sc->channel_utility.rx,sc->channel_utility.tx);
 }
 
 
