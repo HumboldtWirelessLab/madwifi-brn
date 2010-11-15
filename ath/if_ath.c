@@ -133,6 +133,8 @@
 uint8_t get_channel_utility_busy(struct ath_softc *sc);
 uint8_t get_channel_utility_rx(struct ath_softc *sc);
 uint8_t get_channel_utility_tx(struct ath_softc *sc);
+
+void ath_hw_cycle_counters_update(struct ath_softc *sc);
 #endif
 
 enum {
@@ -614,11 +616,13 @@ ath_attach(u_int16_t devid, struct net_device *dev, HAL_BUS_TAG tag)
         memset(&(sc->cc_survey), 0, sizeof(struct ath_cycle_counters));
         sc->cc_pkt_counter = 0;
         sc->cc_pkt_update_threshold = DEFAULT_CC_PKT_UPDATE_THRESHOLD;
-	sc->cc_update_mode = CC_UPDATE_MODE_DEFAULT;
-	sc->cc_anno_mode = CC_ANNO_MODE_DEFAULT;
+        sc->cc_update_mode = CC_UPDATE_MODE_DEFAULT;
+        sc->cc_anno_mode = CC_ANNO_MODE_DEFAULT;
+
+        sc->ath_channel_utility_update = ath_hw_cycle_counters_update;
 #endif
 #ifdef KEEP_CRC
-	sc->keep_crc = 0;
+        sc->keep_crc = 0;
 #endif
 
 	atomic_set(&sc->sc_txbuf_counter, 0);
