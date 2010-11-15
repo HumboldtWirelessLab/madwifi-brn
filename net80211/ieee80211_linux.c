@@ -680,6 +680,37 @@ proc_iv_bss_open(struct inode *inode, struct file *file)
 	return 0;
 }
 
+#ifdef CHANNEL_UTILITY
+static int
+proc_channel_utility_open(struct inode *inode, struct file *file)
+{
+  struct proc_ieee80211_priv *pv = NULL;
+  struct proc_dir_entry *dp = PDE(inode);
+  struct ieee80211vap *vap = dp->data;
+  struct ieee80211com *ic = vap->iv_ic;
+  struct net_device *dev = ic->ic_dev;
+  struct ath_softc *sc = netdev_priv(dev);
+
+  char *p,*buf;
+
+  /* now read the data into the buffer */
+  pv = (struct proc_ieee80211_priv *) file->private_data;
+  buf = pv->rbuf;
+  p = pv->rbuf;
+
+  if ( (sc->cc_update_mode & CC_UPDATE_MODE_CALL) == CC_UPDATE_MODE_CALL ) {
+    sc->ath_channel_utility_update(sc);
+  }
+
+  p += sprintf(p, "Busy: %d RX: %d TX: %d\n", sc->channel_utility.busy, sc->channel_utility.rx, sc->channel_utility.tx);
+
+  pv->rlen = (p - buf);
+
+  return 0;
+}
+#endif
+
+
 static ssize_t
 proc_ieee80211_write(struct file *file, const char __user *buf, size_t len, loff_t *offset)
 {
@@ -744,6 +775,15 @@ static struct file_operations proc_iv_bss_ops = {
 	.open = proc_iv_bss_open,
 	.release = proc_ieee80211_close,
 };
+
+#ifdef CHANNEL_UTILITY
+static struct file_operations proc_channel_utility_ops = {
+  .read = proc_ieee80211_read,
+  .write = proc_ieee80211_write,
+  .open = proc_channel_utility_open,
+  .release = proc_ieee80211_close,
+};
+#endif      /* CHANNEL_UTILITY */
 #endif			/* CONFIG_PROC_FS */
 
 #ifdef IEEE80211_DEBUG
@@ -1037,6 +1077,9 @@ ieee80211_virtfs_latevattach(struct ieee80211vap *vap)
 	ieee80211_proc_vcreate(vap, &proc_doth_ops, "doth");
 	ieee80211_proc_vcreate(vap, &proc_doth_state_ops, "doth_state");
 	ieee80211_proc_vcreate(vap, &proc_iv_bss_ops, "iv_bss");
+#ifdef CHANNEL_UTILITY
+	ieee80211_proc_vcreate(vap, &proc_channel_utility_ops, "channel_utility");
+#endif
 
 	/* Recreate any other proc entries that have been registered */
 	if (vap->iv_proc) {
