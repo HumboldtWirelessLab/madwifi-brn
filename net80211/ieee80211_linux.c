@@ -691,7 +691,13 @@ proc_channel_utility_open(struct inode *inode, struct file *file)
   struct net_device *dev = ic->ic_dev;
   struct ath_softc *sc = netdev_priv(dev);
 
-  char *p,*buf;
+  char *p, *buf;
+
+  int result;
+
+  result = proc_common_open(inode, file);
+  if (result != 0)
+    return result;
 
   /* now read the data into the buffer */
   pv = (struct proc_ieee80211_priv *) file->private_data;
@@ -702,7 +708,7 @@ proc_channel_utility_open(struct inode *inode, struct file *file)
     sc->ath_channel_utility_update(sc);
   }
 
-  p += sprintf(p, "Busy: %d RX: %d TX: %d\n", sc->channel_utility.busy, sc->channel_utility.rx, sc->channel_utility.tx);
+  p += sprintf(p, "Busy: %d RX: %d TX: %d Cycles: %d Busy_Cycles: %d RX_Cycles: %d TX_Cycles: %d\n", sc->channel_utility.busy, sc->channel_utility.rx, sc->channel_utility.tx, sc->cc_survey.cycles, sc->cc_survey.rx_busy, sc->cc_survey.rx_frame, sc->cc_survey.tx_frame);
 
   pv->rlen = (p - buf);
 
