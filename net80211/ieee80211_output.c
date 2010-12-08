@@ -157,55 +157,56 @@ ieee80211_is_operation( struct sk_buff *skb)
 static void
 ieee80211_set_ath_flags( struct sk_buff *skb, struct net_device *dev)
 {
-    struct ieee80211vap *vap = netdev_priv(dev);
-    struct ieee80211com *ic = vap->iv_ic;
-    //struct ieee80211_channel *chan;
     struct ath2_header *ath2_h;
-
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,24))
-    struct ath_softc *sc = ic->ic_dev->priv;
-#else
-    struct ath_softc *sc = netdev_priv(dev);
-#endif
+    struct ieee80211vap *vap = NULL;
+    struct ieee80211com *ic = NULL;
+    struct ath_softc *sc = NULL;
 
     if ( skb->dev->type != ARPHRD_IEEE80211_ATHDESC2 ) return;
 
     ath2_h = (struct ath2_header *)(skb->data + ATHDESC_HEADER_SIZE);
+    if ( (ath2_h->flags & MADWIFI_FLAGS_SET_CONFIG) != MADWIFI_FLAGS_SET_CONFIG ) return;
+
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,24))
+    sc = ic->ic_dev->priv;
+#else
+    sc = netdev_priv(dev);
+#endif
+
+    vap = netdev_priv(dev);
+    ic = vap->iv_ic;
 
 #ifdef OPERATIONPACKETS_DEBUG
     printk("%s:%d %s:  handle flags\n", __FILE__, __LINE__, __func__);
 #endif
 
-    if ( (ath2_h->flags & MADWIFI_FLAGS_SET_CONFIG) == MADWIFI_FLAGS_SET_CONFIG )
-    {
 #ifdef COLORADO_CCA
-        if ( sc->sc_disable_cca_mask != (ath2_h->flags & ATH_CCA_BITMASK) ) {
-            /* CCA */
-	    sc->sc_disable_cca_mask = ath2_h->flags & ATH_CCA_BITMASK;
+    /* CCA */
+    if ( sc->sc_disable_cca_mask != (ath2_h->flags & ATH_CCA_BITMASK) ) {
+        sc->sc_disable_cca_mask = ath2_h->flags & ATH_CCA_BITMASK;
 
-	    /* Only do a reset if device is valid and UP 
-	    * and we just made a change to the settings. */
-	    if (sc->sc_dev && !sc->sc_invalid && (sc->sc_dev->flags & IFF_RUNNING))
-		ic->ic_reset(sc->sc_dev); //ath_reset(sc->sc_dev);
-	}
+        /* Only do a reset if device is valid and UP
+        * and we just made a change to the settings. */
+        if (sc->sc_dev && !sc->sc_invalid && (sc->sc_dev->flags & IFF_RUNNING))
+            ic->ic_reset(sc->sc_dev); //ath_reset(sc->sc_dev);
+    }
 #endif
 
-#ifdef CHANNELSWITCH 
-	/* CHANNELSWITCH */
-	if ((ath2_h->flags & MADWIFI_FLAGS_CHANNELSWITCH_ENABLED) == MADWIFI_FLAGS_CHANNELSWITCH_ENABLED)
-	    vap->iv_flags_ext |= IEEE80211_FEXT_CHANNELSWITCH;
-	else
-	    vap->iv_flags_ext &= ~IEEE80211_FEXT_CHANNELSWITCH;
+#ifdef CHANNELSWITCH
+    /* CHANNELSWITCH */
+    if ((ath2_h->flags & MADWIFI_FLAGS_CHANNELSWITCH_ENABLED) == MADWIFI_FLAGS_CHANNELSWITCH_ENABLED)
+        vap->iv_flags_ext |= IEEE80211_FEXT_CHANNELSWITCH;
+    else
+        vap->iv_flags_ext &= ~IEEE80211_FEXT_CHANNELSWITCH;
 #endif
 
 #ifdef MACCLONE
-	/* MACCLONE */
-	if ((ath2_h->flags & MADWIFI_FLAGS_MACCLONE_ENABLED) == MADWIFI_FLAGS_MACCLONE_ENABLED)
-	    vap->iv_flags_ext |= IEEE80211_FEXT_MACCLONE;
-	else
-	    vap->iv_flags_ext &= ~IEEE80211_FEXT_MACCLONE;											     
+    /* MACCLONE */
+    if ((ath2_h->flags & MADWIFI_FLAGS_MACCLONE_ENABLED) == MADWIFI_FLAGS_MACCLONE_ENABLED)
+        vap->iv_flags_ext |= IEEE80211_FEXT_MACCLONE;
+    else
+        vap->iv_flags_ext &= ~IEEE80211_FEXT_MACCLONE;
 #endif
-    }
 
 #ifdef OPERATIONPACKETS_DEBUG
     printk("%s:%d %s:  flags end\n", __FILE__, __LINE__, __func__);
@@ -230,20 +231,21 @@ ieee80211_handle_operation( struct sk_buff *skb, struct net_device *dev)
 
 #ifdef CHANNELSWITCH
     /* CHANNELSWITCH */
-    if ( ( (vap->iv_flags_ext & IEEE80211_FEXT_CHANNELSWITCH) != 0 ) && ( (ath2_h->anno.tx_anno.operation & ATH2_OPERATION_SETCHANNEL) == ATH2_OPERATION_SETCHANNEL ) )
+    if ( ( (vap->iv_flags_ext & IEEE80211_FEXT_CHANNELSWITCH) != 0 ) &&
+           ( (ath2_h->anno.tx_anno.operation & ATH2_OPERATION_SET_CHANNEL) == ATH2_OPERATION_SET_CHANNEL ) )
     {
-	printk("%s:%d %s:  cs operation\n", __FILE__, __LINE__, __func__);
+      printk("%s:%d %s:  cs operation\n", __FILE__, __LINE__, __func__);
 
-	/*I edit the current channel structure, the other option is to create new structure*/
-	chan = ic->ic_curchan;
-			
-	if ( ( ath2_h->anno.tx_anno.channel != 0 ) && ( ath2_h->anno.tx_anno.channel != chan->ic_ieee ) ) {
-  	    //printk("channelswitch: %d to %d\n",chan->ic_ieee,ath2_h->anno.tx_anno.channel);
-	    chan->ic_ieee = ath2_h->anno.tx_anno.channel;
-	    chan->ic_freq = ieee80211_ieee2mhz( chan->ic_ieee , chan->ic_flags);
-	    //see ieee80211_input.c and what is done here						       
-	    ic->ic_set_channel(ic);
-        }/*end of channel switching*/
+      /*I edit the current channel structure, the other option is to create new structure*/
+      chan = ic->ic_curchan;
+
+      if ( ( ath2_h->anno.tx_anno.channel != 0 ) && ( ath2_h->anno.tx_anno.channel != chan->ic_ieee ) ) {
+        //printk("channelswitch: %d to %d\n",chan->ic_ieee,ath2_h->anno.tx_anno.channel);
+        chan->ic_ieee = ath2_h->anno.tx_anno.channel;
+        chan->ic_freq = ieee80211_ieee2mhz( chan->ic_ieee , chan->ic_flags);
+        //see ieee80211_input.c and what is done here
+        ic->ic_set_channel(ic);
+      }/*end of channel switching*/
     }
 #endif
 
@@ -252,20 +254,65 @@ ieee80211_handle_operation( struct sk_buff *skb, struct net_device *dev)
     if ( ( (vap->iv_flags_ext & IEEE80211_FEXT_MACCLONE) != 0 ) && ( (ath2_h->anno.tx_anno.operation & ATH2_OPERATION_SETMAC) == ATH2_OPERATION_SETMAC ) )
     {
 #ifdef MACCLONEDEBUG
-	printk("%s:%d %s: mac operation\n", __FILE__, __LINE__, __func__);
+      printk("%s:%d %s: mac operation\n", __FILE__, __LINE__, __func__);
 #endif
 
-	if ( memcmp(ath2_h->anno.tx_anno.mac, vap->iv_myaddr, ETH_ALEN) != 0 ) {
-	    if ( ieee80211_setup_macclone(vap, ath2_h->anno.tx_anno.mac) != 0 ) {
-		printk("error while setup macclone (operation)\n");
-	    }
-	}
+      if ( memcmp(ath2_h->anno.tx_anno.mac, vap->iv_myaddr, ETH_ALEN) != 0 ) {
+        if ( ieee80211_setup_macclone(vap, ath2_h->anno.tx_anno.mac) != 0 ) {
+          printk("error while setup macclone (operation)\n");
+        }
+      }
     }
 #endif
 
-
     printk("%s:%d %s:  operation end\n", __FILE__, __LINE__, __func__);
 
+}
+
+static void
+ieee80211_handle_read_config(struct sk_buff *skb, struct net_device *dev)
+{
+  struct ath2_header *ath2_h;
+  struct ieee80211vap *vap = NULL;
+  struct ieee80211com *ic = NULL;
+  struct ieee80211_wme_state *wme = NULL;
+  struct ath_softc *sc = NULL;
+  int i;
+
+  ath2_h = (struct ath2_header *)(skb->data + ATHDESC_HEADER_SIZE);
+  if ( (ath2_h->flags & MADWIFI_FLAGS_GET_CONFIG) != MADWIFI_FLAGS_GET_CONFIG ) return;
+
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,24))
+  sc = ic->ic_dev->priv;
+#else
+  sc = netdev_priv(dev);
+#endif
+
+  vap = netdev_priv(dev);
+  ic = vap->iv_ic;
+  wme = &vap->iv_ic->ic_wme;
+
+  ath2_h->anno.rx_anno.channel = ic->ic_curchan->ic_ieee;
+  memset(ath2_h->anno.rx_anno.mac,0,6);
+  ath2_h->anno.rx_anno.va_position = 0;
+
+  ath2_h->anno.rx_anno.status = 0;
+
+  ath2_h->anno.rx_anno.cu_hw_busy = 0; //TODO: don't overwrite valid values !!
+  ath2_h->anno.rx_anno.cu_hw_rx = 0; //TODO: don't overwrite valid values !!
+  ath2_h->anno.rx_anno.cu_hw_tx = 0; //TODO: don't overwrite valid values !!
+
+  ath2_h->anno.rx_anno.cu_pkt_threshold =  sc->cc_pkt_update_threshold;
+  ath2_h->anno.rx_anno.cu_update_mode = sc->cc_update_mode;
+  ath2_h->anno.rx_anno.cu_anno_mode = sc->cc_anno_mode;
+
+  for ( i =  0; i < 4; i++ ) {
+    ath2_h->anno.rx_anno.cw_min[i] = wme->wme_wmeBssChanParams.cap_wmeParams[i].wmep_logcwmin;
+    ath2_h->anno.rx_anno.cw_max[i] = wme->wme_wmeBssChanParams.cap_wmeParams[i].wmep_logcwmax;
+    ath2_h->anno.rx_anno.aifs[i] = wme->wme_wmeBssChanParams.cap_wmeParams[i].wmep_aifsn;
+  }
+
+  ath2_h->anno.rx_anno.cca_threshold = sc->sc_cca_thresh;
 }
 
 static void
@@ -277,14 +324,14 @@ ieee80211_feedback_operation( struct sk_buff *skb, struct net_device *dev) {
     skb->ip_summed = CHECKSUM_NONE;
     skb->pkt_type = PACKET_OTHERHOST;
     skb->protocol = __constant_htons(0x0019); /* ETH_P_80211_RAW */
-						                 
-    if (SKB_NI(skb) != NULL)
-	ieee80211_unref_node(&SKB_NI(skb));
 
-	if (netif_rx(skb) == NET_RX_DROP)
-		printk("%s:%d %s: Unable to feedback operation\n", __FILE__, __LINE__, __func__);
-	else
-		printk("%s:%d %s: Feedback operation\n", __FILE__, __LINE__, __func__);
+    if (SKB_NI(skb) != NULL)
+      ieee80211_unref_node(&SKB_NI(skb));
+
+    if (netif_rx(skb) == NET_RX_DROP)
+      printk("%s:%d %s: Unable to feedback operation\n", __FILE__, __LINE__, __func__);
+    else
+      printk("%s:%d %s: Feedback operation\n", __FILE__, __LINE__, __func__);
 }
 #endif
 
@@ -461,13 +508,11 @@ ieee80211_hardstart(struct sk_buff *skb, struct net_device *dev)
 
 		    ieee80211_set_ath_flags(skb, dev);
 		    ieee80211_handle_operation(skb, dev);
+        ieee80211_handle_read_config(skb, dev);
 		    ieee80211_feedback_operation(skb, dev);
 
 		    return NETDEV_TX_OK;
 		}
-//#ifdef OPERATIONPACKETS_DEBUG
-//		printk("%s:%d %s: no operation\n", __FILE__, __LINE__, __func__);
-//#endif
 
 #endif
 #ifdef MACCLONE		
