@@ -149,7 +149,7 @@ ieee80211_is_operation( struct sk_buff *skb)
     if ( skb->dev->type != ARPHRD_IEEE80211_ATHDESC2 ) return 0;
 
     ath2_h = (struct ath2_header *)(skb->data + ATHDESC_HEADER_SIZE);
-    if ( ( ath2_h->ath2_version != ATHDESC2_VERSION ) && ( ath2_h->madwifi_version != MADWIFI_TRUNK ) ) return 0;
+    if ( ( le16_to_cpu(ath2_h->ath2_version) != ATHDESC2_VERSION ) && ( le16_to_cpu(ath2_h->madwifi_version) != MADWIFI_TRUNK ) ) return 0;
 
     return ( ((ath2_h->flags & MADWIFI_FLAGS_IS_OPERATION) == MADWIFI_FLAGS_IS_OPERATION) || ((ath2_h->flags & MADWIFI_FLAGS_SET_CONFIG) == MADWIFI_FLAGS_SET_CONFIG) );
 }
@@ -465,9 +465,9 @@ ieee80211_hardstart(struct sk_buff *skb, struct net_device *dev)
 
 		    return NETDEV_TX_OK;
 		}
-#ifdef OPERATIONPACKETS_DEBUG
-		printk("%s:%d %s: no operation\n", __FILE__, __LINE__, __func__);
-#endif
+//#ifdef OPERATIONPACKETS_DEBUG
+//		printk("%s:%d %s: no operation\n", __FILE__, __LINE__, __func__);
+//#endif
 
 #endif
 #ifdef MACCLONE		
