@@ -884,12 +884,12 @@ struct ath_softc {
 
 #endif //COLORADO_CCA
 #ifdef CHANNEL_UTILITY
-    	struct ath_cycle_counters cc_cum;
-    	struct ath_cycle_counters cc_survey;
-    	spinlock_t cc_lock;
+      struct ath_cycle_counters cc_cum;
+      struct ath_cycle_counters cc_survey;
+      spinlock_t cc_lock;
 
       u_int32_t cc_pkt_counter;
-    	u_int32_t cc_pkt_update_threshold;
+      u_int32_t cc_pkt_update_threshold;
       u_int8_t cc_update_mode;
 
       u_int8_t cc_anno_mode;
@@ -899,8 +899,12 @@ struct ath_softc {
       void (*ath_channel_utility_update)(struct ath_softc *sc);
 #endif
 #ifdef KEEP_CRC
-	u_int8_t keep_crc;
+      u_int8_t keep_crc;
 #endif
+#ifdef QUEUECTRL
+      struct ath_txq *sc_prio2q[HAL_NUM_TX_QUEUES];  /* priority -> h/w qnum */
+#endif
+
 };
 
 typedef void (*ath_callback) (struct ath_softc *);
