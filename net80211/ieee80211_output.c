@@ -151,7 +151,7 @@ ieee80211_is_operation( struct sk_buff *skb)
     ath2_h = (struct ath2_header *)(skb->data + ATHDESC_HEADER_SIZE);
     if ( ( le16_to_cpu(ath2_h->ath2_version) != ATHDESC2_VERSION ) && ( le16_to_cpu(ath2_h->madwifi_version) != MADWIFI_TRUNK ) ) return 0;
 
-    return ( ((ath2_h->flags & MADWIFI_FLAGS_IS_OPERATION) == MADWIFI_FLAGS_IS_OPERATION) || ((ath2_h->flags & MADWIFI_FLAGS_SET_CONFIG) == MADWIFI_FLAGS_SET_CONFIG) );
+    return ( ((ath2_h->flags & MADWIFI_FLAGS_IS_OPERATION) == MADWIFI_FLAGS_IS_OPERATION) || ((ath2_h->flags & MADWIFI_FLAGS_SET_CONFIG) == MADWIFI_FLAGS_SET_CONFIG) || ((ath2_h->flags & MADWIFI_FLAGS_GET_CONFIG) == MADWIFI_FLAGS_GET_CONFIG) );
 }
 
 static void
@@ -167,14 +167,14 @@ ieee80211_set_ath_flags( struct sk_buff *skb, struct net_device *dev)
     ath2_h = (struct ath2_header *)(skb->data + ATHDESC_HEADER_SIZE);
     if ( (ath2_h->flags & MADWIFI_FLAGS_SET_CONFIG) != MADWIFI_FLAGS_SET_CONFIG ) return;
 
+    vap = netdev_priv(dev);
+    ic = vap->iv_ic;
+
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,24))
     sc = ic->ic_dev->priv;
 #else
     sc = netdev_priv(dev);
 #endif
-
-    vap = netdev_priv(dev);
-    ic = vap->iv_ic;
 
 #ifdef OPERATIONPACKETS_DEBUG
     printk("%s:%d %s:  handle flags\n", __FILE__, __LINE__, __func__);
@@ -282,15 +282,15 @@ ieee80211_handle_read_config(struct sk_buff *skb, struct net_device *dev)
   ath2_h = (struct ath2_header *)(skb->data + ATHDESC_HEADER_SIZE);
   if ( (ath2_h->flags & MADWIFI_FLAGS_GET_CONFIG) != MADWIFI_FLAGS_GET_CONFIG ) return;
 
+  vap = netdev_priv(dev);
+  ic = vap->iv_ic;
+  wme = &vap->iv_ic->ic_wme;
+
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,24))
   sc = ic->ic_dev->priv;
 #else
   sc = netdev_priv(dev);
 #endif
-
-  vap = netdev_priv(dev);
-  ic = vap->iv_ic;
-  wme = &vap->iv_ic->ic_wme;
 
   ath2_h->anno.rx_anno.channel = ic->ic_curchan->ic_ieee;
   memset(ath2_h->anno.rx_anno.mac,0,6);
