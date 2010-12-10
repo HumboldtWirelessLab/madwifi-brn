@@ -580,7 +580,7 @@ ath_attach(u_int16_t devid, struct net_device *dev, HAL_BUS_TAG tag)
 	int autocreatemode = IEEE80211_M_STA;
 	u_int8_t csz;
 #ifdef QUEUECTRL
-  struct ath_txq *txq = NULL;
+//  struct ath_txq *txq = NULL;
 #ifdef QUEUECTRL_DEBUG
   int q;
 #endif
@@ -864,7 +864,7 @@ ath_attach(u_int16_t devid, struct net_device *dev, HAL_BUS_TAG tag)
 		}
 	}
 #ifdef QUEUECTRL
-  txq = ath_txq_setup(sc, HAL_TX_QUEUE_DATA, HAL_TX_QUEUE_EX1);
+/*  txq = ath_txq_setup(sc, HAL_TX_QUEUE_DATA, HAL_TX_QUEUE_EX1);
   sc->sc_prio2q[HAL_TX_QUEUE_EX1] = txq;
   txq = ath_txq_setup(sc, HAL_TX_QUEUE_DATA, HAL_TX_QUEUE_EX2);
   sc->sc_prio2q[HAL_TX_QUEUE_EX2] = txq;
@@ -878,7 +878,7 @@ ath_attach(u_int16_t devid, struct net_device *dev, HAL_BUS_TAG tag)
   } else {
     printk("Setup extra queues failed.\n");
   }
-
+ */
 #ifdef QUEUECTRL_DEBUG
     for ( q = 0; q < HAL_NUM_TX_QUEUES; q++ ) {
       txq = &(sc->sc_txq[q]);

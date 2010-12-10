@@ -251,7 +251,7 @@ ieee80211_handle_operation( struct sk_buff *skb, struct net_device *dev)
 
 #ifdef MACCLONE
     /* MAC ADDRESS */
-    if ( ( (vap->iv_flags_ext & IEEE80211_FEXT_MACCLONE) != 0 ) && ( (ath2_h->anno.tx_anno.operation & ATH2_OPERATION_SETMAC) == ATH2_OPERATION_SETMAC ) )
+    if ( ( (vap->iv_flags_ext & IEEE80211_FEXT_MACCLONE) != 0 ) && ( (ath2_h->anno.tx_anno.operation & ATH2_OPERATION_SET_MAC) == ATH2_OPERATION_SET_MAC ) )
     {
 #ifdef MACCLONEDEBUG
       printk("%s:%d %s: mac operation\n", __FILE__, __LINE__, __func__);
