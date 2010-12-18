@@ -3090,7 +3090,9 @@ ath_reset(struct net_device *dev)
 #ifdef COLORADO_CCA 
 //This is moved down a few lines in GVY version, but the surrounding code is different.  Don't know what's best.
 	{
+#ifdef COLORADO_CCA_DEBUG
 		printk(KERN_INFO "Resetting hardware.\n");
+#endif
 		set_cca_mode(sc);
 	}
 #endif //COLORADO_CCA
@@ -12295,7 +12297,9 @@ static int set_cca_mode(struct ath_softc *sc)
 
   
 	if (ar_device(sc) == 5212 || ar_device(sc) == 5213) {
+#ifdef COLORADO_CCA_DEBUG
 	        printk("CCA: Found Atheros %d.Setup CCA.\n",ar_device(sc)); 
+#endif
 		/* registers taken from openhal */
 		if ((mask & 0x01) > 0) {
 			if ((changed & 0x01) > 0) {

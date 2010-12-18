@@ -80,20 +80,21 @@ doprint(struct ieee80211vap *vap, int subtype)
 #ifdef MACCLONE
 static int
 ieee80211_setup_macclone(struct ieee80211vap *vap, const char* addr) {
+	int found_dev_with_mac = 0;
 	struct ieee80211com *ic = vap->iv_ic;
+	struct net_device *dev = NULL;
 
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,24))
-	struct net_device *dev = NULL;
 	struct ath_softc *sc = ic->ic_dev->priv;
 #else
 	struct ath_softc *sc = netdev_priv(vap->iv_ic->ic_dev);  //this can be used for all versions ??
-	struct net_device *dev = sc->sc_dev;
 #endif
 
 	struct ath_hal *ah = sc->sc_ah;
 
 #ifdef MACCLONEDEBUG
 	printk("MACclone: Set new mac address.\n");
+	printk("MACclone: New Addr: %x%x%x%x%x%x\n",addr[0],addr[1],addr[2],addr[3],addr[4],addr[5]);
 #endif
 
 	/*Search for device with given addr ( for_each_dev and memcmp)
@@ -109,19 +110,31 @@ ieee80211_setup_macclone(struct ieee80211vap *vap, const char* addr) {
 
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,24))
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,22))
-	for (dev=dev_base; dev; dev=dev->next)
+	for (dev=dev_base; dev; dev=dev->next) {
 #else
-	for_each_netdev(dev)
+	for_each_netdev(dev) {
 #endif
 #else /* 2.6.24 and up */
-	for_each_netdev(&init_net, dev)
+	for_each_netdev(&init_net, dev) {
+#endif
+#ifdef MACCLONEDEBUG
+		if ( dev ) printk("Addr: %x%x%x%x%x%x %d\n",dev->dev_addr[0],dev->dev_addr[1],dev->dev_addr[2],dev->dev_addr[3],dev->dev_addr[4],dev->dev_addr[5], dev->addr_len);
 #endif
 
-	if (!memcmp(dev->dev_addr, addr, dev->addr_len))
-			break;	
+		if (!memcmp(dev->dev_addr, addr, dev->addr_len)) {
+			found_dev_with_mac = 1;
+			break;
+		}
+	}
 
-	if (!dev) {
-		printk("Found dev to change\n");
+#ifdef MACCLONEDEBUG
+	if ( dev ) printk("last dev Addr: %x%x%x%x%x%x %d\n",dev->dev_addr[0],dev->dev_addr[1],dev->dev_addr[2],dev->dev_addr[3],dev->dev_addr[4],dev->dev_addr[5], dev->addr_len);
+#endif
+
+	if (!found_dev_with_mac) { //!dev
+#ifdef MACCLONEDEBUG
+		printk("Found no dev with this mac, so change.\n");
+#endif
 		ATH_LOCK(sc);
 		IEEE80211_ADDR_COPY(ic->ic_myaddr, addr);
 		IEEE80211_ADDR_COPY(ic->ic_dev->dev_addr, ic->ic_myaddr);
@@ -132,9 +145,13 @@ ieee80211_setup_macclone(struct ieee80211vap *vap, const char* addr) {
 		ATH_UNLOCK(sc);
 
 		//return 1;
+#ifdef MACCLONEDEBUG
 	} else {
-	    printk("no dev to change\n");
+	    printk("Found dev with wanted mac.\n");
         }
+#else
+	}
+#endif
 
 	return 0;
 }
