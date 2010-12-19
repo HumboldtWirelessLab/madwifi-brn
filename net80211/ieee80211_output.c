@@ -60,6 +60,11 @@
 #ifdef MACCLONE
 #include <ath/if_ath_hal.h>
 #endif
+#ifdef CHANNELSWITCH
+#ifdef CHANNELSWITCHDEBUG
+#include <linux/time.h>
+#endif
+#endif
 
 #ifdef IEEE80211_DEBUG
 /*
@@ -490,6 +495,9 @@ ieee80211_hardstart(struct sk_buff *skb, struct net_device *dev)
 #ifdef CHANNELSWITCH
 	struct ieee80211_channel *chan;
 	struct ath2_header *ath2_h;
+#ifdef CHANNELSWITCHDEBUG
+	long start,end;
+#endif
 #endif
 
 	/* Reset the SKB of new frames reaching this layer BEFORE
@@ -564,7 +572,14 @@ ieee80211_hardstart(struct sk_buff *skb, struct net_device *dev)
 				chan->ic_ieee = ath2_h->anno.tx_anno.channel;
 				chan->ic_freq = ieee80211_ieee2mhz( chan->ic_ieee , chan->ic_flags);
 				//see ieee80211_input.c and what is done here						       
+#ifdef CHANNELSWITCHDEBUG
+				start = jiffies;
+#endif
 				ic->ic_set_channel(ic);
+#ifdef CHANNELSWITCHDEBUG
+				end = jiffies;
+				printk("Channelswitchtime: %ld jiffies usec: %d\n", end-start, jiffies_to_usecs(end-start));
+#endif
         		}
         		/*end of channel switching*/
 	
