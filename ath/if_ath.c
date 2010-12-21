@@ -218,6 +218,9 @@ static void ath_tx_tasklet(TQUEUE_ARG);
 static void ath_tx_timeout(struct net_device *);
 static void ath_tx_draintxq(struct ath_softc *, struct ath_txq *);
 static int ath_chan_set(struct ath_softc *, struct ieee80211_channel *);
+#ifdef CHANNELSWITCH
+static int ath_chan_set_fast(struct ath_softc *, struct ieee80211_channel *);
+#endif
 static void ath_draintxq(struct ath_softc *);
 static void ath_tx_txqaddbuf(struct ath_softc *, struct ieee80211_node *,
 	struct ath_txq *, struct ath_buf *, int);
@@ -231,6 +234,9 @@ static int ath_newstate(struct ieee80211vap *, enum ieee80211_state, int);
 static void ath_scan_start(struct ieee80211com *);
 static void ath_scan_end(struct ieee80211com *);
 static void ath_set_channel(struct ieee80211com *);
+#ifdef CHANNELSWITCH
+static void ath_set_channel_fast(struct ieee80211com *);
+#endif
 static void ath_set_coverageclass(struct ieee80211com *);
 static u_int ath_mhz2ieee(struct ieee80211com *, u_int, u_int);
 #ifdef ATH_SUPERG_FF
@@ -1182,7 +1188,9 @@ ath_attach(u_int16_t devid, struct net_device *dev, HAL_BUS_TAG tag)
 	ic->ic_scan_start		= ath_scan_start;
 	ic->ic_scan_end			= ath_scan_end;
 	ic->ic_set_channel		= ath_set_channel;
-
+#ifdef CHANNELSWITCH
+	ic->ic_set_channel_fast		= ath_set_channel_fast;
+#endif
 	ic->ic_debug_ath_iwpriv		= ath_debug_iwpriv;
 
 	ic->ic_set_coverageclass = ath_set_coverageclass;
@@ -9346,6 +9354,165 @@ ath_chan_set(struct ath_softc *sc, struct ieee80211_channel *chan)
 	return 0;
 }
 
+#ifdef CHANNELSWITCH
+static int
+ath_chan_set_fast(struct ath_softc *sc, struct ieee80211_channel *chan)
+{
+	struct ath_hal *ah = sc->sc_ah;
+	struct ieee80211com *ic = &sc->sc_ic;
+	struct net_device *dev = sc->sc_dev;
+	HAL_CHANNEL hchan;
+	u_int8_t tswitch = 0;
+	u_int8_t dfs_cac_needed = 0;
+	u_int8_t channel_change_required = 0;
+
+	/*
+	 * Convert to a HAL channel description with
+	 * the flags constrained to reflect the current
+	 * operating mode.
+	 */
+	memset(&hchan, 0, sizeof(HAL_CHANNEL));
+	hchan.channel = chan->ic_freq;
+	hchan.channelFlags = ath_chan2flags(chan);
+	KASSERT(hchan.channel != 0, ("bogus channel %u/0x%x", hchan.channel, hchan.channelFlags));
+
+#ifdef CHANNELSWITCHDEBUG
+	printk("chanswitch: Channel: %u Frequ: /0x%x\n",hchan.channel, hchan.channelFlags);
+#endif
+
+#ifdef CHANNELSWITCHDEBUG
+	printk("chanswitch: check for turbo\n");
+#endif
+	/* check if it is turbo mode switch */
+	if (hchan.channel == sc->sc_curchan.channel &&
+	   (hchan.channelFlags & IEEE80211_CHAN_TURBO) != 
+	   (sc->sc_curchan.channelFlags & IEEE80211_CHAN_TURBO))
+		tswitch = 1;
+
+
+	/* Stop any pending channel calibrations or availability check if we
+	 * are really changing channels.  maybe a turbo mode switch only. */
+	if (hchan.channel != sc->sc_curchan.channel)
+		if (!sc->sc_dfs_testmode &&
+		    timer_pending(&sc->sc_dfs_cac_timer))
+			ath_interrupt_dfs_cac(sc, 
+					"Channel change interrupted DFS wait.");
+
+
+#ifdef CHANNELSWITCHDEBUG
+	printk("chanswitch: check for dfs\n");
+#endif
+	/* Need a DFS channel availability check?  We do if ... */
+	dfs_cac_needed = IEEE80211_IS_MODE_DFS_MASTER(ic->ic_opmode) &&
+		(hchan.channel != sc->sc_curchan.channel ||
+		 /* CAC has not been done and we are not under radar */
+		 (0 == (sc->sc_curchan.privFlags & (CHANNEL_DFS_CLEAR|CHANNEL_INTERFERENCE)))) &&
+		/* the new channel requires DFS protection */
+		ath_radar_is_dfs_required(sc, &hchan) &&
+		/* IEEE 802.11h is required */
+		(ic->ic_flags & IEEE80211_F_DOTH) &&
+		/* CAC is not already started */
+		(!timer_pending(&sc->sc_dfs_cac_timer));
+
+	channel_change_required = hchan.channel != sc->sc_curchan.channel ||
+		hchan.channelFlags != sc->sc_curchan.channelFlags ||
+		tswitch || dfs_cac_needed;
+
+#ifdef CHANNELSWITCHDEBUG
+	printk("chanswitch: check channelswitch required ? -> %d\n",channel_change_required);
+#endif
+	if (channel_change_required) {
+		HAL_STATUS status;
+		HAL_BOOL reset_c_false, reset_c_true;
+
+		/* To switch channels clear any pending DMA operations;
+		 * wait long enough for the RX fifo to drain, reset the
+		 * hardware at the new frequency, and then re-enable
+		 * the relevant bits of the h/w. */
+		ath_hal_intrset(ah, 0);	/* disable interrupts */
+		ath_draintxq(sc);	/* clear pending tx frames */
+		ath_stoprecv(sc);	/* turn off frame recv */
+
+		/* Set coverage class */
+		if (sc->sc_scanning || !IEEE80211_IS_CHAN_A(chan))
+			ath_hal_setcoverageclass(sc->sc_ah, 0, 0);
+		else
+			ath_hal_setcoverageclass(sc->sc_ah, ic->ic_coverageclass, 0);
+
+		/* ath_hal_reset with chanchange = AH_TRUE doesn't seem to
+		 * completely reset the state of the card.  According to
+		 * reports from ticket #1106, kismet and aircrack people they
+		 * needed to do the reset with chanchange = AH_FALSE in order
+		 * to receive traffic when peforming high velocity channel
+		 * changes. */
+		//struct ath_softc *sc, HAL_OPMODE opmode, HAL_CHANNEL *channel, HAL_BOOL bChannelChange, HAL_STATUS *status)
+		reset_c_true = ath_hw_reset(sc, sc->sc_opmode, &hchan, AH_TRUE, &status);
+#ifdef CHANNELSWITCHDEBUG
+		printk("chanswitch: reset_c_true: Result: %d Status: %d\n", reset_c_true, status);		
+#endif
+		reset_c_false = ath_hw_reset(sc, sc->sc_opmode, &hchan, AH_FALSE, &status);
+#ifdef CHANNELSWITCHDEBUG
+		printk("chanswitch: reset_c_false: Result: %d Status: %d\n", reset_c_false, status);		
+#endif
+	        
+		if (!reset_c_true  || !reset_c_false) {
+			EPRINTF(sc, "Unable to reset channel %u (%u MHz) "
+				"flags 0x%x '%s' (HAL status %u)\n",
+				ieee80211_chan2ieee(ic, chan), chan->ic_freq,
+				hchan.channelFlags,
+				ath_get_hal_status_desc(status), status);
+			return -EIO;
+		}
+
+		/* Change channels and update the h/w rate map
+		 * if we're switching; e.g. 11a to 11b/g. */
+		ath_chan_change(sc, chan);
+
+#ifdef COLORADO_CCA
+		{
+			EWA_PRINTK("ath_chan_set -- re-applying CCA setting\n");
+			set_cca_mode(sc);
+		}
+#endif
+		 /* Re-enable rx framework. */
+		if (ath_startrecv(sc) != 0) {
+			EPRINTF(sc, "Unable to restart receive logic!\n");
+			return -EIO;
+		}
+
+		if (dfs_cac_needed && !(ic->ic_flags & IEEE80211_F_SCAN)) {
+			/* set the timeout to normal */
+			dev->watchdog_timeo = (sc->sc_dfs_cac_period + 1) * HZ;
+			/* Disable beacons and beacon miss interrupts */
+			sc->sc_beacons = 0;
+			sc->sc_imask &= ~(HAL_INT_SWBA | HAL_INT_BMISS);
+			ath_hal_intrset(ah, sc->sc_imask);
+
+			/* Reset CHANNEL_INTERFERENCE and CHANNEL_DFS_CLEAR
+			 * after a channel change */
+			_ath_set_dfs_clear(sc, &sc->sc_curchan, 0);
+			_ath_set_dfs_interference(sc, &sc->sc_curchan, 0);
+
+			/* Enter DFS wait period */
+			mod_timer(&sc->sc_dfs_cac_timer,
+				jiffies + (sc->sc_dfs_cac_period * HZ));
+		}
+		/*
+		 * FIXME : HW seems to turn off beacons after a call to
+		 * ath_hal_reset().
+		 */
+		if (sc->sc_beacons && !timer_pending(&sc->sc_dfs_cac_timer))
+			ath_beacon_config(sc, NULL);
+		/*
+		 * Re-enable interrupts.
+		 */
+		ath_hal_intrset(ah, sc->sc_imask);
+	}
+	else DPRINTF(sc, ATH_DEBUG_STATE | ATH_DEBUG_DOTH, "Not performing channel change action.");
+		
+	return 0;
+}
+#endif
 /*
  * Periodically recalibrate the PHY to account
  * for temperature/environment changes.
@@ -9487,6 +9654,17 @@ ath_set_channel(struct ieee80211com *ic)
 	if (!sc->sc_scanning && ic->ic_curchan == ic->ic_bsschan)
 		sc->sc_syncbeacon = 1;
 }
+
+#ifdef CHANNELSWITCH
+static void
+ath_set_channel_fast(struct ieee80211com *ic)
+{
+	struct net_device *dev = ic->ic_dev;
+	struct ath_softc *sc = netdev_priv(dev);
+
+	(void) ath_chan_set_fast(sc, ic->ic_curchan);
+}
+#endif
 
 static void
 ath_set_coverageclass(struct ieee80211com *ic)

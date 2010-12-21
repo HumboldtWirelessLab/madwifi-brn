@@ -480,6 +480,9 @@ struct ieee80211com {
 	void (*ic_scan_start)(struct ieee80211com *);
 	void (*ic_scan_end)(struct ieee80211com *);
 	void (*ic_set_channel)(struct ieee80211com *);
+#ifdef CHANNELSWITCH
+	void (*ic_set_channel_fast)(struct ieee80211com *);
+#endif
 
 	/* U-APSD support */
 	void (*ic_uapsd_flush)(struct ieee80211_node *);
