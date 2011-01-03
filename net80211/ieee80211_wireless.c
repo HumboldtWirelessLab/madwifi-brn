@@ -2277,11 +2277,7 @@ ieee80211_ioctl_setparam(struct net_device *dev, struct iw_request_info *info,
 	const struct ieee80211_aclator *acl;
 
 #ifdef MACCLONE
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,24)) 
-	struct ath_softc *sc = ic->ic_dev->priv;
-#else
-	struct ath_softc *sc = netdev_priv(vap->iv_ic->ic_dev);  //this can be used for all versions ??
-#endif
+	struct ath_softc *sc = netdev_priv(ic->ic_dev);
 	struct ath_hal *ah = sc->sc_ah;
 #endif
 
@@ -2874,11 +2870,7 @@ ieee80211_ioctl_setparam(struct net_device *dev, struct iw_request_info *info,
 			vap->iv_flags_ext |= IEEE80211_FEXT_MACCLONE;
 		else {
 			vap->iv_flags_ext &= ~IEEE80211_FEXT_MACCLONE;
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,24))
-                        sc = ic->ic_dev->priv;
-#else
-                        sc = netdev_priv(vap->iv_ic->ic_dev);  //this can be used for all versions ??
-#endif
+      sc = netdev_priv(ic->ic_dev);
 			ATH_LOCK(sc);
 			IEEE80211_ADDR_COPY(ic->ic_myaddr, dev->dev_addr);
 			IEEE80211_ADDR_COPY(ic->ic_dev->dev_addr, ic->ic_myaddr);

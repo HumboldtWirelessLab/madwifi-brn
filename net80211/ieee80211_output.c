@@ -88,13 +88,7 @@ ieee80211_setup_macclone(struct ieee80211vap *vap, const char* addr) {
 	int found_dev_with_mac = 0;
 	struct ieee80211com *ic = vap->iv_ic;
 	struct net_device *dev = NULL;
-
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,24))
-	struct ath_softc *sc = ic->ic_dev->priv;
-#else
-	struct ath_softc *sc = netdev_priv(vap->iv_ic->ic_dev);  //this can be used for all versions ??
-#endif
-
+	struct ath_softc *sc = netdev_priv(ic->ic_dev);
 	struct ath_hal *ah = sc->sc_ah;
 
 #ifdef MACCLONEDEBUG
@@ -191,12 +185,7 @@ ieee80211_set_ath_flags( struct sk_buff *skb, struct net_device *dev)
 
     vap = netdev_priv(dev);
     ic = vap->iv_ic;
-
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,24))
-    sc = ic->ic_dev->priv;
-#else
-    sc = netdev_priv(vap->iv_ic->ic_dev);
-#endif
+    sc = netdev_priv(ic->ic_dev);
 
 #ifdef OPERATIONPACKETS_DEBUG
     printk("%s:%d %s:  handle flags\n", __FILE__, __LINE__, __func__);
@@ -329,12 +318,7 @@ ieee80211_handle_read_config(struct sk_buff *skb, struct net_device *dev)
   vap = netdev_priv(dev);
   ic = vap->iv_ic;
   wme = &vap->iv_ic->ic_wme;
-
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,24))
-  sc = ic->ic_dev->priv;
-#else
-  sc = netdev_priv(vap->iv_ic->ic_dev);
-#endif
+  sc = netdev_priv(ic->ic_dev);
 
   ath2_h->anno.rx_anno.channel = ic->ic_curchan->ic_ieee;
   memset(ath2_h->anno.rx_anno.mac,0,6);
@@ -523,11 +507,7 @@ ieee80211_hardstart(struct sk_buff *skb, struct net_device *dev)
 #endif
 
 #ifdef RXTX_PACKET_COUNT
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,24))
-  struct ath_softc *sc = ic->ic_dev->priv;
-#else
   struct ath_softc *sc = netdev_priv(ic->ic_dev);
-#endif
 #endif
 
 	/* Reset the SKB of new frames reaching this layer BEFORE
