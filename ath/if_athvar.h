@@ -903,6 +903,7 @@ struct ath_softc {
 #endif
 #ifdef QUEUECTRL
       struct ath_txq *sc_prio2q[HAL_NUM_TX_QUEUES];  /* priority -> h/w qnum */
+      void (*ath_clear_hw_queues)(struct ath_softc *sc);
 #endif
 #ifdef RXTX_PACKET_COUNT
       u_int32_t rx_packets;           //inc in ath_rx_tasklet (if_ath.c)

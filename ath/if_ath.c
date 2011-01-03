@@ -9522,6 +9522,22 @@ ath_chan_set_fast(struct ath_softc *sc, struct ieee80211_channel *chan)
 	return 0;
 }
 #endif
+
+#ifdef QUEUECTRL
+static void
+ath_clear_hw_queues(struct ath_softc *sc)
+{
+  struct ath_hal *ah = sc->sc_ah;
+
+#ifdef  QUEUECTRL_DEBUG
+  printk("Clear hw queue\n");
+#endif
+  ath_hal_intrset(ah, 0);	/* disable interrupts */
+  ath_draintxq(sc);		/* clear pending tx frames */
+  /* Re-enable interrupts.*/
+  ath_hal_intrset(ah, sc->sc_imask);
+}
+#endif
 /*
  * Periodically recalibrate the PHY to account
  * for temperature/environment changes.
@@ -11284,6 +11300,7 @@ enum {
 #endif
 #ifdef QUEUECTRL
 	ATH_NUMTXQUEUE = 39,
+	ATH_CLEARQUEUE = 40,
 #endif
 };
 
@@ -11737,6 +11754,11 @@ ATH_SYSCTL_DECL(ath_sysctl_halparam, ctl, write, filp, buffer, lenp, ppos)
 				else sc->keep_crc = 0;
 				break;
 #endif
+#ifdef QUEUECTRL
+			case ATH_CLEARQUEUE:
+				ath_clear_hw_queues(sc);
+				break;
+#endif
 			default:
 				ret = -EINVAL;
 				break;
@@ -12155,6 +12177,12 @@ static const ctl_table ath_sysctl_template[] = {
 	  .mode         = 0444,
 	  .proc_handler = ath_sysctl_halparam,
 	  .extra2	= (void *)ATH_NUMTXQUEUE,
+	},
+	{ ATH_INIT_CTL_NAME(CTL_AUTO)
+	  .procname     = "cleartxqueue",
+	  .mode         = 0222,
+	  .proc_handler = ath_sysctl_halparam,
+	  .extra2	= (void *)ATH_CLEARQUEUE,
 	},
 #endif
 	{ 0 }
