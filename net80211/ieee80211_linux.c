@@ -716,6 +716,41 @@ proc_channel_utility_open(struct inode *inode, struct file *file)
 }
 #endif
 
+#ifdef RXTX_PACKET_COUNT
+static int
+proc_packet_stats_open(struct inode *inode, struct file *file)
+{
+  struct proc_ieee80211_priv *pv = NULL;
+  struct proc_dir_entry *dp = PDE(inode);
+  struct ieee80211vap *vap = dp->data;
+  struct ieee80211com *ic = vap->iv_ic;
+  struct net_device *dev = ic->ic_dev;
+  struct ath_softc *sc = netdev_priv(dev);
+
+  char *p, *buf;
+
+  int result;
+
+  result = proc_common_open(inode, file);
+  if (result != 0)
+    return result;
+
+  /* now read the data into the buffer */
+  pv = (struct proc_ieee80211_priv *) file->private_data;
+  buf = pv->rbuf;
+  p = pv->rbuf;
+
+  p += sprintf(p, "RX: %u TX: %u RX80211: %u TX80211: %u Feedback: %u\n", sc->rx_packets, sc->tx_packets,
+                                                                          sc->ieee80211_rx_packets, sc->ieee80211_tx_packets,
+                                                                          sc->feedback_packets);
+
+  pv->rlen = (p - buf);
+
+  sc->rx_packets = sc->tx_packets = sc->feedback_packets = sc->ieee80211_tx_packets = sc->ieee80211_rx_packets = 0;
+
+  return 0;
+}
+#endif
 
 static ssize_t
 proc_ieee80211_write(struct file *file, const char __user *buf, size_t len, loff_t *offset)
@@ -790,6 +825,14 @@ static struct file_operations proc_channel_utility_ops = {
   .release = proc_ieee80211_close,
 };
 #endif      /* CHANNEL_UTILITY */
+#ifdef RXTX_PACKET_COUNT
+static struct file_operations proc_packet_stats_ops = {
+  .read = proc_ieee80211_read,
+  .write = proc_ieee80211_write,
+  .open = proc_packet_stats_open,
+  .release = proc_ieee80211_close,
+};
+#endif      /* RXTX_PACKET_COUNT */
 #endif			/* CONFIG_PROC_FS */
 
 #ifdef IEEE80211_DEBUG
@@ -1085,6 +1128,9 @@ ieee80211_virtfs_latevattach(struct ieee80211vap *vap)
 	ieee80211_proc_vcreate(vap, &proc_iv_bss_ops, "iv_bss");
 #ifdef CHANNEL_UTILITY
 	ieee80211_proc_vcreate(vap, &proc_channel_utility_ops, "channel_utility");
+#endif
+#ifdef CHANNEL_UTILITY
+  ieee80211_proc_vcreate(vap, &proc_packet_stats_ops, "packet_stats");
 #endif
 
 	/* Recreate any other proc entries that have been registered */

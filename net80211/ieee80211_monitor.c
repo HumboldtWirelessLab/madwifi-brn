@@ -380,10 +380,16 @@ ieee80211_input_monitor(struct ieee80211com *ic, struct sk_buff *skb,
 		rssi = bf->bf_dsstatus.ds_txstat.ts_rssi;
 		antenna = bf->bf_dsstatus.ds_txstat.ts_antenna;
 		ieeerate = sc->sc_hwmap[bf->bf_dsstatus.ds_txstat.ts_rate].ieeerate;
-	} else {
+#ifdef RXTX_PACKET_COUNT
+    sc->feedback_packets++;
+#endif
+  } else {
 		rssi = bf->bf_dsstatus.ds_rxstat.rs_rssi;
 		antenna = bf->bf_dsstatus.ds_rxstat.rs_antenna;
 		ieeerate = sc->sc_hwmap[bf->bf_dsstatus.ds_rxstat.rs_rate].ieeerate;
+#ifdef RXTX_PACKET_COUNT
+    sc->ieee80211_rx_packets++;
+#endif
 	}
 
 	noise = bf->bf_channoise;

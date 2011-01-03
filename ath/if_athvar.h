@@ -904,6 +904,13 @@ struct ath_softc {
 #ifdef QUEUECTRL
       struct ath_txq *sc_prio2q[HAL_NUM_TX_QUEUES];  /* priority -> h/w qnum */
 #endif
+#ifdef RXTX_PACKET_COUNT
+      u_int32_t rx_packets;           //inc in ath_rx_tasklet (if_ath.c)
+      u_int32_t tx_packets;           //inc in ath_hardstart (if_ath.c)
+      u_int32_t feedback_packets;     //inc in ieee80211_input_monitor (ieee80211_monitor.c)
+      u_int32_t ieee80211_tx_packets; //inc in ieee80211_hardstart (ieee80211_output.c)
+      u_int32_t ieee80211_rx_packets; //inc in ieee80211_input_monitor (ieee80211_monitor.c)
+#endif
 
 };
 

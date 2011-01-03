@@ -630,7 +630,10 @@ ath_attach(u_int16_t devid, struct net_device *dev, HAL_BUS_TAG tag)
 #ifdef KEEP_CRC
         sc->keep_crc = 0;
 #endif
-
+#ifdef RXTX_PACKET_COUNT 
+        sc->rx_packets = sc->tx_packets = sc->feedback_packets = sc->ieee80211_tx_packets = sc->ieee80211_rx_packets = 0;
+#endif
+ 
 	atomic_set(&sc->sc_txbuf_counter, 0);
 
 	ATH_INIT_TQUEUE(&sc->sc_rxtq,		ath_rx_tasklet,		dev);
@@ -3744,6 +3747,9 @@ ath_hardstart(struct sk_buff *__skb, struct net_device *dev)
 	 * *** ALWAYS *** free any skb != __skb when cleaning up - unless it was
 	 * taken. */
 	int ff_flush;
+#endif
+#ifdef RXTX_PACKET_COUNT
+  sc->tx_packets++;
 #endif
 	ieee80211_skb_track(original_skb);
 	if ((dev->flags & IFF_RUNNING) == 0 || sc->sc_invalid) {
@@ -7083,6 +7089,9 @@ rx_accept:
 			sc->cc_pkt_counter = 0;
 		  }
 		}
+#endif
+#ifdef RXTX_PACKET_COUNT
+    sc->rx_packets++;
 #endif
 
 		skb_put(skb, len);

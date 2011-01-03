@@ -195,7 +195,7 @@ ieee80211_set_ath_flags( struct sk_buff *skb, struct net_device *dev)
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,24))
     sc = ic->ic_dev->priv;
 #else
-    sc = netdev_priv(dev);
+    sc = netdev_priv(vap->iv_ic->ic_dev);
 #endif
 
 #ifdef OPERATIONPACKETS_DEBUG
@@ -253,8 +253,7 @@ ieee80211_handle_operation( struct sk_buff *skb, struct net_device *dev)
 
 #ifdef CHANNELSWITCH
     /* CHANNELSWITCH */
-    if ( ( (vap->iv_flags_ext & IEEE80211_FEXT_CHANNELSWITCH) != 0 ) &&
-           ( (ath2_h->anno.tx_anno.operation & ATH2_OPERATION_SET_CHANNEL) == ATH2_OPERATION_SET_CHANNEL ) )
+    if ( ( (vap->iv_flags_ext & IEEE80211_FEXT_CHANNELSWITCH) != 0 ) && ( (ath2_h->anno.tx_anno.operation & ATH2_OPERATION_SET_CHANNEL) != 0 ) )
     {
       printk("%s:%d %s:  cs operation\n", __FILE__, __LINE__, __func__);
 
@@ -273,7 +272,7 @@ ieee80211_handle_operation( struct sk_buff *skb, struct net_device *dev)
 
 #ifdef MACCLONE
     /* MAC ADDRESS */
-    if ( ( (vap->iv_flags_ext & IEEE80211_FEXT_MACCLONE) != 0 ) && ( (ath2_h->anno.tx_anno.operation & ATH2_OPERATION_SET_MAC) == ATH2_OPERATION_SET_MAC ) )
+    if ( ( (vap->iv_flags_ext & IEEE80211_FEXT_MACCLONE) != 0 ) && ( (ath2_h->anno.tx_anno.operation & ATH2_OPERATION_SET_MAC) != 0 ) )
     {
 #ifdef MACCLONEDEBUG
       printk("%s:%d %s: mac operation\n", __FILE__, __LINE__, __func__);
@@ -284,6 +283,29 @@ ieee80211_handle_operation( struct sk_buff *skb, struct net_device *dev)
           printk("error while setup macclone (operation)\n");
         }
       }
+    }
+#endif
+
+#ifdef UPDATECCA
+    /* CCA THRESHOLD */
+    if ( (ath2_h->anno.tx_anno.operation & ATH2_OPERATION_SET_CCA_THRESHOLD) != 0 )
+    {
+#ifdef UPDATECCA_DEBUG
+      printk("%s:%d %s: update_cca operation\n", __FILE__, __LINE__, __func__);
+#endif
+//      sc->sc_cca_thresh = val;
+//      ath_update_cca_thresh(sc);
+    }
+#endif
+
+#ifdef QUEUECTRL
+    /* PRIO QUEUE */
+    if ( (ath2_h->anno.tx_anno.operation & ATH2_OPERATION_SET_PRIOQUEUE) != 0 )
+    {
+#ifdef QUEUECTRL_DEBUG
+      printk("%s:%d %s: queuectrl operation\n", __FILE__, __LINE__, __func__);
+#endif
+
     }
 #endif
 
@@ -311,7 +333,7 @@ ieee80211_handle_read_config(struct sk_buff *skb, struct net_device *dev)
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,24))
   sc = ic->ic_dev->priv;
 #else
-  sc = netdev_priv(dev);
+  sc = netdev_priv(vap->iv_ic->ic_dev);
 #endif
 
   ath2_h->anno.rx_anno.channel = ic->ic_curchan->ic_ieee;
@@ -500,6 +522,14 @@ ieee80211_hardstart(struct sk_buff *skb, struct net_device *dev)
 #endif
 #endif
 
+#ifdef RXTX_PACKET_COUNT
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,24))
+  struct ath_softc *sc = ic->ic_dev->priv;
+#else
+  struct ath_softc *sc = netdev_priv(ic->ic_dev);
+#endif
+#endif
+
 	/* Reset the SKB of new frames reaching this layer BEFORE
 	 * we invoke ieee80211_skb_track. */
 	memset(SKB_CB(skb), 0, sizeof(struct ieee80211_cb));
@@ -584,6 +614,9 @@ ieee80211_hardstart(struct sk_buff *skb, struct net_device *dev)
         		/*end of channel switching*/
 	
 		}
+#endif
+#ifdef RXTX_PACKET_COUNT
+    sc->ieee80211_tx_packets++;
 #endif
 		ieee80211_monitor_encap(vap, skb);
 		ieee80211_parent_queue_xmit(skb);

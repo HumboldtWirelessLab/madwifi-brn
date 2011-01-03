@@ -2281,7 +2281,6 @@ ieee80211_ioctl_setparam(struct net_device *dev, struct iw_request_info *info,
 	struct ath_softc *sc = ic->ic_dev->priv;
 #else
 	struct ath_softc *sc = netdev_priv(vap->iv_ic->ic_dev);  //this can be used for all versions ??
-//        struct ath_softc *sc = netdev_priv(dev);
 #endif
 	struct ath_hal *ah = sc->sc_ah;
 #endif
