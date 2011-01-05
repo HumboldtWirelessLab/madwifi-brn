@@ -341,6 +341,22 @@ ieee80211_handle_read_config(struct sk_buff *skb, struct net_device *dev)
   }
 
   ath2_h->anno.rx_anno.cca_threshold = sc->sc_cca_thresh;
+  
+  /*Flags*/
+  ath2_h->flags &= 0xf000 ;
+#ifdef COLORADO_CCA
+  /* CCA */
+  ath2_h->flags |= sc->sc_disable_cca_mask;
+#endif
+#ifdef CHANNELSWITCH
+  /* CHANNELSWITCH */
+  if ( (vap->iv_flags_ext &= IEEE80211_FEXT_CHANNELSWITCH) != 0 ) ath2_h->flags |= MADWIFI_FLAGS_CHANNELSWITCH_ENABLED;
+#endif
+#ifdef MACCLONE
+  /* MACCLONE */
+  if (  (vap->iv_flags_ext &= IEEE80211_FEXT_MACCLONE) != 0 ) ath2_h->flags |= MADWIFI_FLAGS_MACCLONE_ENABLED;
+#endif
+
 }
 
 static void
@@ -543,7 +559,7 @@ ieee80211_hardstart(struct sk_buff *skb, struct net_device *dev)
 
 		    ieee80211_set_ath_flags(skb, dev);
 		    ieee80211_handle_operation(skb, dev);
-        ieee80211_handle_read_config(skb, dev);
+		    ieee80211_handle_read_config(skb, dev);
 		    ieee80211_feedback_operation(skb, dev);
 
 		    return NETDEV_TX_OK;
