@@ -9308,7 +9308,9 @@ ath_chan_set(struct ath_softc *sc, struct ieee80211_channel *chan)
 
 #ifdef COLORADO_CCA
 		{
+#ifdef COLORADO_CCA_DEBUG
 			EWA_PRINTK("ath_chan_set -- re-applying CCA setting\n");
+#endif
 			set_cca_mode(sc);
 		}
 #endif
@@ -9479,7 +9481,9 @@ ath_chan_set_fast(struct ath_softc *sc, struct ieee80211_channel *chan)
 
 #ifdef COLORADO_CCA
 		{
+#ifdef COLORADO_CCA_DEBUG
 			EWA_PRINTK("ath_chan_set -- re-applying CCA setting\n");
+#endif
 			set_cca_mode(sc);
 		}
 #endif
