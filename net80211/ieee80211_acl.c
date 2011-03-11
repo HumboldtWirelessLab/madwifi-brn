@@ -28,7 +28,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $Id: ieee80211_acl.c 3254 2008-01-25 22:49:48Z mtaylor $
+ * $Id: ieee80211_acl.c 4134 2011-02-02 21:10:53Z proski $
  */
 #ifndef EXPORT_SYMTAB
 #define	EXPORT_SYMTAB
@@ -45,7 +45,7 @@
  * and if found the frame is either accepted (ACL_POLICY_ALLOW)
  * or rejected (ACL_POLICY_DENT).
  */
-#ifndef AUTOCONF_INCLUDED
+#if !defined(AUTOCONF_INCLUDED) && !defined(CONFIG_LOCALVERSION)
 #include <linux/config.h>
 #endif
 #include <linux/version.h>

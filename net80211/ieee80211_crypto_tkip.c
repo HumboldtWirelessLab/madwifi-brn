@@ -28,7 +28,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $Id: ieee80211_crypto_tkip.c 4125 2010-03-23 22:49:56Z proski $
+ * $Id: ieee80211_crypto_tkip.c 4134 2011-02-02 21:10:53Z proski $
  */
 
 /*
@@ -38,7 +38,7 @@
  * AP driver. The code is used with the consent of the author and
  * its license is included below.
  */
-#ifndef AUTOCONF_INCLUDED
+#if !defined(AUTOCONF_INCLUDED) && !defined(CONFIG_LOCALVERSION)
 #include <linux/config.h>
 #endif
 #include <linux/version.h>

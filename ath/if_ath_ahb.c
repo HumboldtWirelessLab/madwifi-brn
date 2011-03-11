@@ -2,7 +2,7 @@
  * Copyright (c) 2004 Atheros Communications, Inc.
  * All rights reserved
  *
- * $Id: if_ath_ahb.c 3902 2009-01-14 02:36:53Z proski $
+ * $Id: if_ath_ahb.c 4134 2011-02-02 21:10:53Z proski $
  */
 #include "opt_ah.h"
 
@@ -10,7 +10,7 @@
 #define	EXPORT_SYMTAB
 #endif
 
-#ifndef AUTOCONF_INCLUDED
+#if !defined(AUTOCONF_INCLUDED) && !defined(CONFIG_LOCALVERSION)
 #include <linux/config.h>
 #endif
 #include <linux/version.h>

@@ -34,7 +34,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $Id: if_ath_pci.c 4111 2010-01-18 14:18:05Z proski $
+ * $Id: if_ath_pci.c 4134 2011-02-02 21:10:53Z proski $
  */
 #include "opt_ah.h"
 
@@ -42,7 +42,7 @@
 #define	EXPORT_SYMTAB
 #endif
 
-#ifndef AUTOCONF_INCLUDED
+#if !defined(AUTOCONF_INCLUDED) && !defined(CONFIG_LOCALVERSION)
 #include <linux/config.h>
 #endif
 #include <linux/version.h>

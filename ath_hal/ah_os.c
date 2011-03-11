@@ -33,7 +33,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $Id: ah_os.c 4102 2010-01-09 08:34:37Z proski $
+ * $Id: ah_os.c 4134 2011-02-02 21:10:53Z proski $
  */
 #include "opt_ah.h"
 
@@ -44,9 +44,9 @@
 /* Don't use virtualized timer in Linux 2.6.20+ */
 #define USE_REAL_TIME_DELAY
 
-#ifndef AUTOCONF_INCLUDED
+#if !defined(AUTOCONF_INCLUDED) && !defined(CONFIG_LOCALVERSION)
 #include <linux/config.h>
-#endif /* AUTOCONF_INCLUDED */
+#endif
 #include <linux/version.h>
 #include <linux/module.h>
 #include <linux/init.h>

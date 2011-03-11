@@ -28,7 +28,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $Id: test_ccmp.c 4127 2010-03-23 23:10:08Z proski $
+ * $Id: test_ccmp.c 4134 2011-02-02 21:10:53Z proski $
  */
 
 /*
@@ -44,7 +44,7 @@
  * you want; e.g. insmod ccmp_test tests=7 will run only test MPDUs
  * 1, 2, and 3.
  */
-#ifndef AUTOCONF_INCLUDED
+#if !defined(AUTOCONF_INCLUDED) && !defined(CONFIG_LOCALVERSION)
 #include <linux/config.h>
 #endif
 #include <linux/version.h>

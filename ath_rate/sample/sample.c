@@ -33,7 +33,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $Id: sample.c 4097 2009-09-19 04:03:53Z proski $
+ * $Id: sample.c 4134 2011-02-02 21:10:53Z proski $
  */
 
 
@@ -41,7 +41,7 @@
  * John Bicket's SampleRate control algorithm.
  */
 
-#ifndef AUTOCONF_INCLUDED
+#if !defined(AUTOCONF_INCLUDED) && !defined(CONFIG_LOCALVERSION)
 #include <linux/config.h>
 #endif
 #include <linux/version.h>

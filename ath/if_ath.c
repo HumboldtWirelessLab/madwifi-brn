@@ -33,7 +33,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $Id: if_ath.c 4130 2010-06-19 18:24:35Z proski $
+ * $Id: if_ath.c 4134 2011-02-02 21:10:53Z proski $
  */
 
 /*
@@ -45,7 +45,7 @@
 #include "if_ath_debug.h"
 #include "opt_ah.h"
 
-#ifndef AUTOCONF_INCLUDED
+#if !defined(AUTOCONF_INCLUDED) && !defined(CONFIG_LOCALVERSION)
 #include <linux/config.h>
 #endif
 #include <linux/version.h>

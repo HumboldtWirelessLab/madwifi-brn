@@ -34,7 +34,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $Id: amrr.c 4102 2010-01-09 08:34:37Z proski $
+ * $Id: amrr.c 4134 2011-02-02 21:10:53Z proski $
  */
 
 /*
@@ -43,7 +43,7 @@
  * "IEEE 802.11 Rate Adaptation: A Practical Approach" by
  *    Mathieu Lacage, Hossein Manshaei, Thierry Turletti
  */
-#ifndef AUTOCONF_INCLUDED
+#if !defined(AUTOCONF_INCLUDED) && !defined(CONFIG_LOCALVERSION)
 #include <linux/config.h>
 #endif
 #include <linux/version.h>

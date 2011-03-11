@@ -31,7 +31,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: if_media.c 3710 2008-06-06 20:32:29Z mentor $
+ * $Id: if_media.c 4134 2011-02-02 21:10:53Z proski $
  */
 
 /*
@@ -49,7 +49,7 @@
 #define	EXPORT_SYMTAB
 #endif
 
-#ifndef AUTOCONF_INCLUDED
+#if !defined(AUTOCONF_INCLUDED) && !defined(CONFIG_LOCALVERSION)
 #include <linux/config.h>
 #endif
 #include <linux/version.h>
