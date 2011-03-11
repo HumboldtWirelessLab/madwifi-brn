@@ -340,8 +340,9 @@ ieee80211_handle_read_config(struct sk_buff *skb, struct net_device *dev)
     ath2_h->anno.rx_anno.aifs[i] = wme->wme_wmeBssChanParams.cap_wmeParams[i].wmep_aifsn;
   }
 
+#ifdef UPDATECCA
   ath2_h->anno.rx_anno.cca_threshold = sc->sc_cca_thresh;
-  
+#endif
   /*Flags*/
   ath2_h->flags &= 0xF0000000 ;
 #ifdef COLORADO_CCA
