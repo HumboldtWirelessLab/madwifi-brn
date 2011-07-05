@@ -284,7 +284,7 @@ ieee80211_monitor_encap(struct ieee80211vap *vap, struct sk_buff *skb)
 			ph->try[0] = 1;
 		break;
 	}
-#ifdef AHT2HEADER
+#ifdef ATH2HEADER
 	case ARPHRD_IEEE80211_ATHDESC2:
 #endif
 	case ARPHRD_IEEE80211_ATHDESC: {
@@ -301,7 +301,7 @@ ieee80211_monitor_encap(struct ieee80211vap *vap, struct sk_buff *skb)
 			ph->try[2] = desc->xmit_tries2;
 			ph->try[3] = desc->xmit_tries3;
 
-#ifdef AHT2HEADER			
+#ifdef ATH2HEADER			
 #ifdef EXTATHFLAGS
 #ifdef EXTATHFLAGSDEBUG
 			printk("PhyFlag in Monitor: %d\n",ph->flags);
@@ -371,7 +371,7 @@ ieee80211_input_monitor(struct ieee80211com *ic, struct sk_buff *skb,
 	int noise = 0, antenna = 0, ieeerate = 0;
 	u_int32_t rssi = 0;
 	u_int8_t pkttype = 0;
-#ifdef AHT2HEADER
+#ifdef ATH2HEADER
 	u_int8_t *skb1_data;
 	struct ath2_header ath2_h;
 #endif
@@ -635,7 +635,7 @@ ieee80211_input_monitor(struct ieee80211com *ic, struct sk_buff *skb,
 					ds, ATHDESC_HEADER_SIZE);
 			break;
 		}
-#ifdef AHT2HEADER
+#ifdef ATH2HEADER
 		case ARPHRD_IEEE80211_ATHDESC2: {
 			if (skb_headroom(skb1) < ATHDESC2_HEADER_SIZE) {
 				printk("%s:%d %s\n", __FILE__, 

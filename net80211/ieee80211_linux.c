@@ -882,7 +882,7 @@ IEEE80211_SYSCTL_DECL(ieee80211_sysctl_dev_type, ctl, write, filp, buffer,
 			if (val == ARPHRD_IEEE80211_RADIOTAP ||
 			    val == ARPHRD_IEEE80211 ||
 			    val == ARPHRD_IEEE80211_PRISM ||
-#ifdef AHT2HEADER
+#ifdef ATH2HEADER
 			    val == ARPHRD_IEEE80211_ATHDESC2 ||
 #endif
 			    val == ARPHRD_IEEE80211_ATHDESC) {

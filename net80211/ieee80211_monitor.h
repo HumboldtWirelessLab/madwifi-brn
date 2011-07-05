@@ -43,7 +43,7 @@
 
 #define ATHDESC_HEADER_SIZE	32
 
-#ifdef AHT2HEADER
+#ifdef ATH2HEADER
 #include <net80211/ieee80211_monitor_ath2.h>
 #endif
 
