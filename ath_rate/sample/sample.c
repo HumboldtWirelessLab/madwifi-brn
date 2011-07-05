@@ -33,7 +33,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $Id: sample.c 4134 2011-02-02 21:10:53Z proski $
+ * $Id: sample.c 4141 2011-05-11 15:17:22Z proski $
  */
 
 
@@ -124,6 +124,7 @@ static char *dev_info = "ath_rate_sample";
 static int ath_smoothing_rate = 95;	/* ewma percentage (out of 100) */
 static int ath_sample_rate = 10;		/* use x% of transmission time 
 					 * sending at a different bit-rate */
+static int packet_size_bins[NUM_PACKET_SIZE_BINS] = {250, 1600, 3000};
 
 static void ath_rate_ctl_reset(struct ath_softc *, struct ieee80211_node *);
 
@@ -225,7 +226,6 @@ calc_usecs_unicast_packet(struct ath_softc *sc, int length,
 		rts = 1;
 
 	if (rts || cts) {
-		int ctsrate;
 		int ctsduration = 0;
 
 		if (!rt->info[cix].rateKbps) {
@@ -237,7 +237,6 @@ calc_usecs_unicast_packet(struct ath_softc *sc, int length,
 		}
 
 
-		ctsrate = rt->info[cix].rateCode | rt->info[cix].shortPreamble;
 		if (rts)		/* SIFS + CTS */
 			ctsduration += rt->info[cix].spAckDuration;
 

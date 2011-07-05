@@ -29,7 +29,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $Id: ieee80211_power.c 4134 2011-02-02 21:10:53Z proski $
+ * $Id: ieee80211_power.c 4137 2011-05-03 21:56:02Z proski $
  */
 #ifndef EXPORT_SYMTAB
 #define	EXPORT_SYMTAB
@@ -304,10 +304,9 @@ ieee80211_node_pwrsave(struct ieee80211_node *ni, int enable)
 
 		for (;;) {
 			struct sk_buff *skb;
-			int qlen;
 
 			IEEE80211_NODE_SAVEQ_LOCK_IRQ(ni);
-			IEEE80211_NODE_SAVEQ_DEQUEUE(ni, skb, qlen);
+			IEEE80211_NODE_SAVEQ_DEQUEUE(ni, skb);
 			IEEE80211_NODE_SAVEQ_UNLOCK_IRQ(ni);
 			if (skb == NULL)
 				break;

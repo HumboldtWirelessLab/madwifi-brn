@@ -29,7 +29,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $Id: ieee80211_beacon.c 4134 2011-02-02 21:10:53Z proski $
+ * $Id: ieee80211_beacon.c 4137 2011-05-03 21:56:02Z proski $
  */
 #ifndef EXPORT_SYMTAB
 #define	EXPORT_SYMTAB
@@ -197,7 +197,6 @@ ieee80211_beacon_alloc(struct ieee80211_node *ni,
 	struct sk_buff *skb;
 	int pktlen;
 	u_int8_t *frm;
-	struct ieee80211_rateset *rs;
 
 	/*
 	 * beacon frame format
@@ -220,7 +219,6 @@ ieee80211_beacon_alloc(struct ieee80211_node *ni,
 	 * XXX Vendor-specific OIDs (e.g. Atheros)
 	 * NB: we allocate the max space required for the TIM bitmap.
 	 */
-	rs = &ni->ni_rates;
 	pktlen = 8					/* time stamp */
 		 + sizeof(u_int16_t)			/* beacon interval */
 		 + sizeof(u_int16_t)			/* capability information */
