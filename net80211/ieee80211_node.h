@@ -29,7 +29,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $Id: ieee80211_node.h 4125 2010-03-23 22:49:56Z proski $
+ * $Id: ieee80211_node.h 4166 2011-08-26 15:31:01Z proski $
  */
 #ifndef _NET80211_IEEE80211_NODE_H_
 #define _NET80211_IEEE80211_NODE_H_
@@ -279,7 +279,7 @@ struct ieee80211_node *ieee80211_find_txnode(struct ieee80211vap *,
 /* Reference counting only needs to be locked out against the transitions,
  * 0->1 and 1->0 (i.e., when we do not own the reference we are getting).
  * This only happens when finding the a node reference from the node table,
- * which is locked seperately. Thus, we do not need to lock the follwoing 
+ * which is locked separately. Thus, we do not need to lock the following
  * functions. 
  * Increment the reference counter for ieee80211_node *. */
 struct ieee80211_node *ieee80211_ref_node(struct ieee80211_node *ni);

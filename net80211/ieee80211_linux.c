@@ -24,7 +24,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $Id: ieee80211_linux.c 4134 2011-02-02 21:10:53Z proski $
+ * $Id: ieee80211_linux.c 4166 2011-08-26 15:31:01Z proski $
  */
 #ifndef EXPORT_SYMTAB
 #define	EXPORT_SYMTAB
@@ -99,7 +99,7 @@ static struct attribute *ieee80211_sysfs_attrs[] = {
 };
 
 static struct attribute_group ieee80211_attr_grp = {
-	.name	= NULL,	/* No seperate (sub-)directory */
+	.name	= NULL,	/* No separate (sub-)directory */
 	.attrs	= ieee80211_sysfs_attrs
 };
 #endif /* LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,17) */
@@ -146,11 +146,7 @@ ieee80211_getmgtframe(u_int8_t **frm, u_int pktlen)
 	u_int len;
 
 	len = roundup(sizeof(struct ieee80211_frame) + pktlen, 4);
-#ifdef IEEE80211_DEBUG_REFCNT
-	skb = ieee80211_dev_alloc_skb_debug(len + align - 1, func, line);
-#else
 	skb = ieee80211_dev_alloc_skb(len + align - 1);
-#endif
 	if (skb != NULL) {
 		u_int off = ((unsigned long) skb->data) % align;
 		if (off != 0)
@@ -1029,7 +1025,7 @@ static const ctl_table ieee80211_sysctl_template[] = {
 	  .mode		= 0444,
 	  .proc_handler	= proc_dostring
 	},
-	{ 0 }
+	{ }
 };
 
 void

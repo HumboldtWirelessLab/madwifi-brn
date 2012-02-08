@@ -34,7 +34,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $Id: if_ath_pci.c 4134 2011-02-02 21:10:53Z proski $
+ * $Id: if_ath_pci.c 4161 2011-08-03 05:43:55Z proski $
  */
 #include "opt_ah.h"
 
@@ -119,7 +119,7 @@ static struct pci_device_id ath_pci_id_table[] __devinitdata = {
 #endif
 	{ 0x168c, 0x002a, PCI_ANY_ID, PCI_ANY_ID }, /* AR9280 PCI Express */
 	{ 0x168c, 0x9013, PCI_ANY_ID, PCI_ANY_ID }, /* sonicwall */
-	{ 0 }
+	{ }
 };
 
 static u16 ath_devidmap[][2] = {

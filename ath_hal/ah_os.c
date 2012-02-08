@@ -33,7 +33,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $Id: ah_os.c 4134 2011-02-02 21:10:53Z proski $
+ * $Id: ah_os.c 4161 2011-08-03 05:43:55Z proski $
  */
 #include "opt_ah.h"
 
@@ -1025,28 +1025,28 @@ static ctl_table ath_hal_sysctls[] = {
 	  .proc_handler	= proc_dointvec
 	},
 #endif /* AH_DEBUG_ALQ */
-	{ 0 }
+	{ }
 };
 static ctl_table ath_hal_table[] = {
 	{ ATH_INIT_CTL_NAME(CTL_AUTO)
 	  .procname	= "hal",
 	  .mode		= 0555,
 	  .child	= ath_hal_sysctls
-	}, { 0 }
+	}, { }
 };
 static ctl_table ath_ath_table[] = {
 	{ ATH_INIT_CTL_NAME(DEV_ATH)
 	  .procname	= "ath",
 	  .mode		= 0555,
 	  .child	= ath_hal_table
-	}, { 0 }
+	}, { }
 };
 static ctl_table ath_root_table[] = {
 	{ ATH_INIT_CTL_NAME(CTL_DEV)
 	  .procname	= "dev",
 	  .mode		= 0555,
 	  .child	= ath_ath_table
-	}, { 0 }
+	}, { }
 };
 static struct ctl_table_header *ath_hal_sysctl_header;
 

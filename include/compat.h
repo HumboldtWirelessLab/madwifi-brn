@@ -33,7 +33,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $Id: compat.h 4131 2010-06-19 18:26:01Z proski $
+ * $Id: compat.h 4168 2011-10-07 21:14:47Z proski $
  */
 #ifndef _ATH_COMPAT_H_
 #define _ATH_COMPAT_H_
@@ -78,8 +78,10 @@
 #endif
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,34)
+#ifndef netdev_for_each_mc_addr
 #define netdev_for_each_mc_addr(mclist, dev) \
-	for (mclist = dev->mc_list; mclist; mclist = mclist->next)
+	for (mclist = (dev)->mc_list; mclist; mclist = mclist->next)
+#endif
 #endif
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,35)
@@ -92,7 +94,7 @@
 
 /*
  * BSD/Linux compatibility shims.  These are used mainly to
- * minimize differences when importing necesary BSD code.
+ * minimize differences when importing necessary BSD code.
  */
 #define	NBBY	8			/* number of bits/byte */
 

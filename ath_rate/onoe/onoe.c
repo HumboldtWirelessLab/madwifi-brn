@@ -33,7 +33,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $Id: onoe.c 4134 2011-02-02 21:10:53Z proski $
+ * $Id: onoe.c 4161 2011-08-03 05:43:55Z proski $
  */
 
 /*
@@ -474,28 +474,28 @@ static ctl_table ath_rate_static_sysctls[] = {
 	  .maxlen	= sizeof(ath_rate_raise_threshold),
 	  .proc_handler	= proc_dointvec
 	},
-	{ 0 }
+	{ }
 };
 static ctl_table ath_rate_table[] = {
 	{ ATH_INIT_CTL_NAME(CTL_AUTO)
 	  .procname	= "rate_onoe",
 	  .mode		= 0555,
 	  .child	= ath_rate_static_sysctls
-	}, { 0 }
+	}, { }
 };
 static ctl_table ath_ath_table[] = {
 	{ ATH_INIT_CTL_NAME(DEV_ATH)
 	  .procname	= "ath",
 	  .mode		= 0555,
 	  .child	= ath_rate_table
-	}, { 0 }
+	}, { }
 };
 static ctl_table ath_root_table[] = {
 	{ ATH_INIT_CTL_NAME(CTL_DEV)
 	  .procname	= "dev",
 	  .mode		= 0555,
 	  .child	= ath_ath_table
-	}, { 0 }
+	}, { }
 };
 static struct ctl_table_header *ath_sysctl_header;
 

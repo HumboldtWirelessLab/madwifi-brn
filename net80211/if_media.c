@@ -31,7 +31,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: if_media.c 4134 2011-02-02 21:10:53Z proski $
+ * $Id: if_media.c 4152 2011-08-03 00:18:57Z proski $
  */
 
 /*
@@ -292,8 +292,8 @@ ifmedia_ioctl(struct net_device *dev, struct ifreq *ifr,
 			return (-EINVAL);
 
 		if (ifmr->ifm_count != 0) {
-			kptr = (int *)kmalloc(ifmr->ifm_count * sizeof(int),
-			    GFP_KERNEL);
+			kptr = kmalloc(ifmr->ifm_count * sizeof(int),
+				       GFP_KERNEL);
 
 			if (kptr == NULL)
 				return (-ENOMEM);

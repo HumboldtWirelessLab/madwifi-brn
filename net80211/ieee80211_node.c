@@ -29,7 +29,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $Id: ieee80211_node.c 4134 2011-02-02 21:10:53Z proski $
+ * $Id: ieee80211_node.c 4166 2011-08-26 15:31:01Z proski $
  */
 #ifndef EXPORT_SYMTAB
 #define	EXPORT_SYMTAB
@@ -374,7 +374,7 @@ ieee80211_reset_bss(struct ieee80211vap *vap)
 	IEEE80211_DPRINTF(vap, IEEE80211_MSG_ASSOC,
 			  "%s: ni:%p allocated for " MAC_FMT "\n",
 			  __func__, ni, MAC_ADDR(vap->iv_myaddr));
-	KASSERT(ni != NULL, ("unable to setup inital BSS node"));
+	KASSERT(ni != NULL, ("unable to setup initial BSS node"));
 
 	vap->iv_bss = PASS_NODE(ni);
 	KASSERT((atomic_read(&vap->iv_bss->ni_refcnt) == 2), 
@@ -702,7 +702,7 @@ ieee80211_sta_join(struct ieee80211vap *vap,
 		if (ni == NULL) {
 			IEEE80211_DPRINTF(vap, IEEE80211_MSG_NODE,
 			"%s: Unable to allocate node for BSS: " MAC_FMT "\n", __func__,
-			MAC_ADDR(ni->ni_macaddr));
+			MAC_ADDR(se->se_macaddr));
 			return 0;
 		}
 	}

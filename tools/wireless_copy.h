@@ -3,7 +3,7 @@
  * make this easier to include into user space programs.
  * Jouni Malinen, 2005-03-12.
  *
- * $Id: wireless_copy.h 3710 2008-06-06 20:32:29Z mentor $
+ * $Id: wireless_copy.h 4166 2011-08-26 15:31:01Z proski $
  */
 
 
@@ -1065,7 +1065,7 @@ struct	iw_priv_args
  */
 struct iw_event
 {
-	__u16		len;			/* Real lenght of this stuff */
+	__u16		len;			/* Real length of this stuff */
 	__u16		cmd;			/* Wireless IOCTL */
 	union iwreq_data	u;		/* IOCTL fixed payload */
 };

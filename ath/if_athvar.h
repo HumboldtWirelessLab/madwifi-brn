@@ -33,7 +33,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $Id: if_athvar.h 4118 2010-01-31 07:01:47Z proski $
+ * $Id: if_athvar.h 4170 2011-10-07 21:30:59Z proski $
  */
 
 /*
@@ -127,12 +127,6 @@ typedef void irqreturn_t;
 
 #ifndef SET_NETDEV_DEV
 #define	SET_NETDEV_DEV(ndev, pdev)
-#endif
-
-#ifdef to_net_dev
-#define ATH_GET_NETDEV_DEV(ndev)	((ndev)->dev.parent)
-#else
-#define ATH_GET_NETDEV_DEV(ndev)	((ndev)->class_dev.dev)
 #endif
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,4,23)
@@ -705,7 +699,7 @@ struct ath_softc {
 	unsigned int	sc_useintmit:1;		/* Interference mitigation enabled? */
 	unsigned int	sc_txcont:1;		/* Is continuous transmit enabled? */
 	unsigned int	sc_dfs_testmode:1; 	/* IF this is on, AP vaps will stay in
-						 * 'channel availability check' indefinately,
+						 * 'channel availability check' indefinitely,
 						 * reporting radar and interference detections. */
 	unsigned int	sc_dmasize_stomp:1;	/* Whether to stomp on DMA size. */
 

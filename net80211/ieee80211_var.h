@@ -29,7 +29,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $Id: ieee80211_var.h 4076 2009-07-11 17:20:58Z benoit $
+ * $Id: ieee80211_var.h 4166 2011-08-26 15:31:01Z proski $
  */
 
 #ifndef _NET80211_IEEE80211_VAR_H_
@@ -76,7 +76,7 @@
  * This is halfway between the 10@100ms default from prior hardcoded setting for
  * software beacon miss timers, and the 7@100ms default from prior hardcoded 
  * timer value for hardware beacon miss timer.
- * Based upon emperical evidence and practices of commercial vendors, I believe
+ * Based upon empirical evidence and practices of commercial vendors, I believe
  * this should really be 2500ms by default. */
 #define IEEE80211_BMISSTHRESH_DEFAULT_MS 850
 

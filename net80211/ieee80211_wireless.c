@@ -33,7 +33,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $Id: ieee80211_wireless.c 4134 2011-02-02 21:10:53Z proski $
+ * $Id: ieee80211_wireless.c 4166 2011-08-26 15:31:01Z proski $
  */
 
 /*
@@ -987,7 +987,7 @@ ieee80211_ioctl_giwrange(struct net_device *dev, struct iw_request_info *info,
 	}
 
 	/* Atheros' RSSI value is SNR: 0 -> 60 for old chipsets. Range 
-	 * for newer chipsets is unknown. This value is arbitarily chosen 
+	 * for newer chipsets is unknown. This value is arbitrarily chosen
 	 * to give an indication that full rate will be available and to be 
 	 * a practicable maximum. */
 	range->max_qual.qual  = 70;
@@ -2190,7 +2190,7 @@ ieee80211_setupxr(struct ieee80211vap *vap)
 			strcat(name, "-xr");
 			/*
 			 * Create a new XR vap. If the normal VAP is already up,
-			 * bring up the XR vap aswell.
+			 * bring up the XR vap as well.
 			 */
 			vap->iv_ath_cap &= ~IEEE80211_ATHC_TURBOP; /* turn off turbo */
 			ieee80211_scan_flush(ic);	/* NB: could optimize */

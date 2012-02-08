@@ -29,7 +29,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $Id: ieee80211.c 4134 2011-02-02 21:10:53Z proski $
+ * $Id: ieee80211.c 4175 2011-11-22 17:22:34Z proski $
  */
 #ifndef EXPORT_SYMTAB
 #define	EXPORT_SYMTAB
@@ -411,7 +411,11 @@ static const struct net_device_ops ieee80211_netdev_ops = {
 	.ndo_open		= ieee80211_open,
 	.ndo_stop		= ieee80211_stop,
 	.ndo_start_xmit		= ieee80211_hardstart,
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,2,0)
+	.ndo_set_rx_mode	= ieee80211_set_multicast_list,
+#else
 	.ndo_set_multicast_list = ieee80211_set_multicast_list,
+#endif
 	.ndo_change_mtu 	= ieee80211_change_mtu,
 	.ndo_do_ioctl		= ieee80211_ioctl,
 #if IEEE80211_VLAN_TAG_USED
@@ -1806,10 +1810,14 @@ ieee80211_set_multicast_list(struct net_device *dev)
 	IEEE80211_UNLOCK_IRQ(ic);
 
 	/* XXX: Merge multicast list into parent device */
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,29)
-	parent->set_multicast_list(ic->ic_dev);
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,2,0)
+	parent->netdev_ops->ndo_set_rx_mode(ic->ic_dev);
 #else
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,29)
 	parent->netdev_ops->ndo_set_multicast_list(ic->ic_dev);
+#else
+	parent->set_multicast_list(ic->ic_dev);
+#endif
 #endif
 }
 
@@ -1847,7 +1855,7 @@ ieee80211_build_countryie(struct ieee80211com *ic)
 	 * NB: this is not quite right, since we should have one of:
 	 *     'I': indoor only
 	 *     'O': outdoor only
-	 *     ' ': all enviroments
+	 *     ' ': all environments
 	 *  we currently can only provide 'I' or ' '.
 	 */
 	ic->ic_country_ie.country_str[2] = 'I';

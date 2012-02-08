@@ -24,7 +24,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $Id: ieee80211_linux.h 4137 2011-05-03 21:56:02Z proski $
+ * $Id: ieee80211_linux.h 4177 2012-01-30 19:55:03Z proski $
  */
 #ifndef _NET80211_IEEE80211_LINUX_H_
 #define _NET80211_IEEE80211_LINUX_H_
@@ -615,7 +615,8 @@ int ieee80211_proc_vcreate(struct ieee80211vap *, struct file_operations *,
 	       char *);
 void ieee80211_proc_cleanup(struct ieee80211vap *);
 
-#if defined(CONFIG_VLAN_8021Q) || defined(CONFIG_VLAN_8021Q_MODULE)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3,1,0) && \
+    (defined(CONFIG_VLAN_8021Q) || defined(CONFIG_VLAN_8021Q_MODULE))
 #define IEEE80211_VLAN_TAG_USED 1
 
 #ifndef VLAN_GROUP_ARRAY_PART_LEN
@@ -642,8 +643,11 @@ int ieee80211_ioctl_create_vap(struct ieee80211com *, struct ifreq *,
 	struct net_device *);
 struct ieee80211vap *ieee80211_create_vap(struct ieee80211com *, char *,
 	struct net_device *, int, int);
+
+#if IEEE80211_VLAN_TAG_USED
 void ieee80211_vlan_register(struct net_device *dev, struct vlan_group *grp);
 void ieee80211_vlan_add_vid(struct net_device *dev, unsigned short vid);
 void ieee80211_vlan_kill_vid(struct net_device *dev, unsigned short vid);
+#endif
 
 #endif /* _NET80211_IEEE80211_LINUX_H_ */

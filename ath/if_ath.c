@@ -33,7 +33,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $Id: if_ath.c 4137 2011-05-03 21:56:02Z proski $
+ * $Id: if_ath.c 4175 2011-11-22 17:22:34Z proski $
  */
 
 /*
@@ -563,7 +563,11 @@ static const struct net_device_ops ath_netdev_ops = {
 	.ndo_stop		= ath_stop,
 	.ndo_start_xmit		= ath_hardstart,
 	.ndo_tx_timeout 	= ath_tx_timeout,
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,2,0)
+	.ndo_set_rx_mode	= ath_mode_init,
+#else
 	.ndo_set_multicast_list = ath_mode_init,
+#endif
 	.ndo_do_ioctl		= ath_ioctl,
 	.ndo_get_stats		= ath_getstats,
 	.ndo_set_mac_address	= ath_set_mac_address,
@@ -1490,12 +1494,10 @@ ath_vap_create(struct ieee80211com *ic, const char *name,
 		/* If no default VAP debug flags are passed, allow a few to
 		 * transfer down from the driver to new VAPs so we can have load
 		 * time debugging for VAPs too. */
-		vap->iv_debug = 0 |
-			((sc->sc_debug & ATH_DEBUG_RATE) ? IEEE80211_MSG_XRATE  : 0) | 
-			((sc->sc_debug & ATH_DEBUG_XMIT) ? IEEE80211_MSG_OUTPUT : 0) | 
-			((sc->sc_debug & ATH_DEBUG_RECV) ? IEEE80211_MSG_INPUT  : 0) |
-			0
-			;
+		vap->iv_debug =
+			((sc->sc_debug & ATH_DEBUG_RATE) ? IEEE80211_MSG_XRATE  : 0) |
+			((sc->sc_debug & ATH_DEBUG_XMIT) ? IEEE80211_MSG_OUTPUT : 0) |
+			((sc->sc_debug & ATH_DEBUG_RECV) ? IEEE80211_MSG_INPUT  : 0);
 	}
 	ic->ic_debug = (sc->sc_default_ieee80211_debug & IEEE80211_MSG_IC);
 
@@ -1600,7 +1602,9 @@ ath_vap_create(struct ieee80211com *ic, const char *name,
 	}
 	if (sc->sc_hastsfadd)
 		ath_hal_settsfadjust(sc->sc_ah, sc->sc_stagbeacons);
-	SET_NETDEV_DEV(dev, ATH_GET_NETDEV_DEV(mdev));
+#ifdef ATH_PCI
+	SET_NETDEV_DEV(dev, &((struct pci_dev *)sc->sc_bdev)->dev);
+#endif
 	/* complete setup */
 	(void) ieee80211_vap_attach(vap,
 		ieee80211_media_change, ieee80211_media_status);
@@ -1913,8 +1917,8 @@ static HAL_BOOL ath_hw_reset(struct ath_softc *sc, HAL_OPMODE opmode,
 		return ret;
 
  	/* Do the same as in ath_getchannels() */
- 	ath_radar_correct_dfs_flags(sc, channel);
- 
+	ath_radar_correct_dfs_flags(sc, channel);
+
  	/* Restore CHANNEL_DFS_CLEAR and CHANNEL_INTERFERENCE flags */
 #define CHANNEL_DFS_FLAGS	(CHANNEL_DFS_CLEAR|CHANNEL_INTERFERENCE)
 	channel->privFlags = (channel->privFlags & ~CHANNEL_DFS_FLAGS) |
@@ -2791,7 +2795,7 @@ ath_bmiss_tasklet(TQUEUE_ARG data)
 	struct ath_softc *sc = netdev_priv(dev);
 
 	if (time_before(jiffies, sc->sc_ic.ic_bmiss_guard)) {
-		/* Beacon miss interrupt occured too short after last beacon
+		/* Beacon miss interrupt occurred too short after last beacon
 		 * timer configuration. Ignore it as it could be spurious. */
 		DPRINTF(sc, ATH_DEBUG_ANY, "Beacon miss ignored\n");
 	} else {
@@ -5462,10 +5466,12 @@ ath_beacon_generate(struct ath_softc *sc, struct ieee80211vap *vap, int *needmar
 	}
 #endif
 	avp = ATH_VAP(vap);
-	if (avp == NULL || avp->av_bcbuf == NULL) {
-		DPRINTF(sc, ATH_DEBUG_ANY, "Returning NULL, one of these "
-				"is NULL {avp=%p av_bcbuf=%p}\n", 
-				avp, avp->av_bcbuf);
+	if (avp == NULL) {
+		DPRINTF(sc, ATH_DEBUG_ANY, "%s: avp is NULL\n", __func__);
+		return NULL;
+	}
+	if (avp->av_bcbuf == NULL) {
+		DPRINTF(sc, ATH_DEBUG_ANY, "%s: av_bcbuf is NULL\n", __func__);
 		return NULL;
 	}
 	bf = avp->av_bcbuf;
@@ -6480,7 +6486,7 @@ ath_node_move_data(const struct ieee80211_node *ni)
 						/* NB: last descriptor */
 						ds = prev->bf_desc;
 #endif
-						ts = &bf->bf_dsstatus.ds_txstat;
+						ts = &prev->bf_dsstatus.ds_txstat;
 						status = ath_hal_txprocdesc(
 								ah, ds, ts
 								);
@@ -6675,7 +6681,7 @@ ath_node_move_data(const struct ieee80211_node *ni)
 		DPRINTF(sc, ATH_DEBUG_XMIT_PROC, 
 				"moved %d buffers from XR to NORMAL\n"m count);
 	}
-#endif
+#endif	/* NOT_YET */
 	return 0;
 }
 #endif
@@ -11347,7 +11353,7 @@ ath_distance2timeout(struct ath_softc *sc, int distance)
 	 * being very careful or taking something into account that I can't
 	 * find in the specs.
 	 *
-	 * XXX: Update based on emperical evidence (potentially save 15us per
+	 * XXX: Update based on empirical evidence (potentially save 15us per
 	 * timeout). */
 	return ath_slottime2timeout(sc, ath_distance2slottime(sc, distance));
 }
@@ -12179,7 +12185,7 @@ static const ctl_table ath_sysctl_template[] = {
 	  .extra2	= (void *)ATH_CLEARQUEUE,
 	},
 #endif
-	{ 0 }
+	{ }
 };
 
 static void
@@ -12374,21 +12380,21 @@ static ctl_table ath_static_sysctls[] = {
 	  .maxlen	= sizeof(ath_xchanmode),
 	  .proc_handler	= proc_dointvec
 	},
-	{ 0 }
+	{ }
 };
 static ctl_table ath_ath_table[] = {
 	{ ATH_INIT_CTL_NAME(DEV_ATH)
 	  .procname	= "ath",
 	  .mode		= 0555,
 	  .child	= ath_static_sysctls
-	}, { 0 }
+	}, { }
 };
 static ctl_table ath_root_table[] = {
 	{ ATH_INIT_CTL_NAME(CTL_DEV)
 	  .procname	= "dev",
 	  .mode		= 0555,
 	  .child	= ath_ath_table
-	}, { 0 }
+	}, { }
 };
 static struct ctl_table_header *ath_sysctl_header;
 
@@ -13522,7 +13528,7 @@ ath_return_txbuf_locked(struct ath_softc *sc, struct ath_buf **bf)
 	atomic_dec(&sc->sc_txbuf_counter);
 #ifdef IEEE80211_DEBUG_REFCNT
 	DPRINTF(sc, ATH_DEBUG_TXBUF, 
-		"[TXBUF=%03d/%03d] returned txbuf %p.\n", 
+		"[TXBUF=%03d/%03d] returned txbuf.\n", 
 		ath_get_buffer_count(sc), ATH_TXBUF);
 #endif /* #ifdef IEEE80211_DEBUG_REFCNT */
 	if (netif_queue_stopped(sc->sc_dev) && 
