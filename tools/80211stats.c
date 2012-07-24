@@ -33,7 +33,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $Id: 80211stats.c 3710 2008-06-06 20:32:29Z mentor $
+ * $Id: 80211stats.c 4179 2012-05-01 19:52:26Z proski $
  */
 
 /*
@@ -284,7 +284,7 @@ main(int argc, char *argv[])
 		/* no args, just show global stats */
 		ifr.ifr_data = (caddr_t) &stats;
 		if (ioctl(s, SIOCG80211STATS, &ifr) < 0)
-			err(1, ifr.ifr_name);
+			err(1, "%s", ifr.ifr_name);
 		printstats(stdout, &stats);
 		return 0;
 	}

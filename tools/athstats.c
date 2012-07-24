@@ -33,7 +33,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $Id: athstats.c 3978 2009-04-07 01:26:53Z proski $
+ * $Id: athstats.c 4179 2012-05-01 19:52:26Z proski $
  */
 
 /*
@@ -285,9 +285,9 @@ main(int argc, char *argv[])
 		if (line != 0) {
 			ifr.ifr_data = (caddr_t) &cur;
 			if (ioctl(s, SIOCGATHSTATS, &ifr) < 0)
-				err(1, ifr.ifr_name);
+				err(1, "%s", ifr.ifr_name);
 			if (!getifstats(ifr.ifr_name, &icur, &ocur))
-				err(1, ifr.ifr_name);
+				err(1, "%s", ifr.ifr_name);
 			printf("%8lu %8lu %7u %7u %7u %6u %6u %6u %7u %4u %3uM\n",
 				(icur - itot) -
 					(cur.ast_rx_mgt - total.ast_rx_mgt),
@@ -307,9 +307,9 @@ main(int argc, char *argv[])
 		} else {
 			ifr.ifr_data = (caddr_t) &total;
 			if (ioctl(s, SIOCGATHSTATS, &ifr) < 0)
-				err(1, ifr.ifr_name);
+				err(1, "%s", ifr.ifr_name);
 			if (!getifstats(ifr.ifr_name, &itot, &otot))
-				err(1, ifr.ifr_name);
+				err(1, "%s", ifr.ifr_name);
 			printf("%8lu %8lu %7u %7u %7u %6u %6u %6u %7u %4u %3uM\n",
 				itot - total.ast_rx_mgt,
 				otot,
@@ -344,7 +344,7 @@ main(int argc, char *argv[])
 
 		ifr.ifr_data = (caddr_t) &stats;
 		if (ioctl(s, SIOCGATHSTATS, &ifr) < 0)
-			err(1, ifr.ifr_name);
+			err(1, "%s", ifr.ifr_name);
 		printstats(stdout, &stats);
 	}
 	return 0;
