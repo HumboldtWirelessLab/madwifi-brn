@@ -1730,6 +1730,7 @@ ar5211GetScaledPower(uint16_t channel, uint16_t pcdacValue, const PCDACS_EEPROM 
 		&lrPcdac, &urPcdac);
 
 	/* get the power index for the pcdac value */
+	lPwr = uPwr = 0; //avoid gcc warnings
 	ar5211FindValueInList(lFreq, llPcdac, pSrcStruct, &lPwr);
 	ar5211FindValueInList(lFreq, ulPcdac, pSrcStruct, &uPwr);
 	lScaledPwr = ar5211GetInterpolatedValue(pcdacValue,

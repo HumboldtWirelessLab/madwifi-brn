@@ -772,11 +772,16 @@ static void
 list_keys(const char *ifname)
 {
 	char cmd[256];
+	int res = 0;
+	
 	puts("[list_keys not implemented (yet). Spawning iwlist...]");
 	strcpy(cmd, "iwlist ");
 	strcat(cmd, ifname);
 	strcat(cmd, " key");
-	system(cmd);
+	res = system(cmd);
+	if ( res != 0 ) {
+	  errx(1, "unable to get key list");
+	}
 }
 
 #define	IEEE80211_C_BITS \
@@ -889,10 +894,14 @@ ieee80211_status(const char *ifname)
 {
 	/* XXX fill in */
 	char cmd[256];
+	int res = 0;
 	puts("[status not implemented (yet). Spawning iwconfig...]");
 	strcpy(cmd, "iwconfig ");
 	strcat(cmd, ifname);
-	system(cmd);
+	res = system(cmd);
+	if ( res != 0 ) {
+	  errx(1, "unable to get ieee80211 status");
+	}
 }
 
 static int
