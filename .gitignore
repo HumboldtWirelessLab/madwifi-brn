@@ -10,3 +10,13 @@ ath_hal/i386-elf.bin
 Module.symvers
 *modules.order
 svnversion.h
+tools/80211debug
+tools/80211stats
+tools/ath_info/ath_info
+tools/athchans
+tools/athctrl
+tools/athdebug
+tools/athkey
+tools/athstats
+tools/wlanconfig
+tools/wpakey
