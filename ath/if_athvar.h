@@ -882,8 +882,8 @@ struct ath_softc {
       struct ath_cycle_counters cc_survey;
       spinlock_t cc_lock;
 
-      u_int32_t cc_pkt_counter;
-      u_int32_t cc_pkt_update_threshold;
+      u_int32_t cc_pkt_counter;         //used only if update is triggered by packet rx/tx (see updatemode)
+      u_int32_t cc_pkt_update_threshold;//used only if update is triggered by packet rx/tx (see updatemode)
       u_int8_t cc_update_mode;
 
       u_int8_t cc_anno_mode;
@@ -906,7 +906,12 @@ struct ath_softc {
       u_int32_t ieee80211_tx_packets; //inc in ieee80211_hardstart (ieee80211_output.c)
       u_int32_t ieee80211_rx_packets; //inc in ieee80211_input_monitor (ieee80211_monitor.c)
 #endif
-
+#ifdef CHANNEL_UTILITY
+#ifdef BRN_REGMON
+      struct timer_list perf_reg_timer;
+      u_int32_t  perf_reg_interval;
+#endif
+#endif
 };
 
 typedef void (*ath_callback) (struct ath_softc *);

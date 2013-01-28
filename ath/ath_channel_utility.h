@@ -13,13 +13,14 @@
 #define CC_ANNO_MODE_DEFAULT  CC_ANNO_MODE_RX_BUSY
 #define CC_ANNO_MODE_MAX      CC_ANNO_MODE_TX_FRAME
 
-#define CC_UPDATE_MODE_RX         1
-#define CC_UPDATE_MODE_TXFEEDBACK 2
-#define CC_UPDATE_MODE_OPERATION  4
-#define CC_UPDATE_MODE_CALL       8
-#define CC_UPDATE_MODE_DEFAULT    CC_UPDATE_MODE_CALL
+#define CC_UPDATE_MODE_RX                 1
+#define CC_UPDATE_MODE_TXFEEDBACK         2
+#define CC_UPDATE_MODE_OPERATION          4
+#define CC_UPDATE_MODE_CALL       	  8 /* procfs */
+#define CC_UPDATE_MODE_KERNELTIMER       16
+#define CC_UPDATE_MODE_DEFAULT           CC_UPDATE_MODE_CALL
 
-#define CC_UPDATE_MODE_MASK       15
+#define CC_UPDATE_MODE_MASK              31
 
 
 struct ath_cycle_counters {

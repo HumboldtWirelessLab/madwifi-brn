@@ -135,6 +135,11 @@ uint8_t get_channel_utility_rx(struct ath_softc *sc);
 uint8_t get_channel_utility_tx(struct ath_softc *sc);
 
 void ath_hw_cycle_counters_update(struct ath_softc *sc);
+
+#ifdef BRN_REGMON
+void regmon_timer_func(unsigned long softc_p);
+#endif
+
 #endif
 
 enum {
@@ -637,7 +642,20 @@ ath_attach(u_int16_t devid, struct net_device *dev, HAL_BUS_TAG tag)
 #ifdef RXTX_PACKET_COUNT 
         sc->rx_packets = sc->tx_packets = sc->feedback_packets = sc->ieee80211_tx_packets = sc->ieee80211_rx_packets = 0;
 #endif
- 
+#ifdef CHANNEL_UTILITY
+#ifdef BRN_REGMON
+	sc->perf_reg_interval = 100;
+
+	init_timer(&(sc->perf_reg_timer));	
+	sc->perf_reg_timer.function = regmon_timer_func;
+	sc->perf_reg_timer.expires  = jiffies + sc->perf_reg_interval;/* set 1st countdown */
+	sc->perf_reg_timer.data     = (unsigned long)sc;
+
+        if (sc->cc_update_mode == CC_UPDATE_MODE_KERNELTIMER) {
+	    add_timer(&(sc->perf_reg_timer));                            /* start timer */
+	}
+#endif
+#endif 
 	atomic_set(&sc->sc_txbuf_counter, 0);
 
 	ATH_INIT_TQUEUE(&sc->sc_rxtq,		ath_rx_tasklet,		dev);
@@ -11465,7 +11483,12 @@ ATH_SYSCTL_DECL(ath_sysctl_halparam, ctl, write, filp, buffer, lenp, ppos)
     HAL_TXQ_INFO qi;
 #endif
 #endif
-  u_int val;
+#ifdef CHANNEL_UTILITY
+#ifdef BRN_REGMON 
+        u_int32_t old_update_mode;
+#endif 
+#endif				
+        u_int val;
 	u_int tab_3_val[3];
 	int ret = 0;
 
@@ -11741,7 +11764,18 @@ ATH_SYSCTL_DECL(ath_sysctl_halparam, ctl, write, filp, buffer, lenp, ppos)
 				sc->cc_pkt_update_threshold = val;
 				break;
 			case ATH_CHANNEL_UTILITY_UPDATE_MODE:
+#ifdef BRN_REGMON
+				old_update_mode = sc->cc_update_mode;
+#endif
 				sc->cc_update_mode = val & CC_UPDATE_MODE_MASK;
+#ifdef BRN_REGMON
+				if ( (sc->cc_update_mode == CC_UPDATE_MODE_KERNELTIMER) &&
+				     (old_update_mode != CC_UPDATE_MODE_KERNELTIMER) ) {
+
+				     sc->perf_reg_timer.expires  = jiffies + sc->perf_reg_interval;/* set 1st countdown */
+				     add_timer(&(sc->perf_reg_timer));                            /* start timer */
+				} 
+#endif
 				break;
 			case ATH_CHANNEL_UTILITY_ANNO_MODE:
 				if ( val > 0 && val <= CC_ANNO_MODE_MAX )
@@ -12755,6 +12789,24 @@ void ath_cycle_counters_reset(struct ath_softc *sc)
     memset(&(sc->cc_cum), 0, sizeof(struct ath_cycle_counters));
 }
 
+#ifdef BRN_REGMON
+/* increments the global counter and sets a new timer */
+void regmon_timer_func(unsigned long softc_p)
+{
+  struct ath_softc *sc = (struct ath_softc *)softc_p;
+
+  ath_hw_cycle_counters_update(sc);
+
+  printk("jiffies=%lu\n", jiffies);
+
+  /* set new timer */
+  sc->perf_reg_timer.expires = jiffies + sc->perf_reg_interval;
+  
+  if (sc->cc_update_mode == CC_UPDATE_MODE_KERNELTIMER) {
+    add_timer(&(sc->perf_reg_timer));
+  }
+}					
+#endif			 
 #endif
 
 /*
