@@ -11320,6 +11320,11 @@ enum {
 	ATH_NUMTXQUEUE = 39,
 	ATH_CLEARQUEUE = 40,
 #endif
+#ifdef CHANNEL_UTILITY
+#ifdef BRN_REGMON
+	ATH_BRN_REGMON_INTERVAL = 41,
+#endif
+#endif
 };
 
 static inline int 
@@ -11793,6 +11798,13 @@ ATH_SYSCTL_DECL(ath_sysctl_halparam, ctl, write, filp, buffer, lenp, ppos)
 				ath_clear_hw_queues(sc);
 				break;
 #endif
+#ifdef CHANNEL_UTILITY
+#ifdef BRN_REGMON
+			case ATH_BRN_REGMON_INTERVAL:
+				sc->perf_reg_interval = val;
+				break;
+#endif
+#endif
 			default:
 				ret = -EINVAL;
 				break;
@@ -11949,6 +11961,14 @@ ATH_SYSCTL_DECL(ath_sysctl_halparam, ctl, write, filp, buffer, lenp, ppos)
 #endif
 			break;
 #endif
+#ifdef CHANNEL_UTILITY
+#ifdef BRN_REGMON
+			case ATH_BRN_REGMON_INTERVAL:
+				val = sc->perf_reg_interval;
+				break;
+#endif
+#endif
+
 		default:
 			ret = -EINVAL;
 			break;
@@ -12218,6 +12238,16 @@ static const ctl_table ath_sysctl_template[] = {
 	  .proc_handler = ath_sysctl_halparam,
 	  .extra2	= (void *)ATH_CLEARQUEUE,
 	},
+#endif
+#ifdef CHANNEL_UTILITY
+#ifdef BRN_REGMON
+	{ ATH_INIT_CTL_NAME(CTL_AUTO)
+	  .procname     = "regmon_interval",
+	  .mode         = 0644,
+	  .proc_handler = ath_sysctl_halparam,
+	  .extra2	= (void *)ATH_BRN_REGMON_INTERVAL,
+	},
+#endif
 #endif
 	{ }
 };
