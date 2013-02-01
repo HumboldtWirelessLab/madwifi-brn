@@ -613,6 +613,9 @@ void ieee80211_virtfs_latevattach(struct ieee80211vap *);
 void ieee80211_virtfs_vdetach(struct ieee80211vap *);
 int ieee80211_proc_vcreate(struct ieee80211vap *, struct file_operations *,
 	       char *);
+#ifdef BRN_REGMON
+int ieee80211_proc_vcreate_func(struct ieee80211vap *vap,int (*proc_read)(char *, char **, off_t, int ,int *, void *), char *name);
+#endif 
 void ieee80211_proc_cleanup(struct ieee80211vap *);
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(3,1,0) && \

@@ -138,8 +138,10 @@ void ath_hw_cycle_counters_update(struct ath_softc *sc);
 
 #ifdef BRN_REGMON
 void regmon_timer_func(unsigned long softc_p);
+#ifdef BRN_REGMON_HR
+enum hrtimer_restart regmon_hrtimer_func(struct hrtimer *hr_timer);
 #endif
-
+#endif
 #endif
 
 enum {
@@ -644,18 +646,44 @@ ath_attach(u_int16_t devid, struct net_device *dev, HAL_BUS_TAG tag)
 #endif
 #ifdef CHANNEL_UTILITY
 #ifdef BRN_REGMON
-	sc->perf_reg_interval = 100;
-
-	init_timer(&(sc->perf_reg_timer));	
-	sc->perf_reg_timer.function = regmon_timer_func;
-	sc->perf_reg_timer.expires  = jiffies + sc->perf_reg_interval;/* set 1st countdown */
-	sc->perf_reg_timer.data     = (unsigned long)sc;
-
-        if (sc->cc_update_mode == CC_UPDATE_MODE_KERNELTIMER) {
-	    add_timer(&(sc->perf_reg_timer));                            /* start timer */
-	}
+#ifdef BRN_REGMON_HR
+        /* Init HR-Timer */
+        sc->perf_reg_hrinterval = ktime_set(0, BRN_REGMON_DEFAULT_INTERVAL * 1E3L ); //usec -> nsec
+        hrtimer_init(&(sc->perf_reg_hrtimer), CLOCK_MONOTONIC, HRTIMER_MODE_ABS);
+        sc->perf_reg_hrtimer.function = &regmon_hrtimer_func;
 #endif
-#endif 
+
+        /* Init Timer */
+        sc->perf_reg_interval = usecs_to_jiffies(BRN_REGMON_DEFAULT_INTERVAL);
+        if ( sc->perf_reg_interval == 0 ) sc->perf_reg_interval = 1;
+        init_timer(&(sc->perf_reg_timer));
+
+        sc->perf_reg_timer.function = regmon_timer_func;
+        sc->perf_reg_timer.expires  = jiffies + sc->perf_reg_interval;/* set 1st countdown */
+        sc->perf_reg_timer.data     = (unsigned long)sc;
+
+
+        /* Init ringbuffer */
+        sc->regm_data_no_entries = BRN_REGMON_DEFAULT_NO_ENTRIES;
+        sc->regm_data_size = (sc->regm_data_no_entries + 1) * sizeof(struct regmon_data); //+1 for info
+        sc->regm_data = (struct regmon_data*)kmalloc(sc->regm_data_size, GFP_KERNEL);
+
+        if ( sc->regm_data == NULL ) {
+          printk("BRN-Regmon: unable to alloc mem for ringbuf. Disable Timer");
+        } else {
+          sc->regm_info = &(sc->regm_data[sc->regm_data_no_entries]);
+          sc->regm_info->value.info.size = sc->regm_data_no_entries;
+          sc->regm_info->value.info.index = 0;
+          if (sc->cc_update_mode == CC_UPDATE_MODE_KERNELTIMER) {
+#ifdef BRN_REGMON_HR
+            hrtimer_start(&(sc->perf_reg_hrtimer), sc->perf_reg_hrinterval, HRTIMER_MODE_ABS);
+#else
+            add_timer(&(sc->perf_reg_timer));                            /* start timer */
+#endif
+          }
+        }
+#endif
+#endif
 	atomic_set(&sc->sc_txbuf_counter, 0);
 
 	ATH_INIT_TQUEUE(&sc->sc_rxtq,		ath_rx_tasklet,		dev);
@@ -1313,7 +1341,22 @@ ath_detach(struct net_device *dev)
 	struct ath_softc *sc = netdev_priv(dev);
 	struct ath_hal *ah = sc->sc_ah;
 
-	HAL_INT tmp;
+  HAL_INT tmp;
+
+#ifdef CHANNEL_UTILITY
+#ifdef BRN_REGMON
+#ifdef BRN_REGMON_HR
+  hrtimer_cancel(&(sc->perf_reg_hrtimer));
+#endif
+  del_timer(&(sc->perf_reg_timer));
+
+  if ( sc->regm_data != NULL ) {
+    kfree(sc->regm_data);
+    sc->regm_data = NULL;
+  }
+#endif
+#endif
+
 	DPRINTF(sc, ATH_DEBUG_ANY, "flags=%x\n", dev->flags);
 	ath_stop(dev);
 
@@ -12809,7 +12852,7 @@ void ath_hw_cycle_counters_update(struct ath_softc *sc)
     sc->channel_utility.rx = sc->cc_survey.rx_frame / (sc->cc_survey.cycles/100);
     sc->channel_utility.tx = sc->cc_survey.tx_frame / (sc->cc_survey.cycles/100);
   }
-  
+
 //  printk("CS: %d %d %d\n",sc->channel_utility.busy,sc->channel_utility.rx,sc->channel_utility.tx);
 }
 
@@ -12824,19 +12867,60 @@ void ath_cycle_counters_reset(struct ath_softc *sc)
 void regmon_timer_func(unsigned long softc_p)
 {
   struct ath_softc *sc = (struct ath_softc *)softc_p;
+  struct regmon_data *rmd;
 
   ath_hw_cycle_counters_update(sc);
 
+#ifdef BRN_REGMON_DEBUG
   printk("jiffies=%lu\n", jiffies);
+#endif
 
-  /* set new timer */
-  sc->perf_reg_timer.expires = jiffies + sc->perf_reg_interval;
-  
+  if (sc->regm_data == NULL)
+    return;
+
+  rmd = (struct regmon_data *)&(sc->regm_data[sc->regm_info->value.info.index]);
+  sc->regm_info->value.info.index = (sc->regm_info->value.info.index+1) % sc->regm_info->value.info.size;
+
+  rmd->jiffies = jiffies;
+  rmd->sec = 0;
+  rmd->nsec = 0;
+
+  rmd->value.regs.cycles = sc->cc_survey.cycles;
+  rmd->value.regs.busy_cycles = sc->cc_survey.rx_busy;
+  rmd->value.regs.rx_cycles = sc->cc_survey.rx_frame;
+  rmd->value.regs.tx_cycles = sc->cc_survey.tx_frame;
+
   if (sc->cc_update_mode == CC_UPDATE_MODE_KERNELTIMER) {
+    /* set new timer */
+    sc->perf_reg_timer.expires = jiffies + sc->perf_reg_interval;
     add_timer(&(sc->perf_reg_timer));
   }
-}					
-#endif			 
+}
+
+#ifdef BRN_REGMON_HR
+enum hrtimer_restart regmon_hrtimer_func(struct hrtimer *hr_timer)
+{
+  ktime_t now = hrtimer_cb_get_time(hr_timer);
+
+  struct ath_softc *sc = container_of(hr_timer, struct ath_softc, perf_reg_hrtimer);
+
+  ath_hw_cycle_counters_update(sc);
+
+#ifdef BRN_REGMON_HR_DEBUG
+  printk("hr jiffies=%lu\n", jiffies);
+#endif
+
+  if (sc->cc_update_mode == CC_UPDATE_MODE_KERNELTIMER) {
+    hrtimer_forward(&(sc->perf_reg_hrtimer), now, sc->perf_reg_hrinterval);
+    return HRTIMER_RESTART;
+  }
+
+  return HRTIMER_NORESTART;
+}
+
+#endif
+
+#endif
 #endif
 
 /*

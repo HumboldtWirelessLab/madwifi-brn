@@ -710,6 +710,41 @@ proc_channel_utility_open(struct inode *inode, struct file *file)
 
   return 0;
 }
+
+#ifdef BRN_REGMON
+static int proc_brn_regmon_read(char *buf, char **start, off_t off, int size_of_buf, int *eof, void *data)
+{
+  struct ieee80211vap *vap = (struct ieee80211vap *)data;
+  struct ieee80211com *ic = vap->iv_ic;
+  struct net_device *dev = ic->ic_dev;
+  struct ath_softc *sc = netdev_priv(dev);
+
+  int bytes_left = sc->regm_data_size - off;
+
+  if ( (sc->regm_data == NULL) || (bytes_left == 0) ) {
+    *eof = 0;
+    return 0;
+  }
+
+ if (bytes_left <= size_of_buf){
+    printk("last bytes.\nbl: %d off: %d size: %d\n\n", bytes_left, (int) off, size_of_buf);
+
+    memcpy(buf+off, sc->regm_data+off, bytes_left);
+    *eof = 0;
+    return bytes_left;
+
+    /* we (still) got more to copy than fits into buf */
+  } else {
+    printk("in the middle.\nbl: %d off: %d size: %d\n\n", bytes_left, (int) off, size_of_buf);
+
+    memcpy(buf+off, sc->regm_data+off, size_of_buf);
+    *eof = 1;
+    return sc->regm_data_size;
+  }
+
+  return -1;   /* error */
+}
+#endif
 #endif
 
 #ifdef RXTX_PACKET_COUNT
@@ -1124,8 +1159,11 @@ ieee80211_virtfs_latevattach(struct ieee80211vap *vap)
 	ieee80211_proc_vcreate(vap, &proc_iv_bss_ops, "iv_bss");
 #ifdef CHANNEL_UTILITY
 	ieee80211_proc_vcreate(vap, &proc_channel_utility_ops, "channel_utility");
+#ifdef BRN_REGMON
+  ieee80211_proc_vcreate_func(vap, &proc_brn_regmon_read, "reg_mon");
 #endif
-#ifdef CHANNEL_UTILITY
+#endif
+#ifdef RXTX_PACKET_COUNT
   ieee80211_proc_vcreate(vap, &proc_packet_stats_ops, "packet_stats");
 #endif
 
@@ -1226,6 +1264,62 @@ ieee80211_proc_vcreate(struct ieee80211vap *vap,
 	return 0;
 }
 EXPORT_SYMBOL(ieee80211_proc_vcreate);
+
+#ifdef BRN_REGMON
+/* Called by other modules to register a proc entry under the vap directory */
+int
+ieee80211_proc_vcreate_func(struct ieee80211vap *vap,int (*proc_read)(char *, char **, off_t, int ,int *, void *), char *name)
+{
+  struct ieee80211_proc_entry *entry;
+  struct ieee80211_proc_entry *tmp = NULL;
+
+  /* Ignore if already in the list */
+  if (vap->iv_proc_entries) {
+    tmp = vap->iv_proc_entries;
+    do {
+      if (strcmp(tmp->name, name)==0)
+        return -1;
+      /* Check for end of list */
+      if (!tmp->next)
+        break;
+      /* Otherwise move on */
+      tmp = tmp->next;
+    } while (1);
+  }
+
+  /* Create an item in our list for the new entry */
+  entry = kmalloc(sizeof(struct ieee80211_proc_entry), GFP_KERNEL);
+  if (entry == NULL) {
+    printk("%s: no memory for new proc entry (%s)!\n", __func__,
+           name);
+    return -1;
+  }
+  /* Create the entry record */
+  entry->name = name;
+  entry->next = NULL;
+  entry->entry = NULL;
+
+  /* Create the actual proc entry */
+  if (vap->iv_proc) {
+    entry->entry = create_proc_entry(entry->name,
+                                     PROC_IEEE80211_PERM, vap->iv_proc);
+    entry->entry->data = vap;
+    entry->entry->read_proc = proc_read;
+  }
+
+  /* Add it to the list */
+  if (!tmp) {
+    /* Add to the start */
+    vap->iv_proc_entries = entry;
+  } else {
+    /* Add to the end */
+    tmp->next = entry;
+  }
+
+  return 0;
+}
+EXPORT_SYMBOL(ieee80211_proc_vcreate_func);
+#endif
 #endif			/* CONFIG_PROC_FS */
 
 void

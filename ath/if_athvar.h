@@ -908,8 +908,17 @@ struct ath_softc {
 #endif
 #ifdef CHANNEL_UTILITY
 #ifdef BRN_REGMON
+#ifdef BRN_REGMON_HR
+      struct hrtimer perf_reg_hrtimer;
+      ktime_t perf_reg_hrinterval;
+#endif
       struct timer_list perf_reg_timer;
-      u_int32_t  perf_reg_interval;
+      u_int32_t perf_reg_interval;
+
+      u_int32_t regm_data_size;
+      u_int32_t regm_data_no_entries;
+      struct regmon_data* regm_data;
+      struct regmon_data* regm_info;
 #endif
 #endif
 };

@@ -16,7 +16,7 @@
 #define CC_UPDATE_MODE_RX                 1
 #define CC_UPDATE_MODE_TXFEEDBACK         2
 #define CC_UPDATE_MODE_OPERATION          4
-#define CC_UPDATE_MODE_CALL       	  8 /* procfs */
+#define CC_UPDATE_MODE_CALL               8 /* procfs */
 #define CC_UPDATE_MODE_KERNELTIMER       16
 #define CC_UPDATE_MODE_DEFAULT           CC_UPDATE_MODE_CALL
 
@@ -36,6 +36,37 @@ struct ath_channel_utility {
 	u32 tx;
 };
 
+#ifdef BRN_REGMON
+
+#define BRN_REGMON_DEFAULT_INTERVAL   100000 /*100 ms*/
+#define BRN_REGMON_DEFAULT_NO_ENTRIES 1000
+
+struct regmon_register {
+  u32 cycles;
+  u32 busy_cycles;
+  u32 rx_cycles;
+  u32 tx_cycles;
+} __attribute__((packed));
+
+struct regmon_info {
+  u16 size;
+  u16 index;
+} __attribute__((packed));
+
+struct regmon_data {
+
+  u32 jiffies;
+  u32 sec;
+  u32 nsec;                      //-> sum = 12Byte
+
+  union {
+    struct regmon_info     info; //4Byte
+    struct regmon_register regs; //16Byte
+  } value;                       //-> 16 Byte
+
+} __attribute__((packed));                    //28Byte
+
+#endif
 
 void ath_hw_cycle_counters_update(struct ath_softc *sc);
 uint8_t get_channel_utility(struct ath_softc *sc);
