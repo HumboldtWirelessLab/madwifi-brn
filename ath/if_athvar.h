@@ -102,6 +102,9 @@ typedef void *TQUEUE_ARG;
 
 #ifdef CHANNEL_UTILITY
 #include "ath_channel_utility.h"
+#ifdef BRN_REGMON_DEBUGFS
+#include <linux/debugfs.h>
+#endif
 #endif
 
 /*
@@ -919,6 +922,11 @@ struct ath_softc {
       u_int32_t regm_data_no_entries;
       struct regmon_data* regm_data;
       struct regmon_data* regm_info;
+
+#ifdef BRN_REGMON_DEBUGFS
+      struct dentry *regm_dfs_file;
+      struct debugfs_blob_wrapper regm_dfs_data;
+#endif
 #endif
 #endif
 };

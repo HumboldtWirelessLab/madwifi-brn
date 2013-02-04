@@ -681,6 +681,19 @@ ath_attach(u_int16_t devid, struct net_device *dev, HAL_BUS_TAG tag)
             add_timer(&(sc->perf_reg_timer));                            /* start timer */
 #endif
           }
+
+#ifdef BRN_REGMON_DEBUGFS
+          /* only set data pointer and data size */
+          sc->regm_dfs_data.data = (void *)sc->regm_data;
+          sc->regm_dfs_data.size = (unsigned long)sc->regm_data_size ;
+
+          /* create pseudo file under /sys/kernel/debug/ with name 'test' */
+          sc->regm_dfs_file = debugfs_create_blob("regmon_data", 0644, NULL, &(sc->regm_dfs_data));
+
+          if (sc->regm_dfs_file == NULL) {
+            printk("Could not create debugfs blob\n");
+          }
+#endif
         }
 #endif
 #endif
@@ -1354,6 +1367,9 @@ ath_detach(struct net_device *dev)
     kfree(sc->regm_data);
     sc->regm_data = NULL;
   }
+#ifdef BRN_REGMON_DEBUGFS
+  debugfs_remove(sc->regm_dfs_file);
+#endif
 #endif
 #endif
 
