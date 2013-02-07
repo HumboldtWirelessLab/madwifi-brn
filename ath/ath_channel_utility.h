@@ -56,8 +56,13 @@ struct regmon_info {
 struct regmon_data {
 
   u32 jiffies;
-  u32 sec;
-  u32 nsec;                      //-> sum = 12Byte
+  union {
+    struct {
+      u32 sec;
+      u32 nsec;                      //-> sum = 12Byte
+    } tv;
+    u64 tv64;
+  } hrtime;
 
   union {
     struct regmon_info     info; //4Byte

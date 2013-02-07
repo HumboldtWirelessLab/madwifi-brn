@@ -12898,8 +12898,7 @@ void regmon_timer_func(unsigned long softc_p)
   sc->regm_info->value.info.index = (sc->regm_info->value.info.index+1) % sc->regm_info->value.info.size;
 
   rmd->jiffies = jiffies;
-  rmd->sec = 0;
-  rmd->nsec = 0;
+  rmd->hrtime.tv64 = 0;
 
   rmd->value.regs.cycles = sc->cc_survey.cycles;
   rmd->value.regs.busy_cycles = sc->cc_survey.rx_busy;
@@ -12917,6 +12916,7 @@ void regmon_timer_func(unsigned long softc_p)
 enum hrtimer_restart regmon_hrtimer_func(struct hrtimer *hr_timer)
 {
   ktime_t now = hrtimer_cb_get_time(hr_timer);
+  struct regmon_data *rmd;
 
   struct ath_softc *sc = container_of(hr_timer, struct ath_softc, perf_reg_hrtimer);
 
@@ -12925,6 +12925,20 @@ enum hrtimer_restart regmon_hrtimer_func(struct hrtimer *hr_timer)
 #ifdef BRN_REGMON_HR_DEBUG
   printk("hr jiffies=%lu\n", jiffies);
 #endif
+
+  if (sc->regm_data == NULL)
+    return HRTIMER_NORESTART;
+
+  rmd = (struct regmon_data *)&(sc->regm_data[sc->regm_info->value.info.index]);
+  sc->regm_info->value.info.index = (sc->regm_info->value.info.index+1) % sc->regm_info->value.info.size;
+
+  rmd->jiffies = jiffies;
+  rmd->hrtime.tv64 = now.tv64;
+
+  rmd->value.regs.cycles = sc->cc_survey.cycles;
+  rmd->value.regs.busy_cycles = sc->cc_survey.rx_busy;
+  rmd->value.regs.rx_cycles = sc->cc_survey.rx_frame;
+  rmd->value.regs.tx_cycles = sc->cc_survey.tx_frame;
 
   if (sc->cc_update_mode == CC_UPDATE_MODE_KERNELTIMER) {
     hrtimer_forward(&(sc->perf_reg_hrtimer), now, sc->perf_reg_hrinterval);
