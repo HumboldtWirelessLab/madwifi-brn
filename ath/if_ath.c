@@ -648,7 +648,7 @@ ath_attach(u_int16_t devid, struct net_device *dev, HAL_BUS_TAG tag)
 #ifdef BRN_REGMON
 #ifdef BRN_REGMON_HR
         /* Init HR-Timer */
-        sc->perf_reg_hrinterval = ktime_set(0, BRN_REGMON_DEFAULT_INTERVAL * 1E3L ); //usec -> nsec
+        sc->perf_reg_hrinterval = ktime_set(0, BRN_REGMON_DEFAULT_INTERVAL * 1000 ); //usec -> nsec
         hrtimer_init(&(sc->perf_reg_hrtimer), CLOCK_MONOTONIC, HRTIMER_MODE_ABS);
         sc->perf_reg_hrtimer.function = &regmon_hrtimer_func;
 #endif
@@ -11835,10 +11835,13 @@ ATH_SYSCTL_DECL(ath_sysctl_halparam, ctl, write, filp, buffer, lenp, ppos)
 #ifdef BRN_REGMON
 				if ( (sc->cc_update_mode == CC_UPDATE_MODE_KERNELTIMER) &&
 				     (old_update_mode != CC_UPDATE_MODE_KERNELTIMER) ) {
-
-				     sc->perf_reg_timer.expires  = jiffies + sc->perf_reg_interval;/* set 1st countdown */
-				     add_timer(&(sc->perf_reg_timer));                            /* start timer */
-				} 
+				    sc->perf_reg_timer.expires  = jiffies + sc->perf_reg_interval;/* set 1st countdown */
+#ifdef BRN_REGMON_HR
+				    hrtimer_start(&(sc->perf_reg_hrtimer), sc->perf_reg_hrinterval, HRTIMER_MODE_ABS);
+#else
+				    add_timer(&(sc->perf_reg_timer));                            /* start timer */
+#endif
+				}
 #endif
 				break;
 			case ATH_CHANNEL_UTILITY_ANNO_MODE:
@@ -11860,7 +11863,13 @@ ATH_SYSCTL_DECL(ath_sysctl_halparam, ctl, write, filp, buffer, lenp, ppos)
 #ifdef CHANNEL_UTILITY
 #ifdef BRN_REGMON
 			case ATH_BRN_REGMON_INTERVAL:
-				sc->perf_reg_interval = val;
+#ifdef BRN_REGMON_HR
+				/* Set HR-Timer */
+				sc->perf_reg_hrinterval = ktime_set(0, val * 1000 ); //usec -> nsec
+#endif
+				sc->perf_reg_interval = usecs_to_jiffies(val);
+				if ( sc->perf_reg_interval == 0 ) sc->perf_reg_interval = 1;
+
 				break;
 #endif
 #endif
@@ -12023,7 +12032,7 @@ ATH_SYSCTL_DECL(ath_sysctl_halparam, ctl, write, filp, buffer, lenp, ppos)
 #ifdef CHANNEL_UTILITY
 #ifdef BRN_REGMON
 			case ATH_BRN_REGMON_INTERVAL:
-				val = sc->perf_reg_interval;
+				val = jiffies_to_usecs(sc->perf_reg_interval);
 				break;
 #endif
 #endif

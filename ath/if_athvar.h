@@ -105,6 +105,13 @@ typedef void *TQUEUE_ARG;
 #ifdef BRN_REGMON_DEBUGFS
 #include <linux/debugfs.h>
 #endif
+#ifdef BRN_REGMON
+#ifdef BRN_REGMON_HR
+#include <linux/ktime.h>
+#include <linux/hrtimer.h>
+#endif
+#include <linux/timer.h>
+#endif
 #endif
 
 /*
