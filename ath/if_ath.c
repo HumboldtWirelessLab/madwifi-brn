@@ -129,6 +129,13 @@
 #ifdef CHANNEL_UTILITY
 #include <ath_hal/ar5212/ar5212reg.h>
 #include "ath_channel_utility.h"
+#ifdef BRN_REGMON
+#ifdef BRN_REGMON_HR
+#include <linux/ktime.h>
+#include <linux/hrtimer.h>
+#endif
+#include <linux/timer.h>
+#endif
 
 uint8_t get_channel_utility_busy(struct ath_softc *sc);
 uint8_t get_channel_utility_rx(struct ath_softc *sc);
@@ -139,7 +146,11 @@ void ath_hw_cycle_counters_update(struct ath_softc *sc);
 #ifdef BRN_REGMON
 void regmon_timer_func(unsigned long softc_p);
 #ifdef BRN_REGMON_HR
+#if LINUX_VERSION_CODE <= KERNEL_VERSION(2,6,19)
+int regmon_hrtimer_func(struct hrtimer *hr_timer);
+#else
 enum hrtimer_restart regmon_hrtimer_func(struct hrtimer *hr_timer);
+#endif
 #endif
 #endif
 #endif
@@ -649,7 +660,11 @@ ath_attach(u_int16_t devid, struct net_device *dev, HAL_BUS_TAG tag)
 #ifdef BRN_REGMON_HR
         /* Init HR-Timer */
         sc->perf_reg_hrinterval = ktime_set(0, BRN_REGMON_DEFAULT_INTERVAL * 1000 ); //usec -> nsec
+#if LINUX_VERSION_CODE <= KERNEL_VERSION(2,6,19)
+        hrtimer_init(&(sc->perf_reg_hrtimer), CLOCK_MONOTONIC, HRTIMER_ABS);
+#else
         hrtimer_init(&(sc->perf_reg_hrtimer), CLOCK_MONOTONIC, HRTIMER_MODE_ABS);
+#endif
         sc->perf_reg_hrtimer.function = &regmon_hrtimer_func;
 #endif
 
@@ -676,7 +691,11 @@ ath_attach(u_int16_t devid, struct net_device *dev, HAL_BUS_TAG tag)
           sc->regm_info->value.info.index = 0;
           if (sc->cc_update_mode == CC_UPDATE_MODE_KERNELTIMER) {
 #ifdef BRN_REGMON_HR
-            hrtimer_start(&(sc->perf_reg_hrtimer), sc->perf_reg_hrinterval, HRTIMER_MODE_ABS);
+#if LINUX_VERSION_CODE <= KERNEL_VERSION(2,6,19)
+          hrtimer_start(&(sc->perf_reg_hrtimer), sc->perf_reg_hrinterval, HRTIMER_ABS);
+#else
+          hrtimer_start(&(sc->perf_reg_hrtimer), sc->perf_reg_hrinterval, HRTIMER_MODE_ABS);
+#endif
 #else
             add_timer(&(sc->perf_reg_timer));                            /* start timer */
 #endif
@@ -11837,7 +11856,13 @@ ATH_SYSCTL_DECL(ath_sysctl_halparam, ctl, write, filp, buffer, lenp, ppos)
 				     (old_update_mode != CC_UPDATE_MODE_KERNELTIMER) ) {
 				    sc->perf_reg_timer.expires  = jiffies + sc->perf_reg_interval;/* set 1st countdown */
 #ifdef BRN_REGMON_HR
+
+#if LINUX_VERSION_CODE <= KERNEL_VERSION(2,6,19)
+				    hrtimer_start(&(sc->perf_reg_hrtimer), sc->perf_reg_hrinterval, HRTIMER_ABS);
+#else
 				    hrtimer_start(&(sc->perf_reg_hrtimer), sc->perf_reg_hrinterval, HRTIMER_MODE_ABS);
+#endif
+
 #else
 				    add_timer(&(sc->perf_reg_timer));                            /* start timer */
 #endif
@@ -12922,9 +12947,17 @@ void regmon_timer_func(unsigned long softc_p)
 }
 
 #ifdef BRN_REGMON_HR
+#if LINUX_VERSION_CODE <= KERNEL_VERSION(2,6,19)
+int regmon_hrtimer_func(struct hrtimer *hr_timer)
+#else
 enum hrtimer_restart regmon_hrtimer_func(struct hrtimer *hr_timer)
+#endif
 {
+#if LINUX_VERSION_CODE <= KERNEL_VERSION(2,6,19)
+  ktime_t now = hr_timer->base->get_time();
+#else
   ktime_t now = hrtimer_cb_get_time(hr_timer);
+#endif
   struct regmon_data *rmd;
 
   struct ath_softc *sc = container_of(hr_timer, struct ath_softc, perf_reg_hrtimer);
