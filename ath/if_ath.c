@@ -11571,6 +11571,7 @@ ATH_SYSCTL_DECL(ath_sysctl_halparam, ctl, write, filp, buffer, lenp, ppos)
 #ifdef CHANNEL_UTILITY
 #ifdef BRN_REGMON 
         u_int32_t old_update_mode;
+        u_int32_t ktime_tv32;
 #endif 
 #endif				
         u_int val;
@@ -11909,6 +11910,10 @@ ATH_SYSCTL_DECL(ath_sysctl_halparam, ctl, write, filp, buffer, lenp, ppos)
           sc->regm_data = NULL;
         }
 
+        if (sc->regm_dfs_file != NULL) {
+          debugfs_remove(sc->regm_dfs_file);
+        }
+
         /* Init ringbuffer */
         sc->regm_data_no_entries = val;
         sc->regm_data_size = (sc->regm_data_no_entries + 1) * sizeof(struct regmon_data); //+1 for info
@@ -11917,6 +11922,18 @@ ATH_SYSCTL_DECL(ath_sysctl_halparam, ctl, write, filp, buffer, lenp, ppos)
         if ( sc->regm_data == NULL ) {
           printk("BRN-Regmon: unable to alloc mem for ringbuf. Disable Timer");
         } else {
+
+          /* only set data pointer and data size */
+          sc->regm_dfs_data.data = (void *)sc->regm_data;
+          sc->regm_dfs_data.size = (unsigned long)sc->regm_data_size ;
+
+          /* create pseudo file under /sys/kernel/debug/ with name 'test' */
+          sc->regm_dfs_file = debugfs_create_blob("regmon_data", 0644, NULL, &(sc->regm_dfs_data));
+
+          if (sc->regm_dfs_file == NULL) {
+            printk("Could not create debugfs blob\n");
+          }
+
           sc->regm_info = &(sc->regm_data[sc->regm_data_no_entries]);
           sc->regm_info->value.info.size = sc->regm_data_no_entries;
           sc->regm_info->value.info.index = 0;
@@ -12098,7 +12115,8 @@ ATH_SYSCTL_DECL(ath_sysctl_halparam, ctl, write, filp, buffer, lenp, ppos)
 #ifdef BRN_REGMON
 			case ATH_BRN_REGMON_INTERVAL:
 #ifdef BRN_REGMON_HR
-        val = (sc->perf_reg_hrinterval.tv64/1000);
+			    ktime_tv32 = (u_int32_t)sc->perf_reg_hrinterval.tv64;
+			    val = (ktime_tv32 / 1000);
 #else
 				val = jiffies_to_usecs(sc->perf_reg_interval);
 #endif
