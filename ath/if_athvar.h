@@ -917,13 +917,17 @@ struct ath_softc {
       u_int32_t ieee80211_rx_packets; //inc in ieee80211_input_monitor (ieee80211_monitor.c)
 #endif
 #ifdef CHANNEL_UTILITY
+#define REGMON_FLAGS_CLEAR                  0
+#define REGMON_FLAGS_DISABLE_REG_FREEZE     1
+#define REGMON_FLAGS_DISABLE_CU_CALCULATION 2
+      u_int32_t regmon_flags;
 #ifdef BRN_REGMON
 #ifdef BRN_REGMON_HR
       struct hrtimer perf_reg_hrtimer;
-      ktime_t perf_reg_hrinterval;
+      ktime_t perf_reg_hrinterval;    //in sec + nsec
 #endif
       struct timer_list perf_reg_timer;
-      u_int32_t perf_reg_interval;
+      u_int32_t perf_reg_interval;    //in jiffies
 
       u_int32_t regm_data_size;
       u_int32_t regm_data_no_entries;

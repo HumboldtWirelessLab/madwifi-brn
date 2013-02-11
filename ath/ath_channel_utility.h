@@ -39,7 +39,7 @@ struct ath_channel_utility {
 #ifdef BRN_REGMON
 
 #define BRN_REGMON_DEFAULT_INTERVAL   100000 /*100 ms*/
-#define BRN_REGMON_DEFAULT_NO_ENTRIES 100000
+#define BRN_REGMON_DEFAULT_NO_ENTRIES 1000
 
 struct regmon_register {
   u32 cycles;

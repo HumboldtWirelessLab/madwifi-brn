@@ -656,6 +656,7 @@ ath_attach(u_int16_t devid, struct net_device *dev, HAL_BUS_TAG tag)
         sc->rx_packets = sc->tx_packets = sc->feedback_packets = sc->ieee80211_tx_packets = sc->ieee80211_rx_packets = 0;
 #endif
 #ifdef CHANNEL_UTILITY
+        sc->regmon_flags = REGMON_FLAGS_CLEAR;
 #ifdef BRN_REGMON
 #ifdef BRN_REGMON_HR
         /* Init HR-Timer */
@@ -677,7 +678,6 @@ ath_attach(u_int16_t devid, struct net_device *dev, HAL_BUS_TAG tag)
         sc->perf_reg_timer.expires  = jiffies + sc->perf_reg_interval;/* set 1st countdown */
         sc->perf_reg_timer.data     = (unsigned long)sc;
 
-
         /* Init ringbuffer */
         sc->regm_data_no_entries = BRN_REGMON_DEFAULT_NO_ENTRIES;
         sc->regm_data_size = (sc->regm_data_no_entries + 1) * sizeof(struct regmon_data); //+1 for info
@@ -697,7 +697,7 @@ ath_attach(u_int16_t devid, struct net_device *dev, HAL_BUS_TAG tag)
           hrtimer_start(&(sc->perf_reg_hrtimer), sc->perf_reg_hrinterval, HRTIMER_MODE_ABS);
 #endif
 #else
-            add_timer(&(sc->perf_reg_timer));                            /* start timer */
+          add_timer(&(sc->perf_reg_timer));                            /* start timer */
 #endif
           }
 
@@ -11401,6 +11401,8 @@ enum {
 #ifdef CHANNEL_UTILITY
 #ifdef BRN_REGMON
 	ATH_BRN_REGMON_INTERVAL = 41,
+  ATH_BRN_REGMON_BUFFERSIZE = 42,
+  ATH_BRN_REGMON_FLAGS = 43,
 #endif
 #endif
 };
@@ -11896,6 +11898,44 @@ ATH_SYSCTL_DECL(ath_sysctl_halparam, ctl, write, filp, buffer, lenp, ppos)
 				if ( sc->perf_reg_interval == 0 ) sc->perf_reg_interval = 1;
 
 				break;
+      case ATH_BRN_REGMON_BUFFERSIZE:
+#ifdef BRN_REGMON_HR
+        if (sc->cc_update_mode == CC_UPDATE_MODE_KERNELTIMER) {
+          hrtimer_cancel(&(sc->perf_reg_hrtimer));
+        }
+#endif
+        if ( sc->regm_data != NULL ) {
+          kfree(sc->regm_data);
+          sc->regm_data = NULL;
+        }
+
+        /* Init ringbuffer */
+        sc->regm_data_no_entries = val;
+        sc->regm_data_size = (sc->regm_data_no_entries + 1) * sizeof(struct regmon_data); //+1 for info
+        sc->regm_data = (struct regmon_data*)kmalloc(sc->regm_data_size, GFP_KERNEL);
+
+        if ( sc->regm_data == NULL ) {
+          printk("BRN-Regmon: unable to alloc mem for ringbuf. Disable Timer");
+        } else {
+          sc->regm_info = &(sc->regm_data[sc->regm_data_no_entries]);
+          sc->regm_info->value.info.size = sc->regm_data_no_entries;
+          sc->regm_info->value.info.index = 0;
+          if (sc->cc_update_mode == CC_UPDATE_MODE_KERNELTIMER) {
+#ifdef BRN_REGMON_HR
+#if LINUX_VERSION_CODE <= KERNEL_VERSION(2,6,19)
+            hrtimer_start(&(sc->perf_reg_hrtimer), sc->perf_reg_hrinterval, HRTIMER_ABS);
+#else
+            hrtimer_start(&(sc->perf_reg_hrtimer), sc->perf_reg_hrinterval, HRTIMER_MODE_ABS);
+#endif
+#else
+            add_timer(&(sc->perf_reg_timer));                            /* start timer */
+#endif
+          }
+        }
+        break;
+      case ATH_BRN_REGMON_FLAGS:
+        sc->regmon_flags = val;
+        break;
 #endif
 #endif
 			default:
@@ -12057,8 +12097,18 @@ ATH_SYSCTL_DECL(ath_sysctl_halparam, ctl, write, filp, buffer, lenp, ppos)
 #ifdef CHANNEL_UTILITY
 #ifdef BRN_REGMON
 			case ATH_BRN_REGMON_INTERVAL:
+#ifdef BRN_REGMON_HR
+        val = (sc->perf_reg_hrinterval.tv64/1000);
+#else
 				val = jiffies_to_usecs(sc->perf_reg_interval);
+#endif
 				break;
+      case ATH_BRN_REGMON_BUFFERSIZE:
+        val = sc->regm_data_no_entries;
+        break;
+      case ATH_BRN_REGMON_FLAGS:
+        val = sc->regmon_flags;
+        break;
 #endif
 #endif
 
@@ -12340,6 +12390,18 @@ static const ctl_table ath_sysctl_template[] = {
 	  .proc_handler = ath_sysctl_halparam,
 	  .extra2	= (void *)ATH_BRN_REGMON_INTERVAL,
 	},
+ { ATH_INIT_CTL_NAME(CTL_AUTO)
+     .procname     = "regmon_bufsize",
+     .mode         = 0644,
+     .proc_handler = ath_sysctl_halparam,
+     .extra2 = (void *)ATH_BRN_REGMON_BUFFERSIZE,
+ },
+ { ATH_INIT_CTL_NAME(CTL_AUTO)
+     .procname     = "regmon_flags",
+     .mode         = 0644,
+     .proc_handler = ath_sysctl_halparam,
+     .extra2 = (void *)ATH_BRN_REGMON_FLAGS,
+ },
 #endif
 #endif
 	{ }
@@ -12854,13 +12916,16 @@ void ath_hw_cycle_counters_update(struct ath_softc *sc)
 {
   struct ath_hal *ah = sc->sc_ah;
 
-  u32 cycles, busy, rx, tx;
+  u32 cycles, busy, rx, tx, tmp_cyc;
 
-//  printk("Set spinlock\n");
+  //printk("Set spinlock\n");
   spin_lock(&sc->cc_lock);
 
-  /* freeze */
-  OS_REG_WRITE(ah, AR_MIBC, AR_MIBC_FMC);
+  if ( (sc->regmon_flags & REGMON_FLAGS_DISABLE_REG_FREEZE) == 0 ) {
+    /* freeze */
+    OS_REG_WRITE(ah, AR_MIBC, AR_MIBC_FMC);
+  }
+
   /* read */
   cycles = OS_REG_READ(ah, AR_CCCNT);
   busy = OS_REG_READ(ah, AR_RCCNT);
@@ -12871,39 +12936,44 @@ void ath_hw_cycle_counters_update(struct ath_softc *sc)
   OS_REG_WRITE(ah, AR_RFCNT, 0);
   OS_REG_WRITE(ah, AR_RCCNT, 0);
   OS_REG_WRITE(ah, AR_TFCNT, 0);
-  /* unfreeze */
-  OS_REG_WRITE(ah, AR_MIBC, 0);
+
+  if ( (sc->regmon_flags & REGMON_FLAGS_DISABLE_REG_FREEZE) == 0 ) {
+    /* unfreeze */
+    OS_REG_WRITE(ah, AR_MIBC, 0);
+  }
 
   spin_unlock(&sc->cc_lock);
-//  printk("unlock spinlock\n");
-
-  /* update all cycle counters here */
-  sc->cc_cum.cycles += cycles;
-  sc->cc_cum.rx_busy += busy;
-  sc->cc_cum.rx_frame += rx;
-  sc->cc_cum.tx_frame += tx;
+  //printk("unlock spinlock\n");
 
   sc->cc_survey.cycles = cycles;
   sc->cc_survey.rx_busy = busy;
   sc->cc_survey.rx_frame = rx;
   sc->cc_survey.tx_frame = tx;
 
-//  printk("Update CHannelstat\n");
-  if ( sc->cc_survey.cycles == 0 ) {
-    sc->channel_utility.busy = 0;
-    sc->channel_utility.rx = 0;
-    sc->channel_utility.tx = 0;
-  } else if ( sc->cc_survey.cycles < 100000 ) {
-    sc->channel_utility.busy = (100 * sc->cc_survey.rx_busy) / sc->cc_survey.cycles;
-    sc->channel_utility.rx = (100 * sc->cc_survey.rx_frame) / sc->cc_survey.cycles;
-    sc->channel_utility.tx = (100 * sc->cc_survey.tx_frame) / sc->cc_survey.cycles;
-  } else {
-    sc->channel_utility.busy = sc->cc_survey.rx_busy / (sc->cc_survey.cycles/100);
-    sc->channel_utility.rx = sc->cc_survey.rx_frame / (sc->cc_survey.cycles/100);
-    sc->channel_utility.tx = sc->cc_survey.tx_frame / (sc->cc_survey.cycles/100);
-  }
+  if ( (sc->regmon_flags & REGMON_FLAGS_DISABLE_CU_CALCULATION) == 0 ) {
+    /* update all cycle counters here */
+    sc->cc_cum.cycles += cycles;
+    sc->cc_cum.rx_busy += busy;
+    sc->cc_cum.rx_frame += rx;
+    sc->cc_cum.tx_frame += tx;
 
-//  printk("CS: %d %d %d\n",sc->channel_utility.busy,sc->channel_utility.rx,sc->channel_utility.tx);
+    //printk("Update Channelstat\n");i
+    if ( sc->cc_survey.cycles == 0 ) {
+      sc->channel_utility.busy = 0;
+      sc->channel_utility.rx = 0;
+      sc->channel_utility.tx = 0;
+    } else if ( sc->cc_survey.cycles < 100000 ) {
+      sc->channel_utility.busy = (100 * sc->cc_survey.rx_busy) / sc->cc_survey.cycles;
+      sc->channel_utility.rx = (100 * sc->cc_survey.rx_frame) / sc->cc_survey.cycles;
+      sc->channel_utility.tx = (100 * sc->cc_survey.tx_frame) / sc->cc_survey.cycles;
+    } else {
+      tmp_cyc = sc->cc_survey.cycles/100;
+      sc->channel_utility.busy = sc->cc_survey.rx_busy / tmp_cyc;
+      sc->channel_utility.rx = sc->cc_survey.rx_frame / tmp_cyc;
+      sc->channel_utility.tx = sc->cc_survey.tx_frame / tmp_cyc;
+    }
+    //printk("CS: %d %d %d\n",sc->channel_utility.busy,sc->channel_utility.rx,sc->channel_utility.tx);
+  }
 }
 
 

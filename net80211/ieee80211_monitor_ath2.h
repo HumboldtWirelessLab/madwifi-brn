@@ -2,7 +2,8 @@
 #define _NET80211_IEEE80211_MONITOR_ATH2_H_
 
 
-#define MADWIFI_RXTX_FLAGS_SHORT_PREAMBLE   1 << 0
+#define MADWIFI_RXTX_FLAGS_SHORT_PREAMBLE   (1 << 0)
+#define MADWIFI_RXTX_FLAGS_HOSTTIME_HRTIME  (1 << 1)
 
 /* This information is part of all received packets */
 struct ath2_rx_status {
@@ -18,7 +19,7 @@ struct ath2_rx_status {
     u_int32_t rs_tstamp;  /* h/w assigned timestamp */
     u_int32_t rs_antenna; /* antenna information */
 
-    u_int64_t rs_hosttime;
+    u_int64_t rs_hosttime;/* jiffies or ktime (tv64) */
     u_int64_t rs_mactime;
 
     int8_t    rs_noise;
