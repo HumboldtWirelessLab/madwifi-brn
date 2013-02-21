@@ -13053,6 +13053,7 @@ enum hrtimer_restart regmon_hrtimer_func(struct hrtimer *hr_timer)
   struct regmon_data *rmd;
 
   struct ath_softc *sc = container_of(hr_timer, struct ath_softc, perf_reg_hrtimer);
+  struct ath_hal *ah = sc->sc_ah;
 
   ath_hw_cycle_counters_update(sc);
 
@@ -13073,6 +13074,7 @@ enum hrtimer_restart regmon_hrtimer_func(struct hrtimer *hr_timer)
   rmd->value.regs.busy_cycles = sc->cc_survey.rx_busy;
   rmd->value.regs.rx_cycles = sc->cc_survey.rx_frame;
   rmd->value.regs.tx_cycles = sc->cc_survey.tx_frame;
+  rmd->value.regs.nav = OS_REG_READ(ah, AR_NAV);
 
   if (sc->cc_update_mode == CC_UPDATE_MODE_KERNELTIMER) {
     hrtimer_forward(&(sc->perf_reg_hrtimer), now, sc->perf_reg_hrinterval);
