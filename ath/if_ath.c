@@ -13029,7 +13029,7 @@ void regmon_timer_func(unsigned long softc_p)
   rmd->value.regs.busy_cycles = sc->cc_survey.rx_busy;
   rmd->value.regs.rx_cycles = sc->cc_survey.rx_frame;
   rmd->value.regs.tx_cycles = sc->cc_survey.tx_frame;
-  rmd->value.regs.tx_cycles = OS_REG_READ(ah, AR_NAV);
+  rmd->value.regs.nav = OS_REG_READ(ah, AR_NAV);
 
   if (sc->cc_update_mode == CC_UPDATE_MODE_KERNELTIMER) {
     /* set new timer */
