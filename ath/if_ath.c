@@ -702,15 +702,17 @@ ath_attach(u_int16_t devid, struct net_device *dev, HAL_BUS_TAG tag)
           }
 
 #ifdef BRN_REGMON_DEBUGFS
-          /* only set data pointer and data size */
-          sc->regm_dfs_data.data = (void *)sc->regm_data;
-          sc->regm_dfs_data.size = (unsigned long)sc->regm_data_size ;
+          if ( sc->regm_dfs_data.data != NULL ) {
+            /* only set data pointer and data size */
+            sc->regm_dfs_data.data = (void *)sc->regm_data;
+            sc->regm_dfs_data.size = (unsigned long)sc->regm_data_size ;
 
-          /* create pseudo file under /sys/kernel/debug/ with name 'test' */
-          sc->regm_dfs_file = debugfs_create_blob("regmon_data", 0644, NULL, &(sc->regm_dfs_data));
+            /* create pseudo file under /sys/kernel/debug/ with name 'test' */
+            sc->regm_dfs_file = debugfs_create_blob("regmon_data", 0644, NULL, &(sc->regm_dfs_data));
 
-          if (sc->regm_dfs_file == NULL) {
-            printk("Could not create debugfs blob\n");
+            if (sc->regm_dfs_file == NULL) {
+              printk("Could not create debugfs blob\n");
+            }
           }
 #endif
         }
@@ -13005,6 +13007,7 @@ void ath_cycle_counters_reset(struct ath_softc *sc)
 void regmon_timer_func(unsigned long softc_p)
 {
   struct ath_softc *sc = (struct ath_softc *)softc_p;
+  struct ath_hal *ah = sc->sc_ah;
   struct regmon_data *rmd;
 
   ath_hw_cycle_counters_update(sc);
@@ -13026,6 +13029,7 @@ void regmon_timer_func(unsigned long softc_p)
   rmd->value.regs.busy_cycles = sc->cc_survey.rx_busy;
   rmd->value.regs.rx_cycles = sc->cc_survey.rx_frame;
   rmd->value.regs.tx_cycles = sc->cc_survey.tx_frame;
+  rmd->value.regs.tx_cycles = OS_REG_READ(ah, AR_NAV);
 
   if (sc->cc_update_mode == CC_UPDATE_MODE_KERNELTIMER) {
     /* set new timer */
