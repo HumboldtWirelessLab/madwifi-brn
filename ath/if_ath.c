@@ -702,7 +702,8 @@ ath_attach(u_int16_t devid, struct net_device *dev, HAL_BUS_TAG tag)
           }
 
 #ifdef BRN_REGMON_DEBUGFS
-          sprintf(sc->regm_dbgfs_name,"regmon_data_%d",sc->devid);
+          //sprintf(sc->regm_dbgfs_name,"regmon_data_%d",sc->devid);
+          sprintf(sc->regm_dbgfs_name,"regmon_data");
           if ( sc->regm_dfs_data.data != NULL ) {
             /* only set data pointer and data size */
             sc->regm_dfs_data.data = (void *)sc->regm_data;
