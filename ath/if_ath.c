@@ -712,6 +712,8 @@ ath_attach(u_int16_t devid, struct net_device *dev, HAL_BUS_TAG tag)
 
             if (sc->regm_dfs_file == NULL) {
               printk("Could not create debugfs blob\n");
+            } else {
+              printk("Could create debugfs blob\n");
             }
           }
 #endif
@@ -11907,13 +11909,13 @@ ATH_SYSCTL_DECL(ath_sysctl_halparam, ctl, write, filp, buffer, lenp, ppos)
           hrtimer_cancel(&(sc->perf_reg_hrtimer));
         }
 #endif
+        if (sc->regm_dfs_file != NULL) {
+          debugfs_remove(sc->regm_dfs_file);
+        }
+
         if ( sc->regm_data != NULL ) {
           kfree(sc->regm_data);
           sc->regm_data = NULL;
-        }
-
-        if (sc->regm_dfs_file != NULL) {
-          debugfs_remove(sc->regm_dfs_file);
         }
 
         /* Init ringbuffer */
