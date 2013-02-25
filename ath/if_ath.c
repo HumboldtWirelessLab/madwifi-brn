@@ -702,13 +702,14 @@ ath_attach(u_int16_t devid, struct net_device *dev, HAL_BUS_TAG tag)
           }
 
 #ifdef BRN_REGMON_DEBUGFS
+          sprintf(sc->regm_dbgfs_name,"regmon_data_%d",sc->devid);
           if ( sc->regm_dfs_data.data != NULL ) {
             /* only set data pointer and data size */
             sc->regm_dfs_data.data = (void *)sc->regm_data;
             sc->regm_dfs_data.size = (unsigned long)sc->regm_data_size ;
 
             /* create pseudo file under /sys/kernel/debug/ with name 'test' */
-            sc->regm_dfs_file = debugfs_create_blob("regmon_data", 0644, NULL, &(sc->regm_dfs_data));
+            sc->regm_dfs_file = debugfs_create_blob(sc->regm_dbgfs_name, 0644, NULL, &(sc->regm_dfs_data));
 
             if (sc->regm_dfs_file == NULL) {
               printk("Could not create debugfs blob\n");
@@ -11932,7 +11933,7 @@ ATH_SYSCTL_DECL(ath_sysctl_halparam, ctl, write, filp, buffer, lenp, ppos)
           sc->regm_dfs_data.size = (unsigned long)sc->regm_data_size ;
 
           /* create pseudo file under /sys/kernel/debug/ with name 'test' */
-          sc->regm_dfs_file = debugfs_create_blob("regmon_data", 0644, NULL, &(sc->regm_dfs_data));
+          sc->regm_dfs_file = debugfs_create_blob(sc->regm_dbgfs_name, 0644, NULL, &(sc->regm_dfs_data));
 
           if (sc->regm_dfs_file == NULL) {
             printk("Could not create debugfs blob\n");

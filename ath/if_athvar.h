@@ -935,6 +935,7 @@ struct ath_softc {
       struct regmon_data* regm_info;
 
 #ifdef BRN_REGMON_DEBUGFS
+      char regm_dbgfs_name[16];
       struct dentry *regm_dfs_file;
       struct debugfs_blob_wrapper regm_dfs_data;
 #endif
