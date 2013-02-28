@@ -150,6 +150,7 @@ void regmon_timer_func(unsigned long softc_p);
 int regmon_hrtimer_func(struct hrtimer *hr_timer);
 #else
 enum hrtimer_restart regmon_hrtimer_func(struct hrtimer *hr_timer);
+void check_rm_data_for_phantom_pkt(struct regmon_data * rmd, struct ath_softc *sc);
 #endif
 #endif
 #endif
@@ -13053,21 +13054,22 @@ void regmon_timer_func(unsigned long softc_p)
 }
 
 
-#ifdef BRN_REGMON_HR_05
+#ifdef BRN_REGMON_HR
 void check_rm_data_for_phantom_pkt(struct regmon_data * rmd, struct ath_softc *sc)
 {
   u_int32_t busy_percentage = sc->channel_utility.busy;
   u_int32_t rx_percentage   = sc->channel_utility.rx;
+  rmd->value.regs.phantom_pkt_len = 0;
 
-  /* channel is 'busy' but we're not receiving (busy 100%) */
-  if (busy_percentage > 0 && busy_percentage < 100 && rx_percentage == 0) {
+  /* channel is busy but we're not receiving */
+  if (busy_percentage > 0 && busy_percentage < 100 && rx_percentage < busy_percentage) { /* BUG: RX? */
     sc->phantom_cnt++;
 
     if (sc->phantom_start == 0) /* mark start of 'phantom pkt' */
-      sc->phantom_start = sc->regm_info.index;
+      sc->phantom_start = sc->regm_info->value.info.index;
 
   /* normal RX, create phantom pkt and reset */
-  } else if (busy_percentage == 100) {
+  } else if (busy_percentage == 100 && rx_percentage == 100) {
     sc->phantom_cnt = 0;
 
     if (sc->phantom_start != 0) {
@@ -13082,13 +13084,14 @@ void check_rm_data_for_phantom_pkt(struct regmon_data * rmd, struct ath_softc *s
     sc->phantom_cnt = 0;
 
     u_int64_t phantom_len = rmd->hrtime.tv64 - sc->regm_data[sc->phantom_start].hrtime.tv64;
-    rmd->value.regs.phantom_pkt_len = phantom_len;
+    rmd->value.regs.phantom_pkt_len = (u_int32_t) phantom_len;
 
     sc->phantom_start = 0;
 
-    //struct sk_buff *skb = create_phantom_pkt();
-
-    //ieee80211_input_monitor(sc->ic, skb, bf, 0 /* RX */, bf->bf_tsf, sc);
+    /*
+    struct sk_buff *skb = create_phantom_pkt();
+    ieee80211_input_monitor(sc->ic, skb, bf, 0, bf->bf_tsf, sc);  // 0 -> RX
+    */
   }
 
 
@@ -13134,7 +13137,7 @@ enum hrtimer_restart regmon_hrtimer_func(struct hrtimer *hr_timer)
   rmd->value.regs.tx_cycles = sc->cc_survey.tx_frame;
   //rmd->value.regs.nav = OS_REG_READ(ah, AR_NAV);
 
-  //check_rm_data_for_phantom_pkt(rmd, sc);
+  check_rm_data_for_phantom_pkt(rmd, sc);
 
   if (sc->cc_update_mode == CC_UPDATE_MODE_KERNELTIMER) {
     hrtimer_forward(&(sc->perf_reg_hrtimer), now, sc->perf_reg_hrinterval);
