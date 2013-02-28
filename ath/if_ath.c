@@ -712,21 +712,18 @@ ath_attach(u_int16_t devid, struct net_device *dev, HAL_BUS_TAG tag)
 
           //sprintf(sc->regm_dbgfs_name,"regmon_data_%d",sc->devid);
           sprintf(sc->regm_dbgfs_name,"regmon_data");
-          if ( sc->regm_dfs_data.data != NULL ) {
-            /* only set data pointer and data size */
-            sc->regm_dfs_data.data = (void *)sc->regm_data;
-            sc->regm_dfs_data.size = (unsigned long)sc->regm_data_size ;
 
-            /* create pseudo file under /sys/kernel/debug/ */
-            sc->regm_dfs_file = debugfs_create_blob(sc->regm_dbgfs_name, 0644, NULL, &(sc->regm_dfs_data));
+          /* only set data pointer and data size */
+          sc->regm_dfs_data.data = (void *)sc->regm_data;
+          sc->regm_dfs_data.size = (unsigned long)sc->regm_data_size ;
 
-            if (sc->regm_dfs_file == NULL) {
-              printk(KERN_ERR "Could not create debugfs blob\n");
-            } else {
-              printk(KERN_ERR "Could create debugfs blob\n");
-            }
+          /* create pseudo file under /sys/kernel/debug/ with name 'test' */
+          sc->regm_dfs_file = debugfs_create_blob(sc->regm_dbgfs_name, 0644, NULL, &(sc->regm_dfs_data));
+
+          if (sc->regm_dfs_file == NULL) {
+            printk(KERN_ERR "Could not create debugfs blob\n");
           } else {
-            printk(KERN_ERR "regm_dfs_data.data wasnt NULL\n");
+            printk(KERN_ERR "Could create debugfs blob\n");
           }
 
           printk(KERN_ERR "after debugsFS init\n");
@@ -11940,7 +11937,7 @@ ATH_SYSCTL_DECL(ath_sysctl_halparam, ctl, write, filp, buffer, lenp, ppos)
         sc->regm_data = (struct regmon_data*)kmalloc(sc->regm_data_size, GFP_KERNEL);
 
         if ( sc->regm_data == NULL ) {
-          printk("BRN-Regmon: unable to alloc mem for ringbuf. Disable Timer");
+          printk(KERN_ERR "BRN-Regmon: unable to alloc mem for ringbuf. Disable Timer");
         } else {
 
           /* only set data pointer and data size */
@@ -11951,7 +11948,7 @@ ATH_SYSCTL_DECL(ath_sysctl_halparam, ctl, write, filp, buffer, lenp, ppos)
           sc->regm_dfs_file = debugfs_create_blob(sc->regm_dbgfs_name, 0644, NULL, &(sc->regm_dfs_data));
 
           if (sc->regm_dfs_file == NULL) {
-            printk("Could not create debugfs blob\n");
+            printk(KERN_ERR "Could not create debugfs blob\n");
           }
 
           sc->regm_info = &(sc->regm_data[sc->regm_data_no_entries]);
