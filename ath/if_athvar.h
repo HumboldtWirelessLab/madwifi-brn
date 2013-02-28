@@ -373,7 +373,7 @@ struct ath_node {
 	u_int32_t an_avgrssi;			/* average rssi over all rx frames */
 	u_int8_t  an_prevdatarix;		/* rate ix of last data frame */
 	u_int16_t an_minffrate;			/* min rate in kbps for ff to aggregate */
-	
+
 	struct ath_buf *an_tx_ffbuf[WME_NUM_AC]; /* ff staging area */
 
 	ath_bufhead an_uapsd_q;			/* U-APSD delivery queue */
@@ -423,7 +423,7 @@ struct ath_node {
 #else
 #define	ATH_NODE_UAPSD_LOCK_ASSERT(_an)
 #define	ATH_NODE_UAPSD_LOCK_CHECK(_an)
-#endif 
+#endif
 
 #define ATH_RSSI_LPF_LEN	10
 #define ATH_RSSI_DUMMY_MARKER	0x127
@@ -465,7 +465,7 @@ struct ath_buf {
 	dma_addr_t bf_skbaddrff[ATH_TXDESC - 1]; 	/* extra addrs for FF */
 #endif
 	int bf_taken_at_line; 				/* XXX: Want full alloc backtrace */
-	const char *bf_taken_at_func;			
+	const char *bf_taken_at_func;
 };
 
 /* The last descriptor for a buffer.
@@ -843,25 +843,25 @@ struct ath_softc {
 	struct timer_list sc_dfs_excl_timer;	/* mark expiration timer task */
 	struct timer_list sc_dfs_cac_timer;	/* dfs wait timer */
 	u_int32_t sc_dfs_cac_period;		/* DFS wait time before accessing a
-					         * channel (in seconds). FCC 
+					         * channel (in seconds). FCC
 						 * requires 60s. */
 	u_int32_t sc_dfs_excl_period;		/* DFS channel non-occupancy limit
 						 * after radar is detected (in seconds).
 						 * FCC requires 30m. */
 	u_int64_t sc_rp_lasttsf;		/* TSF at last detected radar pulse */
 
-	
-	
+
+
 	struct ath_rp *sc_rp;			/* radar pulse circular array */
 	struct list_head sc_rp_list;
 	int sc_rp_num;
 	int sc_rp_min;
 	HAL_BOOL (*sc_rp_analyze)(struct ath_softc *sc);
 	struct ATH_TQ_STRUCT sc_rp_tq;
-	
-	int sc_rp_ignored;			/* if set, we ignored all 
+
+	int sc_rp_ignored;			/* if set, we ignored all
 						 * received pulses */
-	int sc_radar_ignored;			/* if set, we ignored all 
+	int sc_radar_ignored;			/* if set, we ignored all
 						 * detected radars */
 	u_int32_t sc_nexttbtt;	/* TBTT following the next SWBA, updated only
 				 * by ath_beacon_config() to avoid race
@@ -872,7 +872,7 @@ struct ath_softc {
 	//        u_int32_t sc_txcont_mask;           /* Which operations to perform in txcont configuration */
 	unsigned int sc_disable_cca_mask:8;     /* bitmask for turning off/on parts of 'disable_cca' */
 	unsigned int sc_prev_disable_cca_mask:8;
-	
+
 	u_int32_t orig_rssi_thresh;
 	u_int32_t orig_phy_nf;
 	u_int32_t orig_diag_sw;
@@ -925,6 +925,9 @@ struct ath_softc {
 #ifdef BRN_REGMON_HR
       struct hrtimer perf_reg_hrtimer;
       ktime_t perf_reg_hrinterval;    //in sec + nsec
+
+      u_int32_t phantom_cnt;          // counts busy/ACI detection
+      u_int32_t phantom_start;        // ring buffer index when detection started
 #endif
       struct timer_list perf_reg_timer;
       u_int32_t perf_reg_interval;    //in jiffies
