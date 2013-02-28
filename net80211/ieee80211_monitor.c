@@ -61,6 +61,10 @@
 #include <ath/if_athvar.h>
 
 #ifdef CHANNEL_UTILITY
+#ifdef BRN_REGMON_HR
+#include <linux/ktime.h>
+#include <linux/hrtimer.h>
+#endif
 uint8_t get_channel_utility_busy(struct ath_softc *sc);
 #endif
 
@@ -374,6 +378,13 @@ ieee80211_input_monitor(struct ieee80211com *ic, struct sk_buff *skb,
 #ifdef ATH2HEADER
 	u_int8_t *skb1_data;
 	struct ath2_header ath2_h;
+#ifdef BRN_REGMON_HR
+#if LINUX_VERSION_CODE <= KERNEL_VERSION(2,6,19)
+  ktime_t now = sc->perf_reg_hrtimer.base->get_time();
+#else
+  ktime_t now = hrtimer_cb_get_time(&(sc->perf_reg_hrtimer));
+#endif
+#endif
 #endif
 
 	if (tx) {
@@ -679,11 +690,19 @@ ieee80211_input_monitor(struct ieee80211com *ic, struct sk_buff *skb,
 				ath2_h.anno.tx.ts_antenna = bf->bf_dsstatus.ds_txstat.ts_antenna;
 				ath2_h.anno.tx.ts_finaltsi = bf->bf_dsstatus.ds_txstat.ts_finaltsi;
 
-				ath2_h.anno.tx.ts_hosttime = jiffies;
+#ifdef BRN_REGMON_HR
+        ath2_h.anno.tx.ts_hosttime = now.tv64;
+#else
+        ath2_h.anno.tx.ts_hosttime = jiffies;
+#endif
 				ath2_h.anno.tx.ts_mactime = mactime;
 				ath2_h.anno.tx.ts_noise = (int8_t) noise;
 				ath2_h.anno.tx.ts_channel = (int8_t) ieee80211_mhz2ieee(ic->ic_curchan->ic_freq, ic->ic_curchan->ic_flags);
-				ath2_h.anno.tx.ts_flags = 0;
+#ifdef BRN_REGMON_HR
+        ath2_h.anno.tx.ts_flags = MADWIFI_RXTX_FLAGS_HOSTTIME_HRTIME;
+#else
+        ath2_h.anno.tx.ts_flags = 0;
+#endif
 #ifdef CHANNEL_UTILITY
 				if ( (sc->cc_pkt_counter == 0) && ((sc->cc_update_mode & CC_UPDATE_MODE_TXFEEDBACK) == CC_UPDATE_MODE_TXFEEDBACK )) { 
 				  switch ( sc->cc_anno_mode ) {
@@ -717,15 +736,23 @@ ieee80211_input_monitor(struct ieee80211com *ic, struct sk_buff *skb,
 				ath2_h.anno.rx.rs_tstamp = bf->bf_dsstatus.ds_rxstat.rs_tstamp;
 				ath2_h.anno.rx.rs_antenna = bf->bf_dsstatus.ds_rxstat.rs_antenna;
 
-				ath2_h.anno.rx.rs_hosttime = jiffies;
+#ifdef BRN_REGMON_HR
+        ath2_h.anno.rx.rs_hosttime = now.tv64;;
+#else
+        ath2_h.anno.rx.rs_hosttime = jiffies;
+#endif
 				ath2_h.anno.rx.rs_mactime = mactime;
 				ath2_h.anno.rx.rs_noise = (int8_t) noise;
 				ath2_h.anno.rx.rs_channel = (int8_t) ieee80211_mhz2ieee(ic->ic_curchan->ic_freq, ic->ic_curchan->ic_flags);
-				
+
+#ifdef BRN_REGMON_HR
+        ath2_h.anno.rx.rs_flags = MADWIFI_RXTX_FLAGS_HOSTTIME_HRTIME;
+#else
+        ath2_h.anno.rx.rs_flags = 0;
+#endif
+
 				if (ic->ic_flags & IEEE80211_F_SHPREAMBLE) {
-					ath2_h.anno.rx.rs_flags = MADWIFI_RXTX_FLAGS_SHORT_PREAMBLE;
-				} else {
-					ath2_h.anno.rx.rs_flags = 0;
+					ath2_h.anno.rx.rs_flags |= MADWIFI_RXTX_FLAGS_SHORT_PREAMBLE;
 				}
 #ifdef CHANNEL_UTILITY
 				if ( (sc->cc_pkt_counter == 0) && ((sc->cc_update_mode & CC_UPDATE_MODE_RX) == CC_UPDATE_MODE_RX )) {
