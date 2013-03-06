@@ -429,9 +429,16 @@ ieee80211_input_monitor(struct ieee80211com *ic, struct sk_buff *skb,
 			/* Accept PHY, CRC and decrypt errors. Discard the rest. */
 			if (bf->bf_dsstatus.ds_rxstat.rs_status &~
 					(HAL_RXERR_DECRYPT | HAL_RXERR_MIC |
-					 HAL_RXERR_PHY | HAL_RXERR_CRC))
+#ifdef BRN_REGMON
+           HAL_RXERR_PHANTOM |
+#endif
+					 HAL_RXERR_PHY | HAL_RXERR_CRC)) {
+        printk(KERN_ERR "Discard this type of Phy-Error!");
+#ifdef RXTX_PACKET_COUNT
+        sc->ieee80211_discard_phy_packets++;
+#endif
 				continue;
-
+      }
 			/* We can't use addr1 to determine direction at this point */
 			pkttype = PACKET_HOST;
 		} else {

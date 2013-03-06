@@ -124,6 +124,10 @@ struct ath_rx_status {
 #define	HAL_RXERR_DECRYPT	0x08	/* non-Michael decrypt error */
 #define	HAL_RXERR_MIC		0x10	/* Michael MIC decrypt error */
 
+#ifdef BRN_REGMON
+#define HAL_RXERR_PHANTOM   0x20  /* Phantom Paket */
+#endif
+
 /* bits found in rs_flags */
 #define	HAL_RX_MORE		0x01	/* more descriptors follow */
 #define	HAL_RX_MORE_AGGR	0x02	/* more frames in aggr */

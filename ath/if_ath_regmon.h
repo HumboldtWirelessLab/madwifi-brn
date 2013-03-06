@@ -38,6 +38,7 @@
 #include "net80211/if_athproto.h"
 #include "if_athvar.h"
 
+void check_rm_data_for_phantom_pkt(struct regmon_data * rmd, struct ath_softc *sc);
 struct sk_buff *create_phantom_pkt(void);
 
 #endif

@@ -654,7 +654,7 @@ ath_attach(u_int16_t devid, struct net_device *dev, HAL_BUS_TAG tag)
         sc->keep_crc = 0;
 #endif
 #ifdef RXTX_PACKET_COUNT
-        sc->rx_packets = sc->tx_packets = sc->feedback_packets = sc->ieee80211_tx_packets = sc->ieee80211_rx_packets = 0;
+        sc->rx_packets = sc->tx_packets = sc->feedback_packets = sc->ieee80211_tx_packets = sc->ieee80211_rx_packets = sc->ieee80211_discard_phy_packets = 0;
 #endif
 #ifdef CHANNEL_UTILITY
         sc->regmon_flags = REGMON_FLAGS_CLEAR;
@@ -695,6 +695,8 @@ ath_attach(u_int16_t devid, struct net_device *dev, HAL_BUS_TAG tag)
           sc->regm_info = &(sc->regm_data[sc->regm_data_no_entries]);
           sc->regm_info->value.info.size = sc->regm_data_no_entries;
           sc->regm_info->value.info.index = 0;
+          sc->regm_info->value.info.endian = 0x1234;
+          sc->regm_info->value.info.version = 0x0001;
           if (sc->cc_update_mode == CC_UPDATE_MODE_KERNELTIMER) {
 #ifdef BRN_REGMON_HR
 #if LINUX_VERSION_CODE <= KERNEL_VERSION(2,6,19)
@@ -731,6 +733,30 @@ ath_attach(u_int16_t devid, struct net_device *dev, HAL_BUS_TAG tag)
 
 
 #endif
+           sc->phantom_bf = (struct ath_buf*)kmalloc(sizeof(struct ath_buf), GFP_KERNEL);
+           if ( sc->phantom_bf != NULL ) {
+             sc->phantom_bf->bf_desc = (struct ath_desc*)kmalloc(sizeof(struct ath_desc), GFP_KERNEL);
+             if ( sc->phantom_bf->bf_desc != NULL ) {
+               sc->phantom_bf->bf_channoise = 0;
+               sc->phantom_bf->bf_dsstatus.ds_rxstat.rs_status = HAL_RXERR_PHANTOM;
+               sc->phantom_bf->bf_dsstatus.ds_rxstat.rs_datalen = 0;
+               sc->phantom_bf->bf_dsstatus.ds_rxstat.rs_phyerr = 0;
+               sc->phantom_bf->bf_dsstatus.ds_rxstat.rs_rssi = 0;
+               sc->phantom_bf->bf_dsstatus.ds_rxstat.rs_keyix = 0;
+               sc->phantom_bf->bf_dsstatus.ds_rxstat.rs_rate = 2;
+               sc->phantom_bf->bf_dsstatus.ds_rxstat.rs_more = 0;
+               sc->phantom_bf->bf_dsstatus.ds_rxstat.rs_tstamp = 0;
+               sc->phantom_bf->bf_dsstatus.ds_rxstat.rs_antenna = 0;
+
+               memset(sc->phantom_bf->bf_desc,0,sizeof(struct ath_desc));
+             } else {
+               kfree(sc->phantom_bf);
+               sc->phantom_bf = NULL;
+               printk(KERN_ERR "Couldn't create ath_buf for phantom packets!\n");
+             }
+           } else {
+             printk(KERN_ERR "Couldn't create ath_buf for phantom packets!\n");
+           }
         }
 #endif
 #endif
@@ -1407,6 +1433,10 @@ ath_detach(struct net_device *dev)
 #ifdef BRN_REGMON_DEBUGFS
   debugfs_remove(sc->regm_dfs_file);
 #endif
+  if ( sc->phantom_bf != NULL ) {
+    kfree(sc->phantom_bf);
+    sc->phantom_bf = NULL;
+  }
 #endif
 #endif
 
@@ -11955,6 +11985,8 @@ ATH_SYSCTL_DECL(ath_sysctl_halparam, ctl, write, filp, buffer, lenp, ppos)
           sc->regm_info = &(sc->regm_data[sc->regm_data_no_entries]);
           sc->regm_info->value.info.size = sc->regm_data_no_entries;
           sc->regm_info->value.info.index = 0;
+          sc->regm_info->value.info.endian = 0x1234;
+          sc->regm_info->value.info.version = 0x0001;
           if (sc->cc_update_mode == CC_UPDATE_MODE_KERNELTIMER) {
 #ifdef BRN_REGMON_HR
 #if LINUX_VERSION_CODE <= KERNEL_VERSION(2,6,19)
@@ -13019,32 +13051,36 @@ void ath_cycle_counters_reset(struct ath_softc *sc)
 }
 
 #ifdef BRN_REGMON
-/* increments the global counter and sets a new timer */
-void regmon_timer_func(unsigned long softc_p)
+inline void regmon_timer_update(struct ath_softc *sc, uint64_t ktime_now)
 {
-  struct ath_softc *sc = (struct ath_softc *)softc_p;
   struct regmon_data *rmd;
+  struct ath_hal *ah = sc->sc_ah;
 
   ath_hw_cycle_counters_update(sc);
-
-#ifdef BRN_REGMON_DEBUG
-  printk("jiffies=%lu\n", jiffies);
-#endif
-
-  if (sc->regm_data == NULL)
-    return;
 
   rmd = (struct regmon_data *)&(sc->regm_data[sc->regm_info->value.info.index]);
   sc->regm_info->value.info.index = (sc->regm_info->value.info.index+1) % sc->regm_info->value.info.size;
 
   rmd->jiffies = jiffies;
-  rmd->hrtime.tv64 = 0;
+  rmd->hrtime.tv64 = ktime_now;
 
   rmd->value.regs.cycles = sc->cc_survey.cycles;
   rmd->value.regs.busy_cycles = sc->cc_survey.rx_busy;
   rmd->value.regs.rx_cycles = sc->cc_survey.rx_frame;
   rmd->value.regs.tx_cycles = sc->cc_survey.tx_frame;
-  //rmd->value.regs.nav = OS_REG_READ(ah, AR_NAV);
+  rmd->value.regs.frame_ctrl = OS_REG_READ(ah, 0x9944);
+
+  //check_rm_data_for_phantom_pkt(rmd, sc);
+}
+
+/* increments the global counter and sets a new timer */
+/* For Jiffies*/
+void regmon_timer_func(unsigned long softc_p)
+{
+  struct ath_softc *sc = (struct ath_softc *)softc_p;
+  if (sc->regm_data == NULL) return;
+
+  regmon_timer_update(sc, 0);
 
   if (sc->cc_update_mode == CC_UPDATE_MODE_KERNELTIMER) {
     /* set new timer */
@@ -13053,53 +13089,6 @@ void regmon_timer_func(unsigned long softc_p)
   }
 }
 
-
-#ifdef BRN_REGMON_HR
-void check_rm_data_for_phantom_pkt(struct regmon_data * rmd, struct ath_softc *sc)
-{
-  u_int32_t busy_percentage = sc->channel_utility.busy;
-  u_int32_t rx_percentage   = sc->channel_utility.rx;
-  rmd->value.regs.phantom_pkt_len = 0;
-
-  /* channel is busy but we're not receiving */
-  if (busy_percentage > 0 && busy_percentage < 100 && rx_percentage < busy_percentage) { /* BUG: RX? */
-    sc->phantom_cnt++;
-
-    if (sc->phantom_start == 0) /* mark start of 'phantom pkt' */
-      sc->phantom_start = sc->regm_info->value.info.index;
-
-  /* normal RX, create phantom pkt and reset */
-  } else if (busy_percentage == 100 && rx_percentage == 100) {
-    sc->phantom_cnt = 0;
-
-    if (sc->phantom_start != 0) {
-      u_int64_t phantom_len = rmd->hrtime.tv64 - sc->regm_data[sc->phantom_start].hrtime.tv64;
-      rmd->value.regs.phantom_pkt_len = phantom_len;
-
-      sc->phantom_start = 0;
-    }
-
-  /* channel is quiet but earlier we recognized ACI */
-  } else if (busy_percentage == 0 && sc->phantom_cnt > 0) {
-    sc->phantom_cnt = 0;
-
-    u_int64_t phantom_len = rmd->hrtime.tv64 - sc->regm_data[sc->phantom_start].hrtime.tv64;
-    rmd->value.regs.phantom_pkt_len = (u_int32_t) phantom_len;
-
-    sc->phantom_start = 0;
-
-    /*
-    struct sk_buff *skb = create_phantom_pkt();
-    ieee80211_input_monitor(sc->ic, skb, bf, 0, bf->bf_tsf, sc);  // 0 -> RX
-    */
-  }
-
-
-}
-#endif
-
-
-
 #ifdef BRN_REGMON_HR
 #if LINUX_VERSION_CODE <= KERNEL_VERSION(2,6,19)
 int regmon_hrtimer_func(struct hrtimer *hr_timer)
@@ -13107,37 +13096,18 @@ int regmon_hrtimer_func(struct hrtimer *hr_timer)
 enum hrtimer_restart regmon_hrtimer_func(struct hrtimer *hr_timer)
 #endif
 {
-#if LINUX_VERSION_CODE <= KERNEL_VERSION(2,6,19)
-  ktime_t now = hr_timer->base->get_time();
-#else
-  ktime_t now = hrtimer_cb_get_time(hr_timer);
-#endif
-  struct regmon_data *rmd;
+  ktime_t now;
 
   struct ath_softc *sc = container_of(hr_timer, struct ath_softc, perf_reg_hrtimer);
+  if (sc->regm_data == NULL) return HRTIMER_NORESTART;
 
-  ath_hw_cycle_counters_update(sc);
-
-#ifdef BRN_REGMON_HR_DEBUG
-  printk("hr jiffies=%lu\n", jiffies);
+#if LINUX_VERSION_CODE <= KERNEL_VERSION(2,6,19)
+  now = hr_timer->base->get_time();
+#else
+  now = hrtimer_cb_get_time(hr_timer);
 #endif
 
-  if (sc->regm_data == NULL)
-    return HRTIMER_NORESTART;
-
-  rmd = (struct regmon_data *)&(sc->regm_data[sc->regm_info->value.info.index]);
-  sc->regm_info->value.info.index = (sc->regm_info->value.info.index+1) % sc->regm_info->value.info.size;
-
-  rmd->jiffies = jiffies;
-  rmd->hrtime.tv64 = now.tv64;
-
-  rmd->value.regs.cycles = sc->cc_survey.cycles;
-  rmd->value.regs.busy_cycles = sc->cc_survey.rx_busy;
-  rmd->value.regs.rx_cycles = sc->cc_survey.rx_frame;
-  rmd->value.regs.tx_cycles = sc->cc_survey.tx_frame;
-  //rmd->value.regs.nav = OS_REG_READ(ah, AR_NAV);
-
-  check_rm_data_for_phantom_pkt(rmd, sc);
+  regmon_timer_update(sc, now.tv64);
 
   if (sc->cc_update_mode == CC_UPDATE_MODE_KERNELTIMER) {
     hrtimer_forward(&(sc->perf_reg_hrtimer), now, sc->perf_reg_hrinterval);

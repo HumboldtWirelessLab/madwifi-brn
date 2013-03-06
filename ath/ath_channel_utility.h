@@ -46,15 +46,17 @@ struct regmon_register {
   u32 busy_cycles;
   u32 rx_cycles;
   u32 tx_cycles;
+  u32 frame_ctrl;
   u32 phantom_pkt_len;
 } __attribute__((packed));
 
 struct regmon_info {
-  u32 size;
   u32 index;
   u32 unused_1;
   u32 unused_2;
-  u16 unused_3;
+  u32 unused_3;
+  u32 size;
+  u16 version;
   u16 endian;
 } __attribute__((packed));
 

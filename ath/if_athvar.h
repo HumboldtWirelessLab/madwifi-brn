@@ -915,6 +915,7 @@ struct ath_softc {
       u_int32_t feedback_packets;     //inc in ieee80211_input_monitor (ieee80211_monitor.c)
       u_int32_t ieee80211_tx_packets; //inc in ieee80211_hardstart (ieee80211_output.c)
       u_int32_t ieee80211_rx_packets; //inc in ieee80211_input_monitor (ieee80211_monitor.c)
+      u_int32_t ieee80211_discard_phy_packets; //inc in ieee80211_input_monitor (ieee80211_monitor.c)
 #endif
 #ifdef CHANNEL_UTILITY
 #define REGMON_FLAGS_CLEAR                  0
@@ -928,6 +929,7 @@ struct ath_softc {
 
       u_int32_t phantom_cnt;          // counts busy/ACI detection
       u_int32_t phantom_start;        // ring buffer index when detection started
+      struct ath_buf *phantom_bf;
 #endif
       struct timer_list perf_reg_timer;
       u_int32_t perf_reg_interval;    //in jiffies
