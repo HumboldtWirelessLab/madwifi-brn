@@ -41,10 +41,12 @@
 void check_rm_data_for_phantom_pkt(struct regmon_data * rmd, struct ath_softc *sc)
 {
   u_int64_t phantom_len;
-  u_int32_t busy_percentage = sc->channel_utility.busy;
-  u_int32_t rx_percentage   = sc->channel_utility.rx;
+  struct sk_buff *skb = NULL;
+  //u_int32_t busy_percentage = sc->channel_utility.busy;
+  //u_int32_t rx_percentage   = sc->channel_utility.rx;
   rmd->value.regs.phantom_pkt_len = 0;
 
+#ifdef BLABLA
   /* channel is busy but we're not receiving */
   if (busy_percentage > 0 && busy_percentage < 100 && rx_percentage < busy_percentage) { /* BUG: RX? */
     sc->phantom_cnt++;
@@ -65,18 +67,27 @@ void check_rm_data_for_phantom_pkt(struct regmon_data * rmd, struct ath_softc *s
 
     /* channel is quiet but earlier we recognized ACI */
   } else if (busy_percentage == 0 && sc->phantom_cnt > 0) {
+#endif
     sc->phantom_cnt = 0;
 
     phantom_len = rmd->hrtime.tv64 - sc->regm_data[sc->phantom_start].hrtime.tv64;
     rmd->value.regs.phantom_pkt_len = (u_int32_t) phantom_len;
 
-    sc->phantom_start = 0;
+    //sc->phantom_start = 0;
+    sc->phantom_start++;
 
-    /*
-    struct sk_buff *skb = create_phantom_pkt();
-    ieee80211_input_monitor(sc->ic, skb, bf, 0, bf->bf_tsf, sc);  // 0 -> RX
-    */
-  }
+    if ( sc->phantom_start == 1000 ) {
+
+      printk(KERN_ERR "create phan\n");
+      skb = create_phantom_pkt();
+      printk(KERN_ERR "done. pkt to input_mon\n");
+      ieee80211_input_monitor(&sc->sc_ic, skb, sc->phantom_bf, 0, 0, sc);  // 0 -> RX
+      printk(KERN_ERR "FIN\n");
+
+      sc->phantom_start = 0;
+    }
+
+  //}
 }
 #endif
 
@@ -92,7 +103,6 @@ struct sk_buff *create_phantom_pkt(void)
   }
 
   wh  = (struct ieee80211_frame *)skb_put(skb, sizeof(struct ieee80211_frame));
-
 
   return skb;
 }

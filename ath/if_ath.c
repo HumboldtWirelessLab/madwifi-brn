@@ -13070,7 +13070,7 @@ inline void regmon_timer_update(struct ath_softc *sc, uint64_t ktime_now)
   rmd->value.regs.tx_cycles = sc->cc_survey.tx_frame;
   rmd->value.regs.frame_ctrl = OS_REG_READ(ah, 0x9944);
 
-  //check_rm_data_for_phantom_pkt(rmd, sc);
+  check_rm_data_for_phantom_pkt(rmd, sc);
 }
 
 /* increments the global counter and sets a new timer */
