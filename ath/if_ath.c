@@ -743,7 +743,7 @@ ath_attach(u_int16_t devid, struct net_device *dev, HAL_BUS_TAG tag)
                sc->phantom_bf->bf_dsstatus.ds_rxstat.rs_phyerr = 0;
                sc->phantom_bf->bf_dsstatus.ds_rxstat.rs_rssi = 0;
                sc->phantom_bf->bf_dsstatus.ds_rxstat.rs_keyix = 0;
-               sc->phantom_bf->bf_dsstatus.ds_rxstat.rs_rate = 2;
+               sc->phantom_bf->bf_dsstatus.ds_rxstat.rs_rate = 27;
                sc->phantom_bf->bf_dsstatus.ds_rxstat.rs_more = 0;
                sc->phantom_bf->bf_dsstatus.ds_rxstat.rs_tstamp = 0;
                sc->phantom_bf->bf_dsstatus.ds_rxstat.rs_antenna = 0;

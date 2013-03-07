@@ -93,8 +93,10 @@ void check_rm_data_for_phantom_pkt(struct regmon_data * rmd, struct ath_softc *s
 
 struct sk_buff *create_phantom_pkt(void)
 {
-  struct ieee80211_frame *wh         = NULL;
-  unsigned int datasz                = 128;
+  struct ieee80211_frame *wh = NULL;
+  unsigned int datasz        = 2048;
+  char *data                 = NULL;
+
 
   struct sk_buff *skb = alloc_skb(sizeof(struct ieee80211_frame) + datasz +  IEEE80211_CRC_LEN, GFP_ATOMIC);
 
@@ -102,7 +104,12 @@ struct sk_buff *create_phantom_pkt(void)
     printk(KERN_ERR "alloc_skb(...) returned null!\n");
   }
 
+  data = (char *) skb_put(skb, 80);
+  memset(data, 0, 80);
+
   wh  = (struct ieee80211_frame *)skb_put(skb, sizeof(struct ieee80211_frame));
+  memset(wh, 0, sizeof(struct ieee80211_frame));
+
 
   return skb;
 }

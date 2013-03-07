@@ -135,7 +135,7 @@ if_printf(struct net_device *dev, const char *fmt, ...)
  */
 struct sk_buff *
 #ifdef IEEE80211_DEBUG_REFCNT
-ieee80211_getmgtframe_debug(u_int8_t **frm, u_int pktlen, 
+ieee80211_getmgtframe_debug(u_int8_t **frm, u_int pktlen,
 		const char *func, int line)
 #else
 ieee80211_getmgtframe(u_int8_t **frm, u_int pktlen)
@@ -164,7 +164,7 @@ ieee80211_getmgtframe(u_int8_t **frm, u_int pktlen)
 EXPORT_SYMBOL(ieee80211_getmgtframe_debug);
 #else
 EXPORT_SYMBOL(ieee80211_getmgtframe);
-#endif 
+#endif
 
 #if IEEE80211_VLAN_TAG_USED
 /*
@@ -357,7 +357,7 @@ ieee80211_notify_michael_failure(struct ieee80211vap *vap,
 }
 EXPORT_SYMBOL(ieee80211_notify_michael_failure);
 
-/* This function might sleep. Therefore: 
+/* This function might sleep. Therefore:
  * Context: process
  *
  * Note that a successful call to this function does not guarantee that
@@ -405,10 +405,10 @@ proc_read_nodes(struct ieee80211vap *vap, char *buf, int space)
 		/* Assume each node needs 500 bytes */
 		if (buf + space < p + 500)
 			break;
-		if ((ni->ni_vap == vap) && (memcmp(vap->iv_myaddr, 
+		if ((ni->ni_vap == vap) && (memcmp(vap->iv_myaddr,
 				ni->ni_macaddr, IEEE80211_ADDR_LEN) != 0)) {
 			jiffies_to_timespec(jiffies - ni->ni_last_rx, &t);
-			p += sprintf(p, "macaddr: <" MAC_FMT ">\n", 
+			p += sprintf(p, "macaddr: <" MAC_FMT ">\n",
 					MAC_ADDR(ni->ni_macaddr));
 			p += sprintf(p, " RSSI %d\n", ni->ni_rssi);
 			p += sprintf(p, " last_rx %ld.%06ld\n",
@@ -579,7 +579,7 @@ proc_common_open(struct inode *inode, struct file *file)
 {
 	struct proc_ieee80211_priv *pv;
 
-	if (!(file->private_data = kzalloc(sizeof(struct proc_ieee80211_priv), 
+	if (!(file->private_data = kzalloc(sizeof(struct proc_ieee80211_priv),
 			GFP_KERNEL)))
 		return -ENOMEM;
 	/* initially allocate both read and write buffers */
@@ -700,11 +700,56 @@ proc_channel_utility_open(struct inode *inode, struct file *file)
   buf = pv->rbuf;
   p = pv->rbuf;
 
+
   if ( (sc->cc_update_mode & CC_UPDATE_MODE_CALL) == CC_UPDATE_MODE_CALL ) {
     sc->ath_channel_utility_update(sc);
   }
 
-  p += sprintf(p, "Busy: %d RX: %d TX: %d Cycles: %d Busy_Cycles: %d RX_Cycles: %d TX_Cycles: %d\n", sc->channel_utility.busy, sc->channel_utility.rx, sc->channel_utility.tx, sc->cc_survey.cycles, sc->cc_survey.rx_busy, sc->cc_survey.rx_frame, sc->cc_survey.tx_frame);
+
+  /* HR-Timer or jiffies Timer is 'on' */
+  if ((sc->cc_update_mode & CC_UPDATE_MODE_KERNELTIMER) == CC_UPDATE_MODE_KERNELTIMER) {
+
+    /* write accumulated register values in to the survey struct to stay
+       compatible with the legacy proc read (sprintf line 726) */
+    sc->cc_survey.cycles   = sc->cc_cum.cycles;
+    sc->cc_survey.rx_busy  = sc->cc_cum.rx_busy;
+    sc->cc_survey.rx_frame = sc->cc_cum.rx_frame;
+    sc->cc_survey.tx_frame = sc->cc_cum.tx_frame;
+
+    /* reset the accumulated values */
+    memset(&(sc->cc_cum), 0, sizeof(struct ath_cycle_counters));
+
+    /* calculate percentages for the accumulated values now saved in the
+       survey struct */
+    if ( sc->cc_survey.cycles == 0 ) {
+      sc->channel_utility.busy = 0;
+      sc->channel_utility.rx   = 0;
+      sc->channel_utility.tx   = 0;
+
+    } else if ( sc->cc_survey.cycles < 100000 ) {
+      sc->channel_utility.busy = (100 * sc->cc_survey.rx_busy)  / sc->cc_survey.cycles;
+      sc->channel_utility.rx   = (100 * sc->cc_survey.rx_frame) / sc->cc_survey.cycles;
+      sc->channel_utility.tx   = (100 * sc->cc_survey.tx_frame) / sc->cc_survey.cycles;
+
+    } else {
+      u32 tmp_cyc = sc->cc_survey.cycles/100;
+      sc->channel_utility.busy = sc->cc_survey.rx_busy  / tmp_cyc;
+      sc->channel_utility.rx   = sc->cc_survey.rx_frame / tmp_cyc;
+      sc->channel_utility.tx   = sc->cc_survey.tx_frame / tmp_cyc;
+    }
+
+  }
+
+  p += sprintf(p, "Busy: %d RX: %d TX: %d Cycles: %d Busy_Cycles: %d RX_Cycles: %d TX_Cycles: %d\n",
+                  sc->channel_utility.busy,
+                  sc->channel_utility.rx,
+                  sc->channel_utility.tx,
+
+                  sc->cc_survey.cycles,
+                  sc->cc_survey.rx_busy,
+                  sc->cc_survey.rx_frame,
+                  sc->cc_survey.tx_frame
+              );
 
   pv->rlen = (p - buf);
 
@@ -1082,7 +1127,7 @@ ieee80211_virtfs_latevattach(struct ieee80211vap *vap)
 #else
 		sysfs_remove_group(&vap->iv_dev->class_dev.kobj, &ieee80211_attr_grp);
 #endif
-		printk("%s: %s - unable to create sysfs attribute group\n", 
+		printk("%s: %s - unable to create sysfs attribute group\n",
 				__func__, vap->iv_dev->name);
 		return;
 	}
@@ -1097,7 +1142,7 @@ ieee80211_virtfs_latevattach(struct ieee80211vap *vap)
 
 	/*
 	 * Reserve space for the device name outside the net_device structure
-	 * so that if the name changes we know what it used to be. 
+	 * so that if the name changes we know what it used to be.
 	 */
 	devname = kmalloc((strlen(vap->iv_dev->name) + 1) * sizeof(char), GFP_KERNEL);
 	if (devname == NULL) {
@@ -1370,7 +1415,7 @@ ieee80211_virtfs_vdetach(struct ieee80211vap *vap)
 
 /* Function to handle the device event notifications.
  * If the event is a NETDEV_CHANGENAME, and is for an interface
- * we are taking care of, then we want to remove its existing 
+ * we are taking care of, then we want to remove its existing
  * proc entries (which now have the wrong names) and add
  * new, correct, entries.
  */
