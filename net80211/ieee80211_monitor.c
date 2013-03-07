@@ -399,7 +399,6 @@ ieee80211_input_monitor(struct ieee80211com *ic, struct sk_buff *skb,
 		antenna = bf->bf_dsstatus.ds_rxstat.rs_antenna;
 		ieeerate = sc->sc_hwmap[bf->bf_dsstatus.ds_rxstat.rs_rate].ieeerate;
 
-		printk(KERN_ERR "rs_rate: %d - ieeerate: %d\n", bf->bf_dsstatus.ds_rxstat.rs_rate , ieeerate);
 
 #ifdef RXTX_PACKET_COUNT
     sc->ieee80211_rx_packets++;

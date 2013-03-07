@@ -38,6 +38,22 @@
 #include "net80211/if_athproto.h"
 #include "if_athvar.h"
 
+struct ar5212_rx_status {
+	u_int32_t data_len:12;
+	u_int32_t more:1;
+	u_int32_t decomperr:2;
+	u_int32_t rx_rate:5;
+	u_int32_t rx_rssi:8;
+	u_int32_t rx_ant:4;
+
+
+	u_int32_t done:1;
+	u_int32_t rx_ok:1;
+	u_int32_t crcerr:1;
+	u_int32_t decryptcrc:1;
+
+} __attribute__((packed));
+
 void check_rm_data_for_phantom_pkt(struct regmon_data * rmd, struct ath_softc *sc);
 struct sk_buff *create_phantom_pkt(void);
 

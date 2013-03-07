@@ -131,6 +131,7 @@
 #include "ath_channel_utility.h"
 #ifdef BRN_REGMON
 #ifdef BRN_REGMON_HR
+#include "if_ath_regmon.h"
 #include <linux/ktime.h>
 #include <linux/hrtimer.h>
 #endif
@@ -150,7 +151,6 @@ void regmon_timer_func(unsigned long softc_p);
 int regmon_hrtimer_func(struct hrtimer *hr_timer);
 #else
 enum hrtimer_restart regmon_hrtimer_func(struct hrtimer *hr_timer);
-void check_rm_data_for_phantom_pkt(struct regmon_data * rmd, struct ath_softc *sc);
 #endif
 #endif
 #endif
@@ -614,6 +614,11 @@ ath_attach(u_int16_t devid, struct net_device *dev, HAL_BUS_TAG tag)
   int q;
 #endif
 #endif
+#ifdef CHANNEL_UTILITY
+#ifdef BRN_REGMON_HR
+  struct ar5212_rx_status *rx_stats;
+#endif
+#endif
 
 	sc->devid = devid;
 	ath_debug_global = (ath_debug & ATH_DEBUG_GLOBAL);
@@ -743,12 +748,14 @@ ath_attach(u_int16_t devid, struct net_device *dev, HAL_BUS_TAG tag)
                sc->phantom_bf->bf_dsstatus.ds_rxstat.rs_phyerr = 0;
                sc->phantom_bf->bf_dsstatus.ds_rxstat.rs_rssi = 0;
                sc->phantom_bf->bf_dsstatus.ds_rxstat.rs_keyix = 0;
-               sc->phantom_bf->bf_dsstatus.ds_rxstat.rs_rate = 27;
+               sc->phantom_bf->bf_dsstatus.ds_rxstat.rs_rate = 27; /* for none ath header ( 27 -> 1MBit/s) */
                sc->phantom_bf->bf_dsstatus.ds_rxstat.rs_more = 0;
                sc->phantom_bf->bf_dsstatus.ds_rxstat.rs_tstamp = 0;
                sc->phantom_bf->bf_dsstatus.ds_rxstat.rs_antenna = 0;
 
                memset(sc->phantom_bf->bf_desc,0,sizeof(struct ath_desc));
+               rx_stats = (struct ar5212_rx_status *)(((char*)sc->phantom_bf->bf_desc) + 16); //offset 16: see athdecap.cc (click: elements/wifi/)
+               rx_stats->rx_rate = 27;
              } else {
                kfree(sc->phantom_bf);
                sc->phantom_bf = NULL;
