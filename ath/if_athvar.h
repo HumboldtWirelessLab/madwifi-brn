@@ -949,6 +949,7 @@ struct ath_softc {
 #endif
 #endif
 #endif
+      u_int32_t ignored_phy_errors;
 };
 
 typedef void (*ath_callback) (struct ath_softc *);

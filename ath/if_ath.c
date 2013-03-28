@@ -767,6 +767,8 @@ ath_attach(u_int16_t devid, struct net_device *dev, HAL_BUS_TAG tag)
         }
 #endif
 #endif
+        sc->ingnored_phy_errors = 0;
+
 	atomic_set(&sc->sc_txbuf_counter, 0);
 
 	ATH_INIT_TQUEUE(&sc->sc_rxtq,		ath_rx_tasklet,		dev);
@@ -11460,6 +11462,7 @@ enum {
   ATH_BRN_REGMON_FLAGS = 43,
 #endif
 #endif
+  ATH_BRN_IGNORED_PHY_ERRORS = 44,
 };
 
 static inline int
@@ -12186,7 +12189,9 @@ ATH_SYSCTL_DECL(ath_sysctl_halparam, ctl, write, filp, buffer, lenp, ppos)
         break;
 #endif
 #endif
-
+      case ATH_BRN_IGNORED_PHY_ERRORS:
+        val = sc->ignored_phy_errors;
+        break;
 		default:
 			ret = -EINVAL;
 			break;

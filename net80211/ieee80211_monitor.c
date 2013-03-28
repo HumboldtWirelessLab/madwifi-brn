@@ -436,6 +436,7 @@ ieee80211_input_monitor(struct ieee80211com *ic, struct sk_buff *skb,
 #endif
 					 HAL_RXERR_PHY | HAL_RXERR_CRC)) {
         printk(KERN_ERR "Discard this type of Phy-Error!");
+        sc->ignored_phy_errors++;
 #ifdef RXTX_PACKET_COUNT
         sc->ieee80211_discard_phy_packets++;
 #endif
