@@ -767,7 +767,6 @@ ath_attach(u_int16_t devid, struct net_device *dev, HAL_BUS_TAG tag)
         }
 #endif
 #endif
-        sc->ingnored_phy_errors = 0;
 
 	atomic_set(&sc->sc_txbuf_counter, 0);
 
@@ -11438,31 +11437,27 @@ enum {
 	ATH_CCA_THRESH		= 30,
 #endif
 #ifdef CHANNEL_UTILITY
-	ATH_CHANNEL_UTILITY_RX_BUSY	= 31,
-	ATH_CHANNEL_UTILITY_RX_FRAME	= 32,
-	ATH_CHANNEL_UTILITY_TX_FRAME	= 33,
-	ATH_CHANNEL_UTILITY_PKT_THRESHOLD = 34,
-	ATH_CHANNEL_UTILITY_UPDATE_MODE = 35,
-	ATH_CHANNEL_UTILITY_ANNO_MODE = 36,
+	ATH_CHANNEL_UTILITY_PKT_THRESHOLD = 31,
+	ATH_CHANNEL_UTILITY_UPDATE_MODE = 32,
+	ATH_CHANNEL_UTILITY_ANNO_MODE = 33,
 #endif
 #ifdef KEEP_CRC
-	ATH_KEEP_CRC = 37,
+	ATH_KEEP_CRC = 34,
 #endif
 #ifdef SYSCTL_NOISE
-	ATH_NOISE_FLOOR = 38,
+	ATH_NOISE_FLOOR = 35,
 #endif
 #ifdef QUEUECTRL
-	ATH_NUMTXQUEUE = 39,
-	ATH_CLEARQUEUE = 40,
+	ATH_NUMTXQUEUE = 36,
+	ATH_CLEARQUEUE = 37,
 #endif
 #ifdef CHANNEL_UTILITY
 #ifdef BRN_REGMON
-	ATH_BRN_REGMON_INTERVAL = 41,
-  ATH_BRN_REGMON_BUFFERSIZE = 42,
-  ATH_BRN_REGMON_FLAGS = 43,
+	ATH_BRN_REGMON_INTERVAL = 38,
+  ATH_BRN_REGMON_BUFFERSIZE = 39,
+  ATH_BRN_REGMON_FLAGS = 40,
 #endif
 #endif
-  ATH_BRN_IGNORED_PHY_ERRORS = 44,
 };
 
 static inline int
@@ -12099,15 +12094,6 @@ ATH_SYSCTL_DECL(ath_sysctl_halparam, ctl, write, filp, buffer, lenp, ppos)
 			break;
 #endif
 #ifdef CHANNEL_UTILITY
-		case ATH_CHANNEL_UTILITY_RX_BUSY:
-			val = get_channel_utility_busy(sc);
-			break;
-		case ATH_CHANNEL_UTILITY_RX_FRAME:
-			val = get_channel_utility_rx(sc);
-			break;
-		case ATH_CHANNEL_UTILITY_TX_FRAME:
-			val = get_channel_utility_tx(sc);
-			break;
 		case ATH_CHANNEL_UTILITY_PKT_THRESHOLD:
 			val = sc->cc_pkt_update_threshold;
 			break;
@@ -12189,9 +12175,6 @@ ATH_SYSCTL_DECL(ath_sysctl_halparam, ctl, write, filp, buffer, lenp, ppos)
         break;
 #endif
 #endif
-      case ATH_BRN_IGNORED_PHY_ERRORS:
-        val = sc->ignored_phy_errors;
-        break;
 		default:
 			ret = -EINVAL;
 			break;
@@ -12395,24 +12378,6 @@ static const ctl_table ath_sysctl_template[] = {
 	},
 #endif
 #ifdef CHANNEL_UTILITY
-	{ ATH_INIT_CTL_NAME(CTL_AUTO)
-	  .procname     = "cutil_rx_busy",
-	  .mode         = 0444,
-	  .proc_handler = ath_sysctl_halparam,
-	  .extra2	= (void *)ATH_CHANNEL_UTILITY_RX_BUSY,
-	},
-	{ ATH_INIT_CTL_NAME(CTL_AUTO)
-	  .procname     = "cutil_rx_frame",
-	  .mode         = 0444,
-	  .proc_handler = ath_sysctl_halparam,
-	  .extra2	= (void *)ATH_CHANNEL_UTILITY_RX_FRAME,
-	},
-	{ ATH_INIT_CTL_NAME(CTL_AUTO)
-	  .procname     = "cutil_tx_frame",
-	  .mode         = 0444,
-	  .proc_handler = ath_sysctl_halparam,
-	  .extra2	= (void *)ATH_CHANNEL_UTILITY_TX_FRAME,
-	},
 	{ ATH_INIT_CTL_NAME(CTL_AUTO)
 	  .procname     = "cutil_pkt_threshold",
 	  .mode         = 0644,
