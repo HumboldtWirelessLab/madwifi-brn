@@ -816,9 +816,10 @@ proc_packet_stats_open(struct inode *inode, struct file *file)
   buf = pv->rbuf;
   p = pv->rbuf;
 
-  p += sprintf(p, "RX: %u TX: %u RX80211: %u TX80211: %u Feedback: %u\n", sc->rx_packets, sc->tx_packets,
+  p += sprintf(p, "RX: %u TX: %u RX80211: %u TX80211: %u Feedback: %u IPhyErrors: %u\n",
+                                                                          sc->rx_packets, sc->tx_packets,
                                                                           sc->ieee80211_rx_packets, sc->ieee80211_tx_packets,
-                                                                          sc->feedback_packets);
+                                                                          sc->feedback_packets, sc->ieee80211_discard_phy_packets);
 
   pv->rlen = (p - buf);
 
