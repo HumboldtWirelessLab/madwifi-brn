@@ -77,10 +77,12 @@ struct phantom_state_info {
 	u_int32_t pmode_cnt;
 
 	u_int32_t curr_state;
+
+	u_int32_t debug;
 };
 
 
 void check_rm_data_for_phantom_pkt(struct regmon_data * rmd, struct ath_softc *sc);
-struct sk_buff *create_phantom_pkt(void);
+struct sk_buff *create_phantom_pkt(int pkt_size);
 
 #endif

@@ -702,6 +702,8 @@ ath_attach(u_int16_t devid, struct net_device *dev, HAL_BUS_TAG tag)
         sc->ph_state_info->curr_state = STATE_SILENCE;
         sc->ph_state_info->pmode      = 0;
 
+        sc->ph_state_info->debug = 1;
+
 
         /* Init ringbuffer */
         sc->regm_data_no_entries = BRN_REGMON_DEFAULT_NO_ENTRIES;
