@@ -688,6 +688,21 @@ ath_attach(u_int16_t devid, struct net_device *dev, HAL_BUS_TAG tag)
         sc->phantom_cnt   = 0;
         sc->phantom_start = 0;
 
+
+        /* phantom paket detector init */
+        sc->ph_state_info = (struct phantom_state_info *) kmalloc(sizeof(struct phantom_state_info), GFP_KERNEL);
+
+        if ( sc->ph_state_info == NULL )
+                printk(KERN_ERR "BRN-Regmon: unable to alloc mem for phantom state info");
+
+        sc->ph_state_info->rx_cnt      = 0;
+        sc->ph_state_info->silence_cnt = 0;
+        sc->ph_state_info->strange_cnt = 0;
+
+        sc->ph_state_info->curr_state = STATE_SILENCE;
+        sc->ph_state_info->pmode      = 0;
+
+
         /* Init ringbuffer */
         sc->regm_data_no_entries = BRN_REGMON_DEFAULT_NO_ENTRIES;
         sc->regm_data_size = (sc->regm_data_no_entries + 1) * sizeof(struct regmon_data); //+1 for info

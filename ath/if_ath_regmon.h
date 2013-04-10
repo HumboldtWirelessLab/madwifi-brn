@@ -38,6 +38,16 @@
 #include "net80211/if_athproto.h"
 #include "if_athvar.h"
 
+
+/* phantom paket detecor */
+#define STATE_RX      1
+#define STATE_SILENCE 2
+#define STATE_STRANGE 3
+#define GLOBAL_MAX    10
+#define UB   97 /* upper bound */
+#define LB   1  /* lower bound */
+
+
 struct ar5212_rx_status {
 	u_int32_t data_len:12;
 	u_int32_t more:1;
@@ -53,6 +63,22 @@ struct ar5212_rx_status {
 	u_int32_t decryptcrc:1;
 
 } __attribute__((packed));
+
+
+/* needed by the phantom paket detector for stats and current state */
+struct phantom_state_info {
+	/* state counts */
+	u_int32_t rx_cnt;
+	u_int32_t silence_cnt;
+	u_int32_t strange_cnt;
+
+	/* phantom mode indicator + stats count */
+	u_int32_t pmode;
+	u_int32_t pmode_cnt;
+
+	u_int32_t curr_state;
+};
+
 
 void check_rm_data_for_phantom_pkt(struct regmon_data * rmd, struct ath_softc *sc);
 struct sk_buff *create_phantom_pkt(void);

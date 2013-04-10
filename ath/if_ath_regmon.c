@@ -37,64 +37,211 @@
 
 #include "if_ath_regmon.h"
 
+
+#ifdef BLA
+  /* busy and rx values as percentages */
+  u_int32_t val_busy = sc->channel_utility.busy;
+  u_int32_t val_rx   = sc->channel_utility.rx;
+
+  /* situations */
+  u_int32_t rx      = 0;
+  u_int32_t silence = 0;
+  u_int32_t strange = 0;
+
+  /* info */
+  u_int32_t pmode      = sc->ph_state_info->pmode;
+  u_int32_t curr_state = sc->ph_state_info->curr_state;
+
+
+  rx      = (val_busy >= UB) && (val_rx >= UB);
+  silence = (val_busy <= LB) && (val_rx <= LB);
+
+  strange = ((val_busy > LB) && (val_busy < UB) && (val_rx < LB)) ||
+            ((val_busy > LB) && (val_busy < UB) && (val_rx > LB) && (val_rx < UB)) ||
+            ((val_busy > UB) && (val_rx < LB));
+
+
+  /* silence -> strange */
+  if (!pmode && curr_state == STATE_SILENCE && strange) {
+
+    /* mark phantom pkt starting point/index */
+    sc->phantom_start = sc->regm_info->value.info.index;
+
+    sc->ph_state_info->pmode = 1;
+    sc->ph_state_info->pmode_cnt++;
+
+    sc->ph_state_info->curr_state = STATE_STRANGE;
+    sc->ph_state_info->strange_cnt++;
+
+    return;
+  }
+
+
+  /* strange -> rx */
+  if (pmode && curr_state == STATE_STRANGE && rx) {
+
+    /* there really were a couple of consecutive strange-samples */
+    if (sc->ph_state_info->strange_cnt >= GLOBAL_MAX) {
+
+      /* push phantom pkt */
+      phantom_len = rmd->hrtime.tv64 - sc->regm_data[sc->phantom_start].hrtime.tv64;
+      rmd->value.regs.phantom_pkt_len = (u_int32_t) phantom_len;
+
+      skb = create_phantom_pkt();
+      ieee80211_input_monitor(&sc->sc_ic, skb, sc->phantom_bf, 0, 0, sc);  // 1st 0 -> RX, 2nd 0 -> mac time
+
+      /* reset all stats */
+      sc->ph_state_info->pmode     = 0;
+      sc->ph_state_info->pmode_cnt = 0;
+
+      sc->ph_state_info->rx_cnt      = 0;
+      sc->ph_state_info->silence_cnt = 0;
+      sc->ph_state_info->strange_cnt = 0;
+
+      sc->ph_state_info->curr_state = STATE_RX;
+
+      return;
+
+    } else { /* just pass state_strange cuz of 'normal' rx */
+
+      sc->ph_state_info->pmode     = 0;
+      sc->ph_state_info->pmode_cnt = 0;
+
+      sc->ph_state_info->rx_cnt++;
+      sc->ph_state_info->strange_cnt = 0;
+
+      sc->ph_state_info->curr_state = STATE_RX;
+
+      return;
+    }
+
+  }
+
+
+  /* strange -> silence */
+  if (pmode && curr_state == STATE_STRANGE && silence) {
+
+    /* there really were a couple of consecutive strange-samples */
+    if (sc->ph_state_info->strange_cnt >= GLOBAL_MAX) {
+
+      /* push phantom pkt */
+      phantom_len = rmd->hrtime.tv64 - sc->regm_data[sc->phantom_start].hrtime.tv64;
+      rmd->value.regs.phantom_pkt_len = (u_int32_t) phantom_len;
+
+      skb = create_phantom_pkt();
+      ieee80211_input_monitor(&sc->sc_ic, skb, sc->phantom_bf, 0, 0, sc);  // 1st 0 -> RX, 2nd 0 -> mac time
+
+      /* reset all stats */
+      sc->ph_state_info->pmode     = 0;
+      sc->ph_state_info->pmode_cnt = 0;
+
+      sc->ph_state_info->rx_cnt      = 0;
+      sc->ph_state_info->silence_cnt = 0;
+      sc->ph_state_info->strange_cnt = 0;
+
+      sc->ph_state_info->curr_state = STATE_SILENCE;
+
+      return;
+
+    } else { /* just pass state_strange cuz of silence */
+
+      sc->ph_state_info->pmode     = 0;
+      sc->ph_state_info->pmode_cnt = 0;
+
+      sc->ph_state_info->silence_cnt++;
+      sc->ph_state_info->strange_cnt = 0;
+
+      sc->ph_state_info->curr_state = STATE_SILENCE;
+
+      return;
+    }
+
+  }
+
+
+  /* rx -> silence */
+  if (!pmode && curr_state == STATE_RX && silence) {
+
+    sc->ph_state_info->rx_cnt = 0;
+    sc->ph_state_info->silence_cnt++;
+
+    sc->ph_state_info->curr_state = STATE_SILENCE;
+
+    return;
+  }
+
+
+  /* rx -> strange */
+  if (!pmode && curr_state == STATE_RX && strange) {
+
+    /* mark phantom pkt starting point/index */
+    sc->phantom_start = sc->regm_info->value.info.index;
+
+    sc->ph_state_info->pmode = 1;
+    sc->ph_state_info->pmode_cnt++;
+
+    sc->ph_state_info->curr_state = STATE_STRANGE;
+    sc->ph_state_info->strange_cnt++;
+
+    return;
+  }
+
+
+  /* strange loop */
+  if (!pmode && curr_state == STATE_STRANGE && strange) {
+    sc->ph_state_info->strange_cnt++;
+    return;
+  }
+
+
+  /* silence loop */
+  if (!pmode && curr_state == STATE_SILENCE && silence) {
+    sc->ph_state_info->silence_cnt++;
+    return;
+  }
+
+
+  /* rx loop */
+  if (!pmode && curr_state == STATE_RX && rx) {
+    sc->ph_state_info->rx_cnt++;
+    return;
+  }
+#endif
+
+
 #ifdef BRN_REGMON_HR
 void check_rm_data_for_phantom_pkt(struct regmon_data * rmd, struct ath_softc *sc)
 {
   u_int64_t phantom_len;
   struct sk_buff *skb = NULL;
-  //u_int32_t busy_percentage = sc->channel_utility.busy;
-  //u_int32_t rx_percentage   = sc->channel_utility.rx;
+
+
   rmd->value.regs.phantom_pkt_len = 0;
+  sc->phantom_cnt = 0;
 
-#ifdef BLABLA
-  /* channel is busy but we're not receiving */
-  if (busy_percentage > 0 && busy_percentage < 100 && rx_percentage < busy_percentage) { /* BUG: RX? */
-    sc->phantom_cnt++;
+  phantom_len = rmd->hrtime.tv64 - sc->regm_data[sc->phantom_start].hrtime.tv64;
+  rmd->value.regs.phantom_pkt_len = (u_int32_t) phantom_len;
 
-    if (sc->phantom_start == 0) /* mark start of 'phantom pkt' */
-      sc->phantom_start = sc->regm_info->value.info.index;
+  //sc->phantom_start = 0;
+  sc->phantom_start++;
 
-    /* normal RX, create phantom pkt and reset */
-  } else if (busy_percentage == 100 && rx_percentage == 100) {
-    sc->phantom_cnt = 0;
+  if ( sc->phantom_start == 1000 ) {
 
-    if (sc->phantom_start != 0) {
-      u_int64_t phantom_len = rmd->hrtime.tv64 - sc->regm_data[sc->phantom_start].hrtime.tv64;
-      rmd->value.regs.phantom_pkt_len = phantom_len;
+    skb = create_phantom_pkt();
+    ieee80211_input_monitor(&sc->sc_ic, skb, sc->phantom_bf, 0, 0, sc);  // 1st 0 -> RX, 2nd 0 -> mac time
 
-      sc->phantom_start = 0;
-    }
+    sc->phantom_start = 0;
+  }
 
-    /* channel is quiet but earlier we recognized ACI */
-  } else if (busy_percentage == 0 && sc->phantom_cnt > 0) {
-#endif
-    sc->phantom_cnt = 0;
 
-    phantom_len = rmd->hrtime.tv64 - sc->regm_data[sc->phantom_start].hrtime.tv64;
-    rmd->value.regs.phantom_pkt_len = (u_int32_t) phantom_len;
-
-    //sc->phantom_start = 0;
-    sc->phantom_start++;
-
-    if ( sc->phantom_start == 1000 ) {
-
-      printk(KERN_ERR "create phan\n");
-      skb = create_phantom_pkt();
-      printk(KERN_ERR "done. pkt to input_mon\n");
-      ieee80211_input_monitor(&sc->sc_ic, skb, sc->phantom_bf, 0, 0, sc);  // 0 -> RX
-      printk(KERN_ERR "FIN\n");
-
-      sc->phantom_start = 0;
-    }
-
-  //}
 }
 #endif
+
 
 struct sk_buff *create_phantom_pkt(void)
 {
   struct ieee80211_frame *wh = NULL;
-  unsigned int datasz        = 2048;
+  unsigned int datasz        = 2048;  /* max. size = 2290 */
   char *data                 = NULL;
 
 

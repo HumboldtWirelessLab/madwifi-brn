@@ -932,6 +932,9 @@ struct ath_softc {
 
       u_int32_t phantom_cnt;          // counts busy/ACI detection
       u_int32_t phantom_start;        // ring buffer index when detection started
+
+      struct phantom_state_info *ph_state_info;
+
       struct ath_buf *phantom_bf;
 #endif
       struct timer_list perf_reg_timer;
