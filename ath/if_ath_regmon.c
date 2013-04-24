@@ -184,7 +184,7 @@ void check_rm_data_for_phantom_pkt(struct regmon_data * rmd, struct ath_softc *s
       sc->ph_state_info->silence_cnt++;
       sc->ph_state_info->strange_cnt = 0;
 
-      sc->ph_state_info->curr_state = STATE_SILENCE;3
+      sc->ph_state_info->curr_state = STATE_SILENCE;
 
       return;
     }
