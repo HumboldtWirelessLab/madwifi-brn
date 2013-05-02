@@ -82,7 +82,26 @@ struct phantom_state_info {
 };
 
 
+struct add_phantom_data {
+/*
+	union {
+		u_int32_t i;
+		u_int8_t c[4];
+	} endianness = {0x01020304};
+*/
+
+
+
+	/* start and end time of a phantom pkt */
+	u_int64_t ph_start;
+	u_int64_t ph_stop;
+
+	/* packet length/duration in ns */
+	u_int64_t ph_len;
+};
+
+
 void check_rm_data_for_phantom_pkt(struct regmon_data * rmd, struct ath_softc *sc);
-struct sk_buff *create_phantom_pkt(int pkt_size);
+struct sk_buff *create_phantom_pkt(struct add_phantom_data *ph_data);
 
 #endif

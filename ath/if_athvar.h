@@ -934,6 +934,7 @@ struct ath_softc {
       u_int32_t phantom_start;        // ring buffer index when detection started
 
       struct phantom_state_info *ph_state_info;
+      struct add_phantom_data *ph_data;
 
       struct ath_buf *phantom_bf;
 #endif

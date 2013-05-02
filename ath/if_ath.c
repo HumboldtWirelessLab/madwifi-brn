@@ -705,6 +705,17 @@ ath_attach(u_int16_t devid, struct net_device *dev, HAL_BUS_TAG tag)
         sc->ph_state_info->debug = 1;
 
 
+        /* additional phantom packet info */
+        sc->ph_data = (struct add_phantom_data *) kmalloc(sizeof(struct add_phantom_data), GFP_KERNEL);
+
+        if (sc->ph_data == NULL)
+                printk(KERN_ERR "BRN-Regmon: unable to alloc mem for addition phantom data");
+
+        sc->ph_data->ph_start = 0;
+        sc->ph_data->ph_stop  = 0;
+        sc->ph_data->ph_len   = 0;
+
+
         /* Init ringbuffer */
         sc->regm_data_no_entries = BRN_REGMON_DEFAULT_NO_ENTRIES;
         sc->regm_data_size = (sc->regm_data_no_entries + 1) * sizeof(struct regmon_data); //+1 for info

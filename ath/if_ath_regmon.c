@@ -46,7 +46,6 @@
 #ifdef BRN_REGMON_HR
 void check_rm_data_for_phantom_pkt(struct regmon_data * rmd, struct ath_softc *sc)
 {
-  u_int64_t phantom_len;
   struct sk_buff *skb = NULL;
 
   /* busy and rx values as percentages */
@@ -111,11 +110,18 @@ void check_rm_data_for_phantom_pkt(struct regmon_data * rmd, struct ath_softc *s
     /* there really were a couple of consecutive strange-samples */
     if (sc->ph_state_info->strange_cnt >= GLOBAL_MAX) {
 
-      /* push phantom pkt */
+/*
       phantom_len = rmd->hrtime.tv64 - sc->regm_data[sc->phantom_start].hrtime.tv64;
       rmd->value.regs.phantom_pkt_len = (u_int32_t) phantom_len;
+*/
+      /* fill phantom pkt with addition info */
+      sc->ph_data->ph_start = sc->regm_data[sc->phantom_start].hrtime.tv64;
+      sc->ph_data->ph_stop  = rmd->hrtime.tv64;
+      sc->ph_data->ph_len   = sc->ph_data->ph_start - sc->ph_data->ph_stop;
 
-      skb = create_phantom_pkt(STR_RX);
+      rmd->value.regs.phantom_pkt_len = (u_int32_t) sc->ph_data->ph_len;
+
+      skb = create_phantom_pkt(sc->ph_data);
       ieee80211_input_monitor(&sc->sc_ic, skb, sc->phantom_bf, 0, 0, sc);  // 1st 0 -> RX, 2nd 0 -> mac time
 
       //printk(KERN_ERR ">> phantom strange -> rx: %d\n", sc->ph_state_info->strange_cnt);
@@ -155,11 +161,19 @@ void check_rm_data_for_phantom_pkt(struct regmon_data * rmd, struct ath_softc *s
     /* there really were a couple of consecutive strange-samples */
     if (sc->ph_state_info->strange_cnt >= GLOBAL_MAX) {
 
-      /* push phantom pkt */
+/*
       phantom_len = rmd->hrtime.tv64 - sc->regm_data[sc->phantom_start].hrtime.tv64;
       rmd->value.regs.phantom_pkt_len = (u_int32_t) phantom_len;
+*/
 
-      skb = create_phantom_pkt(STR_SIL);
+      /* fill phantom pkt with addition info */
+      sc->ph_data->ph_start = sc->regm_data[sc->phantom_start].hrtime.tv64;
+      sc->ph_data->ph_stop  = rmd->hrtime.tv64;
+      sc->ph_data->ph_len   = sc->ph_data->ph_start - sc->ph_data->ph_stop;
+
+      rmd->value.regs.phantom_pkt_len = (u_int32_t) sc->ph_data->ph_len;
+
+      skb = create_phantom_pkt(sc->ph_data);
       ieee80211_input_monitor(&sc->sc_ic, skb, sc->phantom_bf, 0, 0, sc);  // 1st 0 -> RX, 2nd 0 -> mac time
 
       //printk(KERN_ERR ">> phantom strange -> silence: %d\n", sc->ph_state_info->strange_cnt);
@@ -266,7 +280,7 @@ if
 #endif
 
 
-struct sk_buff *create_phantom_pkt(int pkt_size)
+struct sk_buff *create_phantom_pkt(struct add_phantom_data *ph_data)
 {
   struct ieee80211_frame *wh = NULL;
   unsigned int datasz        = 2048;  /* max. size = 2290 */
@@ -279,8 +293,13 @@ struct sk_buff *create_phantom_pkt(int pkt_size)
     printk(KERN_ERR "alloc_skb(...) returned null!\n");
   }
 
-  data = (char *) skb_put(skb, pkt_size);
-  memset(data, 0, pkt_size);
+
+  /* skb = 20 Byte */
+  data = (char *) skb_put(skb, sizeof(struct add_phantom_data));
+  memset(data, 0, sizeof(struct add_phantom_data));
+
+  memcpy(data, ph_data, sizeof(struct add_phantom_data));
+
 
   wh  = (struct ieee80211_frame *)skb_put(skb, sizeof(struct ieee80211_frame));
   memset(wh, 0, sizeof(struct ieee80211_frame));
