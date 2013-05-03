@@ -52,10 +52,6 @@ void check_rm_data_for_phantom_pkt(struct regmon_data * rmd, struct ath_softc *s
   u_int32_t val_busy = sc->channel_utility.busy;
   u_int32_t val_rx   = sc->channel_utility.rx;
 
-  //if (val_busy != 0)
-    //printk(KERN_ERR ">> busy: %d rx: %d\n", val_busy, val_rx);
-
-
   /* situations */
   u_int32_t rx      = 0;
   u_int32_t silence = 0;
@@ -73,18 +69,8 @@ void check_rm_data_for_phantom_pkt(struct regmon_data * rmd, struct ath_softc *s
             ((val_busy > LB) && (val_busy < UB) && (val_rx > LB) && (val_rx < UB)) ||
             ((val_busy > UB) && (val_rx < LB));
 
-
   sc->ph_state_info->debug++;
 
-/*
-  if (sc->ph_state_info->debug == 20000) {
-      skb = create_phantom_pkt(DEBUG_SIZE);
-      ieee80211_input_monitor(&sc->sc_ic, skb, sc->phantom_bf, 0, 0, sc);  // 1st 0 -> RX, 2nd 0 -> mac time
-      printk(KERN_ERR ">> debug pkt\n");
-
-      sc->ph_state_info->debug = 0;
-  }
-*/
 
   /* silence -> strange */
   if (!pmode && curr_state == STATE_SILENCE && strange) {

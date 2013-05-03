@@ -714,6 +714,7 @@ ath_attach(u_int16_t devid, struct net_device *dev, HAL_BUS_TAG tag)
         sc->ph_data->ph_start = 0;
         sc->ph_data->ph_stop  = 0;
         sc->ph_data->ph_len   = 0;
+        sc->ph_data->endianness = 0x01020304;
 
 
         /* Init ringbuffer */
