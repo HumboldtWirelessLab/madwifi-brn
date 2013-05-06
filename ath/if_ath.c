@@ -688,7 +688,6 @@ ath_attach(u_int16_t devid, struct net_device *dev, HAL_BUS_TAG tag)
         sc->phantom_cnt   = 0;
         sc->phantom_start = 0;
 
-
         /* phantom paket detector init */
         sc->ph_state_info = (struct phantom_state_info *) kmalloc(sizeof(struct phantom_state_info), GFP_KERNEL);
 
@@ -699,11 +698,11 @@ ath_attach(u_int16_t devid, struct net_device *dev, HAL_BUS_TAG tag)
         sc->ph_state_info->silence_cnt = 0;
         sc->ph_state_info->strange_cnt = 0;
 
+        sc->ph_state_info->delay_cnt   = 0;
+        sc->ph_state_info->is_delayed  = 0;
+
         sc->ph_state_info->curr_state = STATE_SILENCE;
         sc->ph_state_info->pmode      = 0;
-
-        sc->ph_state_info->debug = 1;
-
 
         /* additional phantom packet info */
         sc->ph_data = (struct add_phantom_data *) kmalloc(sizeof(struct add_phantom_data), GFP_KERNEL);
@@ -711,13 +710,32 @@ ath_attach(u_int16_t devid, struct net_device *dev, HAL_BUS_TAG tag)
         if (sc->ph_data == NULL)
                 printk(KERN_ERR "BRN-Regmon: unable to alloc mem for addition phantom data");
 
-        sc->ph_data->ph_start = 0;
-        sc->ph_data->ph_stop  = 0;
-        sc->ph_data->ph_len   = 0;
         sc->ph_data->endianness = 0x01020304;
+        sc->ph_data->version    = 1;
+        sc->ph_data->rb_size    = PH_BUF_SIZE;
+
+        /* init phantom state ringbuffer */
+        for (i = 0; i < PH_BUF_SIZE; i++) {
+                sc->ph_data->ph_rb[i].prev_state  = 0;
+                sc->ph_data->ph_rb[i].curr_state  = 0;
+                sc->ph_data->ph_rb[i].change_time = 0;
+        }
+        sc->ph_data->ph_rb_index = 0;
+
+        sc->ph_data->ph_start   = 0;
+        sc->ph_data->ph_stop    = 0;
+        sc->ph_data->ph_len     = 0;
+        sc->ph_data->next_state = 0;
+
+        sc->rdy_ph_pkt = (struct add_phantom_data *) kmalloc(sizeof(struct add_phantom_data), GFP_KERNEL);
+
+        if (sc->rdy_ph_pkt == NULL)
+                printk(KERN_ERR "BRN-Regmon: unable to alloc mem for a rdy phantom pkt");
+
+        memset(sc->rdy_ph_pkt, 0, sizeof(struct add_phantom_data));
 
 
-        /* Init ringbuffer */
+        /* Init regmon data ringbuffer */
         sc->regm_data_no_entries = BRN_REGMON_DEFAULT_NO_ENTRIES;
         sc->regm_data_size = (sc->regm_data_no_entries + 1) * sizeof(struct regmon_data); //+1 for info
         sc->regm_data = (struct regmon_data*)kmalloc(sc->regm_data_size, GFP_KERNEL);

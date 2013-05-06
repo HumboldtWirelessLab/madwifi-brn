@@ -38,10 +38,6 @@
 #include "if_ath_regmon.h"
 
 
-#define DEBUG_SIZE 80
-#define STR_RX     81
-#define STR_SIL    82
-
 
 #ifdef BRN_REGMON_HR
 void check_rm_data_for_phantom_pkt(struct regmon_data * rmd, struct ath_softc *sc)
@@ -61,6 +57,8 @@ void check_rm_data_for_phantom_pkt(struct regmon_data * rmd, struct ath_softc *s
   u_int32_t pmode      = sc->ph_state_info->pmode;
   u_int32_t curr_state = sc->ph_state_info->curr_state;
 
+  /* phantom state ringbuffer index */
+  u_int32_t rb_index;
 
   rx      = (val_busy >= UB) && (val_rx >= UB);
   silence = (val_busy <= LB) && (val_rx <= LB);
@@ -69,7 +67,24 @@ void check_rm_data_for_phantom_pkt(struct regmon_data * rmd, struct ath_softc *s
             ((val_busy > LB) && (val_busy < UB) && (val_rx > LB) && (val_rx < UB)) ||
             ((val_busy > UB) && (val_rx < LB));
 
-  sc->ph_state_info->debug++;
+  rb_index= sc->ph_data->ph_rb_index;
+
+
+  if (sc->ph_state_info->is_delayed == 1)
+    sc->ph_state_info->delay_cnt++;
+
+
+  if (sc->ph_state_info->delay_cnt >= DELAY_MAX) {
+    sc->rdy_ph_pkt->next_state = curr_state;
+
+    /* push phantom packet */
+    skb = create_phantom_pkt(sc->rdy_ph_pkt);
+    ieee80211_input_monitor(&sc->sc_ic, skb, sc->phantom_bf, 0, 0, sc);  // 1st 0 -> RX, 2nd 0 -> mac time
+
+    /* reset delay mechanism */
+    sc->ph_state_info->delay_cnt  = 0;
+    sc->ph_state_info->is_delayed = 0;
+  }
 
 
   /* silence -> strange */
@@ -78,13 +93,19 @@ void check_rm_data_for_phantom_pkt(struct regmon_data * rmd, struct ath_softc *s
     /* mark phantom pkt starting point/index */
     sc->phantom_start = sc->regm_info->value.info.index;
 
+    /* change state */
     sc->ph_state_info->pmode = 1;
     sc->ph_state_info->pmode_cnt++;
-
     sc->ph_state_info->curr_state = STATE_STRANGE;
     sc->ph_state_info->strange_cnt++;
 
-    //printk(KERN_ERR ">> started phantom pkt: silence -> strange\n");
+    /* update phantom ring buffer */
+    sc->ph_data->ph_rb[rb_index].prev_state  = STATE_SILENCE;
+    sc->ph_data->ph_rb[rb_index].curr_state  = STATE_STRANGE;
+    sc->ph_data->ph_rb[rb_index].change_time = rmd->hrtime.tv64;
+
+    /* phantom ring buffer index update */
+    sc->ph_data->ph_rb_index = (sc->ph_data->ph_rb_index + 1) & (PH_BUF_SIZE - 1);
 
     return;
   }
@@ -96,23 +117,7 @@ void check_rm_data_for_phantom_pkt(struct regmon_data * rmd, struct ath_softc *s
     /* there really were a couple of consecutive strange-samples */
     if (sc->ph_state_info->strange_cnt >= GLOBAL_MAX) {
 
-/*
-      phantom_len = rmd->hrtime.tv64 - sc->regm_data[sc->phantom_start].hrtime.tv64;
-      rmd->value.regs.phantom_pkt_len = (u_int32_t) phantom_len;
-*/
-      /* fill phantom pkt with addition info */
-      sc->ph_data->ph_start = sc->regm_data[sc->phantom_start].hrtime.tv64;
-      sc->ph_data->ph_stop  = rmd->hrtime.tv64;
-      sc->ph_data->ph_len   = sc->ph_data->ph_start - sc->ph_data->ph_stop;
-
-      rmd->value.regs.phantom_pkt_len = (u_int32_t) sc->ph_data->ph_len;
-
-      skb = create_phantom_pkt(sc->ph_data);
-      ieee80211_input_monitor(&sc->sc_ic, skb, sc->phantom_bf, 0, 0, sc);  // 1st 0 -> RX, 2nd 0 -> mac time
-
-      //printk(KERN_ERR ">> phantom strange -> rx: %d\n", sc->ph_state_info->strange_cnt);
-
-      /* reset all stats */
+      /* reset state machine stats */
       sc->ph_state_info->pmode     = 0;
       sc->ph_state_info->pmode_cnt = 0;
 
@@ -120,19 +125,54 @@ void check_rm_data_for_phantom_pkt(struct regmon_data * rmd, struct ath_softc *s
       sc->ph_state_info->silence_cnt = 0;
       sc->ph_state_info->strange_cnt = 0;
 
+      /* change state */
       sc->ph_state_info->curr_state = STATE_RX;
+      sc->ph_state_info->rx_cnt++;
+
+      /* update phantom ring buffer */
+      sc->ph_data->ph_rb[rb_index].prev_state  = STATE_STRANGE;
+      sc->ph_data->ph_rb[rb_index].curr_state  = STATE_RX;
+      sc->ph_data->ph_rb[rb_index].change_time = rmd->hrtime.tv64;
+
+      /* phantom ring buffer index update */
+      sc->ph_data->ph_rb_index = (sc->ph_data->ph_rb_index + 1) & (PH_BUF_SIZE - 1);
+
+      /* fill phantom pkt with addition info */
+      sc->ph_data->ph_start = sc->regm_data[sc->phantom_start].hrtime.tv64;
+      sc->ph_data->ph_stop  = rmd->hrtime.tv64;
+      sc->ph_data->ph_len   = sc->ph_data->ph_start - sc->ph_data->ph_stop;
+
+      /* mark pkt as ready to push */
+      memcpy(sc->rdy_ph_pkt, sc->ph_data, sizeof(struct add_phantom_data));
+      sc->ph_state_info->is_delayed = 1;
+
+      /* reset phantom pkt stats */
+      sc->phantom_start = 0;
+      sc->phantom_cnt   = 0;
+
+      /* legacy code, probably needs refactoring */
+      rmd->value.regs.phantom_pkt_len = (u_int32_t) sc->ph_data->ph_len;
 
       return;
 
-    } else { /* just pass state_strange cuz of 'normal' rx */
+    } else { /* just normal rx */
 
-      sc->ph_state_info->pmode     = 0;
-      sc->ph_state_info->pmode_cnt = 0;
-
-      sc->ph_state_info->rx_cnt++;
+      /* reset state machine stats */
+      sc->ph_state_info->pmode       = 0;
+      sc->ph_state_info->pmode_cnt   = 0;
       sc->ph_state_info->strange_cnt = 0;
 
+      /* change state */
       sc->ph_state_info->curr_state = STATE_RX;
+      sc->ph_state_info->rx_cnt++;
+
+      /* update phanom ring buffer */
+      sc->ph_data->ph_rb[rb_index].prev_state  = STATE_STRANGE;
+      sc->ph_data->ph_rb[rb_index].curr_state  = STATE_RX;
+      sc->ph_data->ph_rb[rb_index].change_time = rmd->hrtime.tv64;
+
+      /* update phantom ring buffer index */
+      sc->ph_data->ph_rb_index = (sc->ph_data->ph_rb_index + 1) & (PH_BUF_SIZE - 1);
 
       return;
     }
@@ -147,24 +187,7 @@ void check_rm_data_for_phantom_pkt(struct regmon_data * rmd, struct ath_softc *s
     /* there really were a couple of consecutive strange-samples */
     if (sc->ph_state_info->strange_cnt >= GLOBAL_MAX) {
 
-/*
-      phantom_len = rmd->hrtime.tv64 - sc->regm_data[sc->phantom_start].hrtime.tv64;
-      rmd->value.regs.phantom_pkt_len = (u_int32_t) phantom_len;
-*/
-
-      /* fill phantom pkt with addition info */
-      sc->ph_data->ph_start = sc->regm_data[sc->phantom_start].hrtime.tv64;
-      sc->ph_data->ph_stop  = rmd->hrtime.tv64;
-      sc->ph_data->ph_len   = sc->ph_data->ph_start - sc->ph_data->ph_stop;
-
-      rmd->value.regs.phantom_pkt_len = (u_int32_t) sc->ph_data->ph_len;
-
-      skb = create_phantom_pkt(sc->ph_data);
-      ieee80211_input_monitor(&sc->sc_ic, skb, sc->phantom_bf, 0, 0, sc);  // 1st 0 -> RX, 2nd 0 -> mac time
-
-      //printk(KERN_ERR ">> phantom strange -> silence: %d\n", sc->ph_state_info->strange_cnt);
-
-      /* reset all stats */
+      /* reset state machine stats */
       sc->ph_state_info->pmode     = 0;
       sc->ph_state_info->pmode_cnt = 0;
 
@@ -172,19 +195,54 @@ void check_rm_data_for_phantom_pkt(struct regmon_data * rmd, struct ath_softc *s
       sc->ph_state_info->silence_cnt = 0;
       sc->ph_state_info->strange_cnt = 0;
 
+      /* change state */
       sc->ph_state_info->curr_state = STATE_SILENCE;
+      sc->ph_state_info->silence_cnt++;
+
+      /* update phantom ring buffer */
+      sc->ph_data->ph_rb[rb_index].prev_state  = STATE_STRANGE;
+      sc->ph_data->ph_rb[rb_index].curr_state  = STATE_SILENCE;
+      sc->ph_data->ph_rb[rb_index].change_time = rmd->hrtime.tv64;
+
+      /* update phantom ring buffer index */
+      sc->ph_data->ph_rb_index = (sc->ph_data->ph_rb_index + 1) & (PH_BUF_SIZE - 1);
+
+      /* fill phantom pkt with addition info */
+      sc->ph_data->ph_start = sc->regm_data[sc->phantom_start].hrtime.tv64;
+      sc->ph_data->ph_stop  = rmd->hrtime.tv64;
+      sc->ph_data->ph_len   = sc->ph_data->ph_start - sc->ph_data->ph_stop;
+
+      /* mark pkt as ready to push */
+      memcpy(sc->rdy_ph_pkt, sc->ph_data, sizeof(struct add_phantom_data));
+      sc->ph_state_info->is_delayed = 1;
+
+      /* reset phantom pkt stats */
+      sc->phantom_start = 0;
+      sc->phantom_cnt  = 0;
+
+      /* legacy code, probably needs refactoring */
+      rmd->value.regs.phantom_pkt_len = (u_int32_t) sc->ph_data->ph_len;
 
       return;
 
     } else { /* just pass state_strange cuz of silence */
 
-      sc->ph_state_info->pmode     = 0;
-      sc->ph_state_info->pmode_cnt = 0;
-
-      sc->ph_state_info->silence_cnt++;
+      /* reset state machine stats */
+      sc->ph_state_info->pmode       = 0;
+      sc->ph_state_info->pmode_cnt   = 0;
       sc->ph_state_info->strange_cnt = 0;
 
+      /* change state */
       sc->ph_state_info->curr_state = STATE_SILENCE;
+      sc->ph_state_info->silence_cnt++;
+
+      /* update phanom ring buffer */
+      sc->ph_data->ph_rb[rb_index].prev_state  = STATE_STRANGE;
+      sc->ph_data->ph_rb[rb_index].curr_state  = STATE_SILENCE;
+      sc->ph_data->ph_rb[rb_index].change_time = rmd->hrtime.tv64;
+
+      /* update phantom ring buffer index */
+      sc->ph_data->ph_rb_index = (sc->ph_data->ph_rb_index + 1) & (PH_BUF_SIZE - 1);
 
       return;
     }
@@ -195,12 +253,20 @@ void check_rm_data_for_phantom_pkt(struct regmon_data * rmd, struct ath_softc *s
   /* rx -> silence */
   if (!pmode && curr_state == STATE_RX && silence) {
 
+    /* reset state machine stats */
     sc->ph_state_info->rx_cnt = 0;
+
+    /* change state */
+    sc->ph_state_info->curr_state = STATE_SILENCE;
     sc->ph_state_info->silence_cnt++;
 
-    sc->ph_state_info->curr_state = STATE_SILENCE;
+    /* update phanom ring buffer */
+    sc->ph_data->ph_rb[rb_index].prev_state  = STATE_RX;
+    sc->ph_data->ph_rb[rb_index].curr_state  = STATE_SILENCE;
+    sc->ph_data->ph_rb[rb_index].change_time = rmd->hrtime.tv64;
 
-    //printk(KERN_ERR ">> rx -> silence: %d\n", sc->ph_state_info->silence_cnt);
+    /* update phantom ring buffer index */
+    sc->ph_data->ph_rb_index = (sc->ph_data->ph_rb_index + 1) & (PH_BUF_SIZE - 1);
 
     return;
   }
@@ -212,13 +278,21 @@ void check_rm_data_for_phantom_pkt(struct regmon_data * rmd, struct ath_softc *s
     /* mark phantom pkt starting point/index */
     sc->phantom_start = sc->regm_info->value.info.index;
 
+    /* upate state machine stats */
     sc->ph_state_info->pmode = 1;
     sc->ph_state_info->pmode_cnt++;
 
+    /* change state */
     sc->ph_state_info->curr_state = STATE_STRANGE;
     sc->ph_state_info->strange_cnt++;
 
-    //printk(KERN_ERR ">> rx -> strange: %d\n", sc->ph_state_info->rx_cnt);
+    /* update phantom ring buffer */
+    sc->ph_data->ph_rb[rb_index].prev_state  = STATE_RX;
+    sc->ph_data->ph_rb[rb_index].curr_state  = STATE_STRANGE;
+    sc->ph_data->ph_rb[rb_index].change_time = rmd->hrtime.tv64;
+
+    /* phantom ring buffer index update */
+    sc->ph_data->ph_rb_index = (sc->ph_data->ph_rb_index + 1) & (PH_BUF_SIZE - 1);
 
     return;
   }
