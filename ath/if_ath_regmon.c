@@ -69,7 +69,7 @@ void check_rm_data_for_phantom_pkt(struct regmon_data * rmd, struct ath_softc *s
 
   rb_index= sc->ph_data->ph_rb_index;
 
-
+#ifdef BLA
   if (sc->ph_state_info->is_delayed == 1)
     sc->ph_state_info->delay_cnt++;
 
@@ -85,7 +85,7 @@ void check_rm_data_for_phantom_pkt(struct regmon_data * rmd, struct ath_softc *s
     sc->ph_state_info->delay_cnt  = 0;
     sc->ph_state_info->is_delayed = 0;
   }
-
+#endif
 
   /* silence -> strange */
   if (!pmode && curr_state == STATE_SILENCE && strange) {
@@ -142,9 +142,14 @@ void check_rm_data_for_phantom_pkt(struct regmon_data * rmd, struct ath_softc *s
       sc->ph_data->ph_stop  = rmd->hrtime.tv64;
       sc->ph_data->ph_len   = sc->ph_data->ph_start - sc->ph_data->ph_stop;
 
+#ifdef BLA
       /* mark pkt as ready to push */
       memcpy(sc->rdy_ph_pkt, sc->ph_data, sizeof(struct add_phantom_data));
       sc->ph_state_info->is_delayed = 1;
+#endif
+    /* push phantom packet */
+    skb = create_phantom_pkt(sc->ph_data);
+    ieee80211_input_monitor(&sc->sc_ic, skb, sc->phantom_bf, 0, 0, sc);  // 1st 0 -> RX, 2nd 0 -> mac time
 
       /* reset phantom pkt stats */
       sc->phantom_start = 0;
@@ -212,9 +217,15 @@ void check_rm_data_for_phantom_pkt(struct regmon_data * rmd, struct ath_softc *s
       sc->ph_data->ph_stop  = rmd->hrtime.tv64;
       sc->ph_data->ph_len   = sc->ph_data->ph_start - sc->ph_data->ph_stop;
 
+#ifdef BLA
       /* mark pkt as ready to push */
       memcpy(sc->rdy_ph_pkt, sc->ph_data, sizeof(struct add_phantom_data));
       sc->ph_state_info->is_delayed = 1;
+#endif
+
+    /* push phantom packet */
+    skb = create_phantom_pkt(sc->ph_data);
+    ieee80211_input_monitor(&sc->sc_ic, skb, sc->phantom_bf, 0, 0, sc);  // 1st 0 -> RX, 2nd 0 -> mac time
 
       /* reset phantom pkt stats */
       sc->phantom_start = 0;
