@@ -38,7 +38,96 @@
 #include "net80211/if_athproto.h"
 #include "if_athvar.h"
 
+
+/* phantom packet detecor */
+#define STATE_RX      1
+#define STATE_SILENCE 2
+#define STATE_STRANGE 3
+
+/* how many samples does it take, for us to be sure that this really is a
+   phantom packet */
+#define GLOBAL_MAX 10
+
+/* We have already decided to push the phantom packet. How many samples do
+   we delay the push to find out the state AFTER the phantom pkt. */
+#define DELAY_MAX 3
+/*
+ * <!> Important <!>
+ * DELAY_MAX needs to be << GLOBAL_MAX, since we don't use a
+ * phantom pkt queue for ready phantom pkts. We only got 1 ready spot and
+ * if DELAY_MAX >= GLOBAL_MAX we might lose a phantom pkt by overwriting it
+ * with a newer one.
+ */
+
+
+/* upper and lower bound */
+#define UB 97
+#define LB  1
+
+/* phantom state ring buffer size */
+#define PH_BUF_SIZE 16
+
+
+struct ar5212_rx_status {
+	u_int32_t data_len:12;
+	u_int32_t more:1;
+	u_int32_t decomperr:2;
+	u_int32_t rx_rate:5;
+	u_int32_t rx_rssi:8;
+	u_int32_t rx_ant:4;
+
+
+	u_int32_t done:1;
+	u_int32_t rx_ok:1;
+	u_int32_t crcerr:1;
+	u_int32_t decryptcrc:1;
+
+} __attribute__((packed));
+
+
+/* needed by the phantom paket detector for stats and current state */
+struct phantom_state_info {
+	/* state counts */
+	u_int32_t rx_cnt;
+	u_int32_t silence_cnt;
+	u_int32_t strange_cnt;
+
+	/* phantom mode indicator + stats count */
+	u_int32_t pmode;
+	u_int32_t pmode_cnt;
+
+	u_int32_t curr_state;
+
+	u_int32_t delay_cnt;
+	u_int32_t is_delayed;
+} __attribute__((packed));
+
+
+struct ph_state_buf_entry {
+	u_int32_t prev_state;
+	u_int32_t curr_state;
+
+	u_int64_t change_time;
+} __attribute__((packed));
+
+
+/* additional phantom data which is supposed to be put into a phantom pkt */
+struct add_phantom_data {
+	u_int32_t endianness;
+	u_int32_t version;
+	u_int32_t rb_size;    /* both, flag and size. if 0 -> no ring buffer */
+
+	struct ph_state_buf_entry ph_rb[PH_BUF_SIZE];  /* ph state ringbuffer */
+	u_int32_t ph_rb_index;
+
+	u_int64_t ph_start;   /* start and end time of a phantom pkt in 'k_time' */
+	u_int64_t ph_stop;
+	u_int64_t ph_len;     /* packet length/duration in ns */
+	u_int32_t next_state; /* state after ph pkt push */
+} __attribute__((packed));
+
+
 void check_rm_data_for_phantom_pkt(struct regmon_data * rmd, struct ath_softc *sc);
-struct sk_buff *create_phantom_pkt(void);
+struct sk_buff *create_phantom_pkt(struct add_phantom_data *ph_data);
 
 #endif

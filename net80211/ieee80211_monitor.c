@@ -32,7 +32,7 @@
 #endif
 
 /*
- * IEEE 802.11 monitor mode 
+ * IEEE 802.11 monitor mode
  */
 #if !defined(AUTOCONF_INCLUDED) && !defined(CONFIG_LOCALVERSION)
 #include <linux/config.h>
@@ -209,7 +209,7 @@ ieee80211_monitor_encap(struct ieee80211vap *vap, struct sk_buff *skb)
 		/* skip the chain of additional bitmaps following it_present */
 		while (present_ext & (1 << IEEE80211_RADIOTAP_EXT)) {
 			if (p + 4 > end) {
-				/* An extended bitmap would now follow, but there is 
+				/* An extended bitmap would now follow, but there is
 				 * no place for it. Stop parsing. */
 				present = 0;
 				break;
@@ -305,7 +305,7 @@ ieee80211_monitor_encap(struct ieee80211vap *vap, struct sk_buff *skb)
 			ph->try[2] = desc->xmit_tries2;
 			ph->try[3] = desc->xmit_tries3;
 
-#ifdef ATH2HEADER			
+#ifdef ATH2HEADER
 #ifdef EXTATHFLAGS
 #ifdef EXTATHFLAGSDEBUG
 			printk("PhyFlag in Monitor: %d\n",ph->flags);
@@ -316,9 +316,9 @@ ieee80211_monitor_encap(struct ieee80211vap *vap, struct sk_buff *skb)
 			}
 
 			if ( desc->ant_mode_xmit > 0 ) {		         // move antmode to the highest 4 bits (not used now)
-				ph->flags |= ( desc->ant_mode_xmit << 28 );   
+				ph->flags |= ( desc->ant_mode_xmit << 28 );
 			}
-			
+
 			if ( desc->rts_cts_enable == 1 ) {
 				ph->flags |= HAL_TXDESC_RTSENA;
 			} else {
@@ -326,11 +326,11 @@ ieee80211_monitor_encap(struct ieee80211vap *vap, struct sk_buff *skb)
 					ph->flags |= HAL_TXDESC_CTSENA;
 				}
 			}
-			
+
 			if ( desc->rts_cts_rate > 0 ) {
 				ph->flags |= ( desc->rts_cts_rate << 23 );
 			}
-			
+
 #ifdef EXTATHFLAGSDEBUG
 			printk("New PhyFlag in Monitor: %d\n",ph->flags);
 #endif
@@ -343,12 +343,12 @@ ieee80211_monitor_encap(struct ieee80211vap *vap, struct sk_buff *skb)
 			if ( ath2_h->anno.tx_anno.queue != 0 ) {
 			  skb->priority = ath2_h->anno.tx_anno.queue & 0x3;  //set priority
 			}
-#endif			
+#endif
 			if ( skb->dev->type == ARPHRD_IEEE80211_ATHDESC2 )
 				skb_pull(skb, ATHDESC2_HEADER_SIZE);
 			else
 #endif
-				skb_pull(skb, ATHDESC_HEADER_SIZE); 
+				skb_pull(skb, ATHDESC_HEADER_SIZE);
 		}
 		break;
 	}
@@ -398,6 +398,8 @@ ieee80211_input_monitor(struct ieee80211com *ic, struct sk_buff *skb,
 		rssi = bf->bf_dsstatus.ds_rxstat.rs_rssi;
 		antenna = bf->bf_dsstatus.ds_rxstat.rs_antenna;
 		ieeerate = sc->sc_hwmap[bf->bf_dsstatus.ds_rxstat.rs_rate].ieeerate;
+
+
 #ifdef RXTX_PACKET_COUNT
     sc->ieee80211_rx_packets++;
 #endif
@@ -442,7 +444,7 @@ ieee80211_input_monitor(struct ieee80211com *ic, struct sk_buff *skb,
 			/* We can't use addr1 to determine direction at this point */
 			pkttype = PACKET_HOST;
 		} else {
-			/* 
+			/*
 			 * The frame passed its CRC, so we can rely
 			 * on the contents of the frame to set pkttype.
 			 */
@@ -465,7 +467,7 @@ ieee80211_input_monitor(struct ieee80211com *ic, struct sk_buff *skb,
 			/* don't rx fromds, tods, or dstods packets */
 			continue;
 		}
-		
+
 		if (skb_headroom(skb) < IEEE80211_MON_MAXHDROOM)
 			skb1 = skb_copy_expand(skb, IEEE80211_MON_MAXHDROOM,
 					0, GFP_ATOMIC);
@@ -633,7 +635,7 @@ ieee80211_input_monitor(struct ieee80211com *ic, struct sk_buff *skb,
 				}
 
 				th->wr_dbm_antnoise = (int8_t) noise;
-				th->wr_dbm_antsignal = 
+				th->wr_dbm_antsignal =
 					th->wr_dbm_antnoise + rssi;
 				th->wr_antenna = antenna;
 				th->wr_antsignal = rssi;
@@ -644,32 +646,32 @@ ieee80211_input_monitor(struct ieee80211com *ic, struct sk_buff *skb,
 		}
 		case ARPHRD_IEEE80211_ATHDESC: {
 			if (skb_headroom(skb1) < ATHDESC_HEADER_SIZE) {
-				printk("%s:%d %s\n", __FILE__, 
+				printk("%s:%d %s\n", __FILE__,
 						__LINE__, __func__);
 				ieee80211_dev_kfree_skb(&skb1);
 				break;
 			}
-			memcpy(skb_push(skb1, ATHDESC_HEADER_SIZE), 
+			memcpy(skb_push(skb1, ATHDESC_HEADER_SIZE),
 					ds, ATHDESC_HEADER_SIZE);
 			break;
 		}
 #ifdef ATH2HEADER
 		case ARPHRD_IEEE80211_ATHDESC2: {
 			if (skb_headroom(skb1) < ATHDESC2_HEADER_SIZE) {
-				printk("%s:%d %s\n", __FILE__, 
+				printk("%s:%d %s\n", __FILE__,
 						__LINE__, __func__);
 				ieee80211_dev_kfree_skb(&skb1);
 				break;
 			}
-			
+
 			ath2_h.ath2_version = cpu_to_le16(ATHDESC2_VERSION);
 			ath2_h.madwifi_version = cpu_to_le16(MADWIFI_TRUNK);
-			
+
 			/* Flags */
 #ifdef COLORADO_CCA
 			ath2_h.flags = sc->sc_disable_cca_mask;
-#else			
-			ath2_h.flags = 0;	
+#else
+			ath2_h.flags = 0;
 #endif
 
 #ifdef CHANNELSWITCH
@@ -683,7 +685,7 @@ ieee80211_input_monitor(struct ieee80211com *ic, struct sk_buff *skb,
 #endif
 
 			ath2_h.flags = cpu_to_le32(ath2_h.flags);
-			
+
 			if (tx)
 			{
 				ath2_h.anno.tx.ts_seqnum = bf->bf_dsstatus.ds_txstat.ts_seqnum;
@@ -711,7 +713,7 @@ ieee80211_input_monitor(struct ieee80211com *ic, struct sk_buff *skb,
         ath2_h.anno.tx.ts_flags = 0;
 #endif
 #ifdef CHANNEL_UTILITY
-				if ( (sc->cc_pkt_counter == 0) && ((sc->cc_update_mode & CC_UPDATE_MODE_TXFEEDBACK) == CC_UPDATE_MODE_TXFEEDBACK )) { 
+				if ( (sc->cc_pkt_counter == 0) && ((sc->cc_update_mode & CC_UPDATE_MODE_TXFEEDBACK) == CC_UPDATE_MODE_TXFEEDBACK )) {
 				  switch ( sc->cc_anno_mode ) {
 				      case CC_ANNO_MODE_RX_BUSY:
 					ath2_h.anno.tx.ts_channel_utility = sc->channel_utility.busy;
@@ -722,8 +724,8 @@ ieee80211_input_monitor(struct ieee80211com *ic, struct sk_buff *skb,
 				      case CC_ANNO_MODE_TX_FRAME:
 					ath2_h.anno.tx.ts_channel_utility = sc->channel_utility.tx;
 					break;
-				    
-				  }      
+
+				  }
 				} else {
 				  ath2_h.anno.tx.ts_channel_utility = CHANNEL_UTILITY_INVALID;
 				}
@@ -783,7 +785,7 @@ ieee80211_input_monitor(struct ieee80211com *ic, struct sk_buff *skb,
 			}
 
 			skb1_data = skb_push(skb1, ATHDESC2_HEADER_SIZE);
-			
+
 			memcpy(skb1_data, ds, ATHDESC_HEADER_SIZE);
 			memcpy(&(skb1_data[ATHDESC_HEADER_SIZE]), &(ath2_h), ATHDESC2_BRN_HEADER_SIZE );
 			/*Copy the hole rx/tx-status and brn extra*/
@@ -795,11 +797,11 @@ ieee80211_input_monitor(struct ieee80211com *ic, struct sk_buff *skb,
 		}
 		if (skb1 != NULL) {
 #ifdef KEEP_CRC
-			if (!tx && (skb1->len >= IEEE80211_CRC_LEN) && 
+			if (!tx && (skb1->len >= IEEE80211_CRC_LEN) &&
 					((vap->iv_dev->type != ARPHRD_IEEE80211_RADIOTAP) || ( sc->keep_crc != 0 )) ) {
 #else
-			if (!tx && (skb1->len >= IEEE80211_CRC_LEN) && 
-					(vap->iv_dev->type != 
+			if (!tx && (skb1->len >= IEEE80211_CRC_LEN) &&
+					(vap->iv_dev->type !=
 					 ARPHRD_IEEE80211_RADIOTAP)) {
 #endif
 				/* Remove FCS from end of RX frames when
@@ -811,7 +813,7 @@ ieee80211_input_monitor(struct ieee80211com *ic, struct sk_buff *skb,
 
 			skb1->ip_summed = CHECKSUM_NONE;
 			skb1->pkt_type = pkttype;
-			skb1->protocol = 
+			skb1->protocol =
 				__constant_htons(0x0019); /* ETH_P_80211_RAW */
 
 			vap->iv_devstats.rx_packets++;

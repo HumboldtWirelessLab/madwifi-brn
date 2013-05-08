@@ -131,6 +131,7 @@
 #include "ath_channel_utility.h"
 #ifdef BRN_REGMON
 #ifdef BRN_REGMON_HR
+#include "if_ath_regmon.h"
 #include <linux/ktime.h>
 #include <linux/hrtimer.h>
 #endif
@@ -150,7 +151,6 @@ void regmon_timer_func(unsigned long softc_p);
 int regmon_hrtimer_func(struct hrtimer *hr_timer);
 #else
 enum hrtimer_restart regmon_hrtimer_func(struct hrtimer *hr_timer);
-void check_rm_data_for_phantom_pkt(struct regmon_data * rmd, struct ath_softc *sc);
 #endif
 #endif
 #endif
@@ -614,6 +614,11 @@ ath_attach(u_int16_t devid, struct net_device *dev, HAL_BUS_TAG tag)
   int q;
 #endif
 #endif
+#ifdef CHANNEL_UTILITY
+#ifdef BRN_REGMON_HR
+  struct ar5212_rx_status *rx_stats;
+#endif
+#endif
 
 	sc->devid = devid;
 	ath_debug_global = (ath_debug & ATH_DEBUG_GLOBAL);
@@ -683,7 +688,54 @@ ath_attach(u_int16_t devid, struct net_device *dev, HAL_BUS_TAG tag)
         sc->phantom_cnt   = 0;
         sc->phantom_start = 0;
 
-        /* Init ringbuffer */
+        /* phantom paket detector init */
+        sc->ph_state_info = (struct phantom_state_info *) kmalloc(sizeof(struct phantom_state_info), GFP_KERNEL);
+
+        if ( sc->ph_state_info == NULL )
+                printk(KERN_ERR "BRN-Regmon: unable to alloc mem for phantom state info");
+
+        sc->ph_state_info->rx_cnt      = 0;
+        sc->ph_state_info->silence_cnt = 0;
+        sc->ph_state_info->strange_cnt = 0;
+
+        sc->ph_state_info->delay_cnt   = 0;
+        sc->ph_state_info->is_delayed  = 0;
+
+        sc->ph_state_info->curr_state = STATE_SILENCE;
+        sc->ph_state_info->pmode      = 0;
+
+        /* additional phantom packet info */
+        sc->ph_data = (struct add_phantom_data *) kmalloc(sizeof(struct add_phantom_data), GFP_KERNEL);
+
+        if (sc->ph_data == NULL)
+                printk(KERN_ERR "BRN-Regmon: unable to alloc mem for addition phantom data");
+
+        sc->ph_data->endianness = 0x01020304;
+        sc->ph_data->version    = 1;
+        sc->ph_data->rb_size    = PH_BUF_SIZE;
+
+        /* init phantom state ringbuffer */
+        for (i = 0; i < PH_BUF_SIZE; i++) {
+                sc->ph_data->ph_rb[i].prev_state  = 0;
+                sc->ph_data->ph_rb[i].curr_state  = 0;
+                sc->ph_data->ph_rb[i].change_time = 0;
+        }
+        sc->ph_data->ph_rb_index = 0;
+
+        sc->ph_data->ph_start   = 0;
+        sc->ph_data->ph_stop    = 0;
+        sc->ph_data->ph_len     = 0;
+        sc->ph_data->next_state = 0;
+
+        sc->rdy_ph_pkt = (struct add_phantom_data *) kmalloc(sizeof(struct add_phantom_data), GFP_KERNEL);
+
+        if (sc->rdy_ph_pkt == NULL)
+                printk(KERN_ERR "BRN-Regmon: unable to alloc mem for a rdy phantom pkt");
+
+        memset(sc->rdy_ph_pkt, 0, sizeof(struct add_phantom_data));
+
+
+        /* Init regmon data ringbuffer */
         sc->regm_data_no_entries = BRN_REGMON_DEFAULT_NO_ENTRIES;
         sc->regm_data_size = (sc->regm_data_no_entries + 1) * sizeof(struct regmon_data); //+1 for info
         sc->regm_data = (struct regmon_data*)kmalloc(sc->regm_data_size, GFP_KERNEL);
@@ -743,12 +795,14 @@ ath_attach(u_int16_t devid, struct net_device *dev, HAL_BUS_TAG tag)
                sc->phantom_bf->bf_dsstatus.ds_rxstat.rs_phyerr = 0;
                sc->phantom_bf->bf_dsstatus.ds_rxstat.rs_rssi = 0;
                sc->phantom_bf->bf_dsstatus.ds_rxstat.rs_keyix = 0;
-               sc->phantom_bf->bf_dsstatus.ds_rxstat.rs_rate = 2;
+               sc->phantom_bf->bf_dsstatus.ds_rxstat.rs_rate = 27; /* for none ath header ( 27 -> 1MBit/s) */
                sc->phantom_bf->bf_dsstatus.ds_rxstat.rs_more = 0;
                sc->phantom_bf->bf_dsstatus.ds_rxstat.rs_tstamp = 0;
                sc->phantom_bf->bf_dsstatus.ds_rxstat.rs_antenna = 0;
 
                memset(sc->phantom_bf->bf_desc,0,sizeof(struct ath_desc));
+               rx_stats = (struct ar5212_rx_status *)(((char*)sc->phantom_bf->bf_desc) + 16); //offset 16: see athdecap.cc (click: elements/wifi/)
+               rx_stats->rx_rate = 27;
              } else {
                kfree(sc->phantom_bf);
                sc->phantom_bf = NULL;
@@ -760,6 +814,7 @@ ath_attach(u_int16_t devid, struct net_device *dev, HAL_BUS_TAG tag)
         }
 #endif
 #endif
+
 	atomic_set(&sc->sc_txbuf_counter, 0);
 
 	ATH_INIT_TQUEUE(&sc->sc_rxtq,		ath_rx_tasklet,		dev);
@@ -11429,28 +11484,25 @@ enum {
 	ATH_CCA_THRESH		= 30,
 #endif
 #ifdef CHANNEL_UTILITY
-	ATH_CHANNEL_UTILITY_RX_BUSY	= 31,
-	ATH_CHANNEL_UTILITY_RX_FRAME	= 32,
-	ATH_CHANNEL_UTILITY_TX_FRAME	= 33,
-	ATH_CHANNEL_UTILITY_PKT_THRESHOLD = 34,
-	ATH_CHANNEL_UTILITY_UPDATE_MODE = 35,
-	ATH_CHANNEL_UTILITY_ANNO_MODE = 36,
+	ATH_CHANNEL_UTILITY_PKT_THRESHOLD = 31,
+	ATH_CHANNEL_UTILITY_UPDATE_MODE = 32,
+	ATH_CHANNEL_UTILITY_ANNO_MODE = 33,
 #endif
 #ifdef KEEP_CRC
-	ATH_KEEP_CRC = 37,
+	ATH_KEEP_CRC = 34,
 #endif
 #ifdef SYSCTL_NOISE
-	ATH_NOISE_FLOOR = 38,
+	ATH_NOISE_FLOOR = 35,
 #endif
 #ifdef QUEUECTRL
-	ATH_NUMTXQUEUE = 39,
-	ATH_CLEARQUEUE = 40,
+	ATH_NUMTXQUEUE = 36,
+	ATH_CLEARQUEUE = 37,
 #endif
 #ifdef CHANNEL_UTILITY
 #ifdef BRN_REGMON
-	ATH_BRN_REGMON_INTERVAL = 41,
-  ATH_BRN_REGMON_BUFFERSIZE = 42,
-  ATH_BRN_REGMON_FLAGS = 43,
+	ATH_BRN_REGMON_INTERVAL = 38,
+  ATH_BRN_REGMON_BUFFERSIZE = 39,
+  ATH_BRN_REGMON_FLAGS = 40,
 #endif
 #endif
 };
@@ -12089,15 +12141,6 @@ ATH_SYSCTL_DECL(ath_sysctl_halparam, ctl, write, filp, buffer, lenp, ppos)
 			break;
 #endif
 #ifdef CHANNEL_UTILITY
-		case ATH_CHANNEL_UTILITY_RX_BUSY:
-			val = get_channel_utility_busy(sc);
-			break;
-		case ATH_CHANNEL_UTILITY_RX_FRAME:
-			val = get_channel_utility_rx(sc);
-			break;
-		case ATH_CHANNEL_UTILITY_TX_FRAME:
-			val = get_channel_utility_tx(sc);
-			break;
 		case ATH_CHANNEL_UTILITY_PKT_THRESHOLD:
 			val = sc->cc_pkt_update_threshold;
 			break;
@@ -12179,7 +12222,6 @@ ATH_SYSCTL_DECL(ath_sysctl_halparam, ctl, write, filp, buffer, lenp, ppos)
         break;
 #endif
 #endif
-
 		default:
 			ret = -EINVAL;
 			break;
@@ -12383,24 +12425,6 @@ static const ctl_table ath_sysctl_template[] = {
 	},
 #endif
 #ifdef CHANNEL_UTILITY
-	{ ATH_INIT_CTL_NAME(CTL_AUTO)
-	  .procname     = "cutil_rx_busy",
-	  .mode         = 0444,
-	  .proc_handler = ath_sysctl_halparam,
-	  .extra2	= (void *)ATH_CHANNEL_UTILITY_RX_BUSY,
-	},
-	{ ATH_INIT_CTL_NAME(CTL_AUTO)
-	  .procname     = "cutil_rx_frame",
-	  .mode         = 0444,
-	  .proc_handler = ath_sysctl_halparam,
-	  .extra2	= (void *)ATH_CHANNEL_UTILITY_RX_FRAME,
-	},
-	{ ATH_INIT_CTL_NAME(CTL_AUTO)
-	  .procname     = "cutil_tx_frame",
-	  .mode         = 0444,
-	  .proc_handler = ath_sysctl_halparam,
-	  .extra2	= (void *)ATH_CHANNEL_UTILITY_TX_FRAME,
-	},
 	{ ATH_INIT_CTL_NAME(CTL_AUTO)
 	  .procname     = "cutil_pkt_threshold",
 	  .mode         = 0644,
@@ -13070,7 +13094,7 @@ inline void regmon_timer_update(struct ath_softc *sc, uint64_t ktime_now)
   rmd->value.regs.tx_cycles = sc->cc_survey.tx_frame;
   rmd->value.regs.frame_ctrl = OS_REG_READ(ah, 0x9944);
 
-  //check_rm_data_for_phantom_pkt(rmd, sc);
+  check_rm_data_for_phantom_pkt(rmd, sc);
 }
 
 /* increments the global counter and sets a new timer */
