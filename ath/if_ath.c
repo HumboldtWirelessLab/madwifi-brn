@@ -13927,7 +13927,7 @@ static int
 ath_rcv_dev_event(struct notifier_block *this, unsigned long event,
 	void *ptr)
 {
-	struct net_device *dev = (struct net_device *)ptr;
+	struct net_device *dev = netdev_notifier_info_to_dev(ptr);
 	struct ath_softc *sc = (struct ath_softc *)netdev_priv(dev);
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,29)

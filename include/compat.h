@@ -242,6 +242,10 @@ typedef unsigned long resource_size_t;
 #endif
 #endif
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3,11,0)
+#define netdev_notifier_info_to_dev(ptr) ((struct net_device *)(ptr))
+#endif
+
 #endif /* __KERNEL__ */
 
 #endif /* _ATH_COMPAT_H_ */
