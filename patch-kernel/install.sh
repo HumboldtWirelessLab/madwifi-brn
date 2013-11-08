@@ -69,8 +69,7 @@ echo "Copying top-level files"
 MADWIFI=${WIRELESS}/madwifi
 rm -rf ${MADWIFI}
 mkdir -p ${MADWIFI}
-make -s -C ${SRC} svnversion.h
-cp -f ${SRC}/BuildCaps.inc ${SRC}/svnversion.h ${SRC}/release.h ${MADWIFI}
+cp -f ${SRC}/BuildCaps.inc ${SRC}/release.h ${MADWIFI}
 
 
 echo "Copying source files"

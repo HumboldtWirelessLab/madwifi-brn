@@ -35,14 +35,7 @@
  *
  * $Id: release.h 4116 2010-01-25 22:53:37Z proski $
  */
-#include "svnversion.h"
-
 #define	RELEASE_TYPE	"BETA"
-
-#ifdef SVNVERSION
-#define RELEASE_VERSION	SVNVERSION " (trunk)"
-#else
 #define RELEASE_VERSION	"trunk"
-#endif
 
 #include "brn/brn.h"

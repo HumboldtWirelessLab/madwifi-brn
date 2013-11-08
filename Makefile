@@ -55,7 +55,7 @@ endif
 all: modules tools
 
 .PHONY: modules
-modules: configcheck $(TOP)/svnversion.h
+modules: configcheck
 ifdef LINUX24
 	for i in $(obj-y); do \
 		$(MAKE) -C $$i || exit 1; \
@@ -63,24 +63,6 @@ ifdef LINUX24
 else
 	$(MAKE) -C $(KERNELPATH) SUBDIRS=$(shell pwd) modules
 endif
-
-$(addprefix $(obj)/, $(obj-y:/=)): $(TOP)/svnversion.h
-
-$(TOP)/svnversion.h:
-	@cd $(TOP) && \
-	if [ -d .svn ]; then \
-		ver=$$(svnversion -nc . | sed -e 's/^[^:]*://;s/[A-Za-z]//'); \
-		echo "#define SVNVERSION \"svn r$$ver\"" > $@.tmp; \
-	elif [ -d .git ]; then \
-		ver=$$(git svn log --oneline --limit 1 | cut -d\  -f1); \
-		echo "#define SVNVERSION \"svn $$ver\"" > $@.tmp; \
-	elif [ -s SNAPSHOT ]; then \
-		ver=$$(sed -e '/^Revision: */!d;s///;q' SNAPSHOT); \
-		echo "#define SVNVERSION \"svn r$$ver\"" > $@.tmp; \
-	else \
-		touch $@.tmp; \
-	fi || exit 1; \
-	diff $@ $@.tmp >/dev/null 2>&1 || cp -f $@.tmp $@; rm -f $@.tmp
 
 # conflicts with the 'tools' subdirectory
 .PHONY: tools
@@ -133,7 +115,7 @@ clean:
 	done
 	-$(MAKE) -C $(TOOLS) clean
 	rm -rf .tmp_versions
-	rm -f modules.order *.symvers Module.markers svnversion.h
+	rm -f modules.order *.symvers Module.markers
 
 .PHONY: info
 info:
