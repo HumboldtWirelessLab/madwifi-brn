@@ -45,6 +45,7 @@
 #include <linux/netdevice.h>
 #include <linux/kernel.h>
 #include <linux/kmod.h>
+#include <linux/proc_fs.h>
 #endif
 
 #include <linux/version.h>
@@ -240,6 +241,36 @@ typedef unsigned long resource_size_t;
 #define spin_lock_irqsave_nested(_lock, _flags, _subclass) \
 	spin_lock_irqsave(_lock, _flags)
 #endif
+#endif
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,26)
+static inline struct proc_dir_entry *proc_create_data(const char *name,
+	umode_t mode, struct proc_dir_entry *parent,
+	struct file_operations *fops, void *data)
+{
+	struct proc_dir_entry *de;
+
+	de = create_proc_entry(name, mode, parent);
+	if (de) {
+		de->data = data;
+		de->proc_fops = fops;
+	}
+
+	return de;
+}
+#endif
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3,10,0)
+static inline void proc_remove(struct proc_dir_entry *de)
+{
+	if (de)
+		remove_proc_entry(de->name, de->parent);
+}
+
+static inline void *PDE_DATA(const struct inode *inode)
+{
+	return PDE(inode)->data;
+}
 #endif
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(3,11,0)

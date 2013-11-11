@@ -1045,9 +1045,14 @@ static int
 proc_ratesample_open(struct inode *inode, struct file *file)
 {
 	struct proc_ieee80211_priv *pv;
-	struct proc_dir_entry *dp = PDE(inode);
-	struct ieee80211vap *vap = dp->data;
+	struct ieee80211vap *vap = PDE_DATA(inode);
 	unsigned long size;
+
+	/* Determine what size packets to get stats for based on proc filename */
+	size = simple_strtoul(file->f_dentry->d_name.name +
+			      sizeof("ratestats_"), NULL, 0);
+	if (size < 250 || size > 3000)
+		return -ENOENT;
 
 	if (!(file->private_data = kzalloc(sizeof(struct proc_ieee80211_priv),
 			GFP_KERNEL)))
@@ -1070,9 +1075,6 @@ proc_ratesample_open(struct inode *inode, struct file *file)
 	memset(pv->rbuf, 0, MAX_PROC_IEEE80211_SIZE);
 	pv->max_wlen = MAX_PROC_IEEE80211_SIZE;
 	pv->max_rlen = MAX_PROC_IEEE80211_SIZE;
-
-	/* Determine what size packets to get stats for based on proc filename */
-	size = simple_strtoul(dp->name + 10, NULL, 0);
 
 	/* now read the data into the buffer */
 	pv->rlen = proc_read_nodes(vap, size, pv->rbuf, MAX_PROC_IEEE80211_SIZE);

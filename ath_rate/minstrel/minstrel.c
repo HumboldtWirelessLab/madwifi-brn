@@ -1032,8 +1032,7 @@ static int
 ath_proc_ratesample_open(struct inode *inode, struct file *file)
 {
 	struct proc_ieee80211_priv *pv = NULL;
-	struct proc_dir_entry *dp = PDE(inode);
-	struct ieee80211vap *vap = dp->data;
+	struct ieee80211vap *vap = PDE_DATA(inode);
 
 	if (!(file->private_data = kzalloc(sizeof(struct proc_ieee80211_priv),
 			   GFP_KERNEL)))

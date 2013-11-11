@@ -607,8 +607,7 @@ static int
 proc_ieee80211_open(struct inode *inode, struct file *file)
 {
 	struct proc_ieee80211_priv *pv = NULL;
-	struct proc_dir_entry *dp = PDE(inode);
-	struct ieee80211vap *vap = dp->data;
+	struct ieee80211vap *vap = PDE_DATA(inode);
 	int result;
 
 	result = proc_common_open(inode, file);
@@ -625,8 +624,7 @@ static int
 proc_doth_open(struct inode *inode, struct file *file)
 {
 	struct proc_ieee80211_priv *pv = NULL;
-	struct proc_dir_entry *dp = PDE(inode);
-	struct ieee80211vap *vap = dp->data;
+	struct ieee80211vap *vap = PDE_DATA(inode);
 	int result;
 
 	result = proc_common_open(inode, file);
@@ -643,8 +641,7 @@ static int
 proc_doth_state_open(struct inode *inode, struct file *file)
 {
 	struct proc_ieee80211_priv *pv = NULL;
-	struct proc_dir_entry *dp = PDE(inode);
-	struct ieee80211vap *vap = dp->data;
+	struct ieee80211vap *vap = PDE_DATA(inode);
 	int result;
 
 	result = proc_common_open(inode, file);
@@ -662,8 +659,7 @@ static int
 proc_iv_bss_open(struct inode *inode, struct file *file)
 {
 	struct proc_ieee80211_priv *pv = NULL;
-	struct proc_dir_entry *dp = PDE(inode);
-	struct ieee80211vap *vap = dp->data;
+	struct ieee80211vap *vap = PDE_DATA(inode);
 	int result;
 
 	result = proc_common_open(inode, file);
@@ -1219,10 +1215,9 @@ ieee80211_virtfs_latevattach(struct ieee80211vap *vap)
 
 		while (tmp) {
 			if (!tmp->entry) {
-				tmp->entry = create_proc_entry(tmp->name,
-				PROC_IEEE80211_PERM, vap->iv_proc);
-				tmp->entry->data = vap;
-				tmp->entry->proc_fops = tmp->fileops;
+				tmp->entry = proc_create_data(tmp->name,
+				PROC_IEEE80211_PERM, vap->iv_proc,
+				tmp->fileops, vap);
 			}
 			tmp = tmp->next;
 		}
@@ -1292,10 +1287,9 @@ ieee80211_proc_vcreate(struct ieee80211vap *vap,
 
 	/* Create the actual proc entry */
 	if (vap->iv_proc) {
-		entry->entry = create_proc_entry(entry->name,
-				PROC_IEEE80211_PERM, vap->iv_proc);
-		entry->entry->data = vap;
-		entry->entry->proc_fops = entry->fileops;
+		entry->entry = proc_create_data(entry->name,
+				PROC_IEEE80211_PERM, vap->iv_proc,
+				entry->fileops, vap);
 	}
 
 	/* Add it to the list */
@@ -1389,14 +1383,14 @@ ieee80211_virtfs_vdetach(struct ieee80211vap *vap)
 
 		while (tmp) {
 			if (tmp->entry) {
-				remove_proc_entry(tmp->name, vap->iv_proc);
+				proc_remove(tmp->entry);
 				tmp->entry = NULL;
 			}
 			tmp = tmp->next;
 		}
-		remove_proc_entry(vap->iv_proc->name, proc_madwifi);
+		proc_remove(vap->iv_proc);
 		if (proc_madwifi_count == 1) {
-			remove_proc_entry("madwifi", proc_net);
+			proc_remove(proc_madwifi);
 			proc_madwifi = NULL;
 		}
 		proc_madwifi_count--;
