@@ -1050,7 +1050,7 @@ proc_ratesample_open(struct inode *inode, struct file *file)
 
 	/* Determine what size packets to get stats for based on proc filename */
 	size = simple_strtoul(file->f_dentry->d_name.name +
-			      sizeof("ratestats_"), NULL, 0);
+			      strlen("ratestats_"), NULL, 0);
 	if (size < 250 || size > 3000)
 		return -ENOENT;
 
