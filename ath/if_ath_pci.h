@@ -43,22 +43,10 @@
 #include <linux/pci.h>
 #define bus_map_single		pci_map_single
 #define bus_unmap_single	pci_unmap_single
-
 #define bus_dma_sync_single	pci_dma_sync_single_for_cpu
-#define	PCI_SAVE_STATE(a,b)	pci_save_state(a)
-#define	PCI_RESTORE_STATE(a,b)	pci_restore_state(a)
-
 #define bus_alloc_consistent	pci_alloc_consistent
 #define bus_free_consistent	pci_free_consistent
 #define BUS_DMA_FROMDEVICE	PCI_DMA_FROMDEVICE
 #define BUS_DMA_TODEVICE	PCI_DMA_TODEVICE
-
-#ifndef PCI_D0
-#define PCI_D0		0
-#endif
-
-#ifndef PCI_D3hot
-#define PCI_D3hot	3
-#endif
 
 #endif   /* _DEV_ATH_PCI_H_ */

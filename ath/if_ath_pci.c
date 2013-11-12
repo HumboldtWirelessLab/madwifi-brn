@@ -295,7 +295,7 @@ ath_pci_suspend(struct pci_dev *pdev, pm_message_t state)
 	struct net_device *dev = pci_get_drvdata(pdev);
 
 	ath_suspend(dev);
-	PCI_SAVE_STATE(pdev, ((struct ath_pci_softc *)netdev_priv(dev))->aps_pmstate);
+	pci_save_state(pdev);
 	pci_disable_device(pdev);
 	return pci_set_power_state(pdev, PCI_D3hot);
 }
@@ -312,7 +312,7 @@ ath_pci_resume(struct pci_dev *pdev)
 		return err;
 
 	/* XXX - Should this return nonzero on fail? */
-	PCI_RESTORE_STATE(pdev,	((struct ath_pci_softc *)netdev_priv(dev))->aps_pmstate);
+	pci_restore_state(pdev);
 
 	err = pci_enable_device(pdev);
 	if (err)
