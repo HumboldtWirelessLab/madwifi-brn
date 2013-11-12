@@ -504,10 +504,10 @@ proc_iv_bss_print(struct ieee80211vap *vap, char *buf, int space)
 	char *p = buf;
 	const struct ieee80211_node *ni = vap->iv_bss;
 
-	p += sprintf(p, "vap:%p vap->iv_bss: %p\n",
-		     vap, ni);
-	if (ni == NULL)
+	if (ni == NULL) {
+		p += sprintf(p, "ni:	NULL\n");
 		return (p - buf);
+	}
 
 	p += sprintf(p, "ni_macaddr:	" MAC_FMT "\n"
 		     "ni_bssid:	" MAC_FMT "\n"
