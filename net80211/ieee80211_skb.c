@@ -84,12 +84,10 @@
 #undef skb_unshare
 #undef vlan_hwaccel_rx
 
-atomic_t skb_total_counter = ATOMIC_INIT(0);
-EXPORT_SYMBOL(skb_total_counter);
+static atomic_t skb_total_counter = ATOMIC_INIT(0);
 
 #ifdef IEEE80211_DEBUG_REFCNT
-atomic_t skb_refs_counter  = ATOMIC_INIT(0);
-EXPORT_SYMBOL(skb_refs_counter);
+static atomic_t skb_refs_counter = ATOMIC_INIT(0);
 #endif
 
 /*******************************************************************************

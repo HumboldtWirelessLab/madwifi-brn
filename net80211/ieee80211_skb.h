@@ -30,19 +30,6 @@
 #define _NET80211_IEEE80211_SKB_H_
 
 /*******************************************************************************
- * Globals
- ******************************************************************************/
-
-#ifdef IEEE80211_DEBUG_REFCNT
-
-/* Count of currently tracked skbs */
-extern atomic_t skb_total_counter;
-/* Count of currently tracked skbs' references */
-extern atomic_t skb_refs_counter;
-
-#endif /* #ifdef IEEE80211_DEBUG_REFCNT */
-
-/*******************************************************************************
  * Public API
  ******************************************************************************/
 
