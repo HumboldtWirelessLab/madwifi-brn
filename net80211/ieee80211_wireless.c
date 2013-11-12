@@ -53,8 +53,8 @@
 #include <linux/wireless.h>
 #include <net/iw_handler.h>
 
-#if WIRELESS_EXT < 15
-#error "Wireless extensions v15 or better is needed."
+#if WIRELESS_EXT < 18
+#error "Wireless extensions v18 or better is needed."
 #endif
 
 #include <asm/uaccess.h>
@@ -1031,7 +1031,6 @@ ieee80211_ioctl_giwrange(struct net_device *dev, struct iw_request_info *info,
 	range->min_frag = 256;
 	range->max_frag = 2346;
 
-#if WIRELESS_EXT >= 17
 	/* Event capability (kernel) */
 	IW_EVENT_CAPA_SET_KERNEL(range->event_capa);
 
@@ -1052,13 +1051,10 @@ ieee80211_ioctl_giwrange(struct net_device *dev, struct iw_request_info *info,
 
 	/* this is used for reporting replay failure, which is used by the different encoding schemes */
 	IW_EVENT_CAPA_SET(range->event_capa, IWEVCUSTOM);
-#endif
 
-#if WIRELESS_EXT >= 18
 	/* report supported WPA/WPA2 capabilities to userspace */
 	range->enc_capa = IW_ENC_CAPA_WPA | IW_ENC_CAPA_WPA2 |
 		IW_ENC_CAPA_CIPHER_TKIP | IW_ENC_CAPA_CIPHER_CCMP;
-#endif
 
 	return 0;
 }
@@ -1152,7 +1148,6 @@ ieee80211_ioctl_getspy(struct net_device *dev, struct iw_request_info *info,
 	return 0;
 }
 
-#if WIRELESS_EXT >= 16
 /* Enhanced iwspy support */
 static int
 ieee80211_ioctl_setthrspy(struct net_device *dev, struct iw_request_info *info,
@@ -1210,7 +1205,6 @@ ieee80211_ioctl_getthrspy(struct net_device *dev, struct iw_request_info *info,
 
 	return 0;
 }
-#endif
 
 static int
 ieee80211_ioctl_siwmode(struct net_device *dev, struct iw_request_info *info,
@@ -1675,7 +1669,6 @@ ieee80211_ioctl_iwaplist(struct net_device *dev, struct iw_request_info *info,
 	return 0;
 }
 
-#ifdef SIOCGIWSCAN
 static int
 ieee80211_ioctl_siwscan(struct net_device *dev,	struct iw_request_info *info,
 	struct iw_point *data, char *extra)
@@ -1696,7 +1689,6 @@ ieee80211_ioctl_siwscan(struct net_device *dev,	struct iw_request_info *info,
 	IEEE80211_DPRINTF(vap, IEEE80211_MSG_SCAN,
 		"%s: active scan request\n", __func__);
 	preempt_scan(dev, 100, 100);
-#if WIRELESS_EXT > 17
 	if (data && (data->flags & IW_SCAN_THIS_ESSID)) {
 		struct iw_scan_req req;
 		struct ieee80211_scan_ssid ssid;
@@ -1722,7 +1714,6 @@ ieee80211_ioctl_siwscan(struct net_device *dev,	struct iw_request_info *info,
 			1, &ssid);
 		return 0;
 	}
-#endif
 	(void) ieee80211_start_scan(vap, IEEE80211_SCAN_ACTIVE |
 		IEEE80211_SCAN_NOPICK |	IEEE80211_SCAN_ONCE,
 		IEEE80211_SCAN_FOREVER,
@@ -2056,7 +2047,6 @@ ieee80211_ioctl_giwscan(struct net_device *dev,	struct iw_request_info *info,
 
 	return res;
 }
-#endif /* SIOCGIWSCAN */
 
 static int
 cipher2cap(int cipher)
@@ -4551,7 +4541,6 @@ ieee80211_ioctl_chanswitch(struct net_device *dev, struct iw_request_info *info,
 	return 0;
 }
 
-#if WIRELESS_EXT >= 18
 static int
 ieee80211_ioctl_siwmlme(struct net_device *dev,
 	struct iw_request_info *info, struct iw_point *erq, char *data)
@@ -5277,7 +5266,6 @@ ieee80211_ioctl_siwencodeext(struct net_device *dev,
 
 	return ieee80211_ioctl_setkey(dev, NULL, NULL, (char *)&kr);
 }
-#endif /* WIRELESS_EXT >= 18 */
 
 #define	IW_PRIV_TYPE_OPTIE	\
 	IW_PRIV_BLOB_TYPE_ENCODING(IEEE80211_MAX_OPT_IE)
@@ -5727,20 +5715,14 @@ static const iw_handler ieee80211_handlers[] = {
 	set_handler(SIOCGIWRANGE, ieee80211_ioctl_giwrange),
 	set_handler(SIOCSIWSPY, ieee80211_ioctl_setspy),
 	set_handler(SIOCGIWSPY, ieee80211_ioctl_getspy),
-#if WIRELESS_EXT >= 16
 	set_handler(SIOCSIWTHRSPY, ieee80211_ioctl_setthrspy),
 	set_handler(SIOCGIWTHRSPY, ieee80211_ioctl_getthrspy),
-#endif
 	set_handler(SIOCSIWAP, ieee80211_ioctl_siwap),
 	set_handler(SIOCGIWAP, ieee80211_ioctl_giwap),
-#ifdef SIOCSIWMLME
 	set_handler(SIOCSIWMLME, ieee80211_ioctl_siwmlme),
-#endif
 	set_handler(SIOCGIWAPLIST, ieee80211_ioctl_iwaplist),
-#ifdef SIOCGIWSCAN
 	set_handler(SIOCSIWSCAN, ieee80211_ioctl_siwscan),
 	set_handler(SIOCGIWSCAN, ieee80211_ioctl_giwscan),
-#endif /* SIOCGIWSCAN */
 	set_handler(SIOCSIWESSID, ieee80211_ioctl_siwessid),
 	set_handler(SIOCGIWESSID, ieee80211_ioctl_giwessid),
 	set_handler(SIOCSIWNICKN, ieee80211_ioctl_siwnickn),
@@ -5759,14 +5741,12 @@ static const iw_handler ieee80211_handlers[] = {
 	set_handler(SIOCGIWENCODE, ieee80211_ioctl_giwencode),
 	set_handler(SIOCSIWPOWER, ieee80211_ioctl_siwpower),
 	set_handler(SIOCGIWPOWER, ieee80211_ioctl_giwpower),
-#if WIRELESS_EXT >= 18
 	set_handler(SIOCSIWGENIE, ieee80211_ioctl_siwgenie),
 	set_handler(SIOCGIWGENIE, ieee80211_ioctl_giwgenie),
 	set_handler(SIOCSIWAUTH, ieee80211_ioctl_siwauth),
 	set_handler(SIOCGIWAUTH, ieee80211_ioctl_giwauth),
 	set_handler(SIOCSIWENCODEEXT, ieee80211_ioctl_siwencodeext),
 	set_handler(SIOCGIWENCODEEXT, ieee80211_ioctl_giwencodeext),
-#endif /* WIRELESS_EXT >= 18 */
 };
 
 #define set_priv(x,f) [x - SIOCIWFIRSTPRIV] = (iw_handler) f

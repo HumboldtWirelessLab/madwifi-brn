@@ -133,7 +133,6 @@ static int athff_decap(struct sk_buff *);
 static __be16 ath_eth_type_trans(struct sk_buff *, struct net_device *);
 #endif
 
-#if WIRELESS_EXT >= 16
 /**
  * Given a node and the RSSI value of a just received frame from the node, this
  * function checks if to raise an iwspy event because we iwspy the node and RSSI
@@ -176,10 +175,6 @@ iwspy_event(struct ieee80211vap *vap, struct ieee80211_node *ni, u_int rssi)
 		}
 	}
 }
-
-#else
-#define iwspy_event(_vap, _ni, _rssi)
-#endif /* WIRELESS_EXT >= 16 */
 
 /*
  * Process a received frame.  The node associated with the sender
