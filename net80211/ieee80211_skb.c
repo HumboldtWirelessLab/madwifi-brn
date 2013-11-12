@@ -699,7 +699,9 @@ struct sk_buff *skb_copy_expand_debug(const struct sk_buff *skb, int newheadroom
 			__func__, __LINE__);
 }
 
+#if IEEE80211_VLAN_TAG_USED
 EXPORT_SYMBOL(vlan_hwaccel_rx_debug);
+#endif
 EXPORT_SYMBOL(netif_rx_debug);
 EXPORT_SYMBOL(alloc_skb_debug);
 EXPORT_SYMBOL(dev_alloc_skb_debug);
