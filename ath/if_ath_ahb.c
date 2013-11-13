@@ -44,14 +44,7 @@
 static char *version = RELEASE_VERSION;
 static char *dev_info = "ath_ahb";
 
-struct ath_ahb_softc {
-	struct ath_softc	aps_sc;
-#ifdef CONFIG_PM
-	u32 aps_pmstate[16];
-#endif
-};
-
-static struct ath_ahb_softc *sclist[2] = {NULL, NULL};
+static struct ath_softc *sclist[2] = {NULL, NULL};
 static u_int8_t num_activesc = 0;
 
 
@@ -161,18 +154,18 @@ ahb_disable_wmac(u_int16_t devid, u_int16_t wlanNum)
 static int
 exit_ath_wmac(u_int16_t wlanNum, struct ar531x_config *config)
 {
-	struct ath_ahb_softc *sc = sclist[wlanNum];
+	struct ath_softc *sc = sclist[wlanNum];
 	struct net_device *dev;
 	u_int16_t devid;
 
 	if (sc == NULL)
 		return -ENODEV; /* XXX: correct return value? */
 
-	dev = sc->aps_sc.sc_dev;
+	dev = sc->sc_dev;
 	ath_detach(dev);
 	if (dev->irq)
 		free_irq(dev->irq, dev);
-	devid = sc->aps_sc.devid;
+	devid = sc->devid;
 	config->tag = (void *)((unsigned long) devid);
 
 	ahb_disable_wmac(devid, wlanNum);
@@ -186,7 +179,7 @@ init_ath_wmac(u_int16_t devid, u_int16_t wlanNum, struct ar531x_config *config)
 {
 	const char *athname;
 	struct net_device *dev;
-	struct ath_ahb_softc *sc;
+	struct ath_softc *sc;
 
 	if (((wlanNum != 0) && (wlanNum != 1)) ||
 		(sclist[wlanNum] != NULL))
@@ -194,19 +187,19 @@ init_ath_wmac(u_int16_t devid, u_int16_t wlanNum, struct ar531x_config *config)
 
 	ahb_enable_wmac(devid, wlanNum);
 
-	dev = alloc_netdev(sizeof(struct ath_ahb_softc), "wifi%d", ether_setup);
+	dev = alloc_netdev(sizeof(struct ath_softc), "wifi%d", ether_setup);
 	if (dev == NULL) {
 		printk(KERN_ERR "%s: no memory for device state\n", dev_info);
 		goto bad2;
 	}
 	sc = netdev_priv(dev);
-	sc->aps_sc.sc_dev = dev;
+	sc->sc_dev = dev;
 
 	/*
 	 * Mark the device as detached to avoid processing
 	 * interrupts until setup is complete.
 	 */
-	sc->aps_sc.sc_invalid = 1;
+	sc->sc_invalid = 1;
 	SET_MODULE_OWNER(dev);
 	sclist[wlanNum] = sc;
 
@@ -229,8 +222,8 @@ init_ath_wmac(u_int16_t devid, u_int16_t wlanNum, struct ar531x_config *config)
 		goto bad3;
 	}
 	dev->mem_end = dev->mem_start + AR531X_WLANX_LEN;
-	sc->aps_sc.sc_iobase = (void __iomem *)dev->mem_start;
-	sc->aps_sc.sc_bdev = NULL;
+	sc->sc_iobase = (void __iomem *)dev->mem_start;
+	sc->sc_bdev = NULL;
 
 	if (request_irq(dev->irq, ath_intr, IRQF_SHARED, dev->name, dev)) {
 		printk(KERN_WARNING "%s: %s: request_irq failed\n", dev_info, dev->name);
@@ -245,7 +238,7 @@ init_ath_wmac(u_int16_t devid, u_int16_t wlanNum, struct ar531x_config *config)
 	num_activesc++;
 	/* Ready to process interrupts */
 
-	sc->aps_sc.sc_invalid = 0;
+	sc->sc_invalid = 0;
 	return 0;
 
  bad4:
