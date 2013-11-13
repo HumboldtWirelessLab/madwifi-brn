@@ -69,13 +69,6 @@
 #error Atheros PCI version requires at least Linux kernel version 2.6.13
 #endif /* kernel < 2.6.13 */
 
-struct ath_pci_softc {
-	struct ath_softc	aps_sc;
-#ifdef CONFIG_PM
-	u32	aps_pmstate[16];
-#endif
-};
-
 /*
  * Module glue.
  */
@@ -127,7 +120,7 @@ ath_pci_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 {
 	resource_size_t phymem;
 	void __iomem *mem;
-	struct ath_pci_softc *sc;
+	struct ath_softc *sc;
 	struct net_device *dev;
 	const char *athname;
 	u_int8_t csz;
@@ -191,27 +184,27 @@ ath_pci_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 		goto bad1;
 	}
 
-	dev = alloc_netdev(sizeof(struct ath_pci_softc), "wifi%d", ether_setup);
+	dev = alloc_netdev(sizeof(struct ath_softc), "wifi%d", ether_setup);
 	if (dev == NULL) {
 		printk(KERN_ERR "%s: no memory for device state\n", dev_info);
 		goto bad2;
 	}
 	sc = netdev_priv(dev);
-	sc->aps_sc.sc_dev = dev;
-	sc->aps_sc.sc_iobase = mem;
+	sc->sc_dev = dev;
+	sc->sc_iobase = mem;
 
 	/*
 	 * Mark the device as detached to avoid processing
 	 * interrupts until setup is complete.
 	 */
-	sc->aps_sc.sc_invalid = 1;
+	sc->sc_invalid = 1;
 
 	dev->irq = pdev->irq;
 
 	SET_MODULE_OWNER(dev);
 	SET_NETDEV_DEV(dev, &pdev->dev);
 
-	sc->aps_sc.sc_bdev = (void *)pdev;
+	sc->sc_bdev = (void *)pdev;
 
 	pci_set_drvdata(pdev, dev);
 
@@ -235,14 +228,14 @@ ath_pci_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 	 * support with a sysctl.
 	 */
 	if (vdevice == AR5212_DEVID_IBM || vdevice == AR5211_DEVID) {
-		sc->aps_sc.sc_softled = 1;
-		sc->aps_sc.sc_ledpin = 0;
+		sc->sc_softled = 1;
+		sc->sc_ledpin = 0;
 	}
 
 	/* Enable softled on PIN1 on HP Compaq nc6xx, nc4000 & nx5000 laptops */
 	if (pdev->subsystem_vendor == PCI_VENDOR_ID_COMPAQ) {
-		sc->aps_sc.sc_softled = 1;
-		sc->aps_sc.sc_ledpin = 1;
+		sc->sc_softled = 1;
+		sc->sc_ledpin = 1;
 	}
 
 	if (ath_attach(vdevice, dev, NULL) != 0)
@@ -254,10 +247,10 @@ ath_pci_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 		(unsigned long long)phymem, dev->irq);
 
 	if (vdevice == AR5416_DEVID_PCIE)
-		sc->aps_sc.sc_dmasize_stomp = 1;
+		sc->sc_dmasize_stomp = 1;
 
 	/* ready to process interrupts */
-	sc->aps_sc.sc_invalid = 0;
+	sc->sc_invalid = 0;
 
 	return 0;
 bad4:
@@ -277,12 +270,12 @@ static void
 ath_pci_remove(struct pci_dev *pdev)
 {
 	struct net_device *dev = pci_get_drvdata(pdev);
-	struct ath_pci_softc *sc = netdev_priv(dev);
+	struct ath_softc *sc = netdev_priv(dev);
 
 	ath_detach(dev);
 	if (dev->irq)
 		free_irq(dev->irq, dev);
-	iounmap(sc->aps_sc.sc_iobase);
+	iounmap(sc->sc_iobase);
 	release_mem_region(pci_resource_start(pdev, 0), pci_resource_len(pdev, 0));
 	pci_disable_device(pdev);
 	free_netdev(dev);
