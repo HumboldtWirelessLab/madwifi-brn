@@ -34,8 +34,8 @@
 #include "if_ath_ahb.h"
 #include "ah_soc.h"
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,19)
-#error "Kernel versions older than 2.6.19 are not supported!"
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,15)
+#error "Kernel versions older than 2.6.15 are not supported!"
 #endif
 
 /*
