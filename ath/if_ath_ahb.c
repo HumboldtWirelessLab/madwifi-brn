@@ -21,6 +21,7 @@
 #include <linux/cache.h>
 #include <linux/platform_device.h>
 #include <linux/ethtool.h>
+#include <linux/delay.h>
 
 #include <asm/io.h>
 #include <asm/uaccess.h>
