@@ -25,4 +25,4 @@ tools/wpakey
 *.mod.c
 *.o
 *.order
-/Module.symvers
+Module.symvers
