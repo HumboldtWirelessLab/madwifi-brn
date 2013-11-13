@@ -4806,6 +4806,40 @@ siwauth_privacy_invoked(struct net_device *dev,
 	return ieee80211_ioctl_setparam(dev, NULL, NULL, (char *)args);
 }
 
+#ifdef IW_AUTH_CIPHER_GROUP_MGMT
+static int
+siwauth_cipher_group_mgmt(struct net_device *dev,
+	struct iw_request_info *info, struct iw_param *erq, char *buf)
+{
+	int arg = erq->value;
+
+	if (arg == IW_AUTH_CIPHER_NONE)
+		return 0;
+
+	printk(KERN_WARNING "%s: group management frame encryption not "
+	       "supported, arg = %d\n", dev->name, arg);
+
+	return -EOPNOTSUPP;
+}
+#endif
+
+#ifdef IW_AUTH_MFP
+static int
+siwauth_mfp(struct net_device *dev,
+	struct iw_request_info *info, struct iw_param *erq, char *buf)
+{
+	int arg = erq->value;
+
+	if (arg == IW_AUTH_MFP_DISABLED)
+		return 0;
+
+	printk(KERN_WARNING "%s: management frame protection not supported, "
+	       "arg = %d\n", dev->name, arg);
+
+	return -EOPNOTSUPP;
+}
+#endif
+
 /* 
  * If this function is invoked it means someone is using the wireless extensions
  * API instead of the private madwifi ioctls.  That's fine.  We translate their
@@ -4856,6 +4890,16 @@ ieee80211_ioctl_siwauth(struct net_device *dev,
 	case IW_AUTH_PRIVACY_INVOKED:
 		rc = siwauth_privacy_invoked(dev, info, erq, buf);
 		break;
+#ifdef IW_AUTH_CIPHER_GROUP_MGMT
+	case IW_AUTH_CIPHER_GROUP_MGMT:
+		rc = siwauth_cipher_group_mgmt(dev, info, erq, buf);
+		break;
+#endif
+#ifdef IW_AUTH_MFP
+	case IW_AUTH_MFP:
+		rc = siwauth_mfp(dev, info, erq, buf);
+		break;
+#endif
 	default:
 		printk(KERN_WARNING "%s: unknown SIOCSIWAUTH flag %d\n",
 			dev->name, erq->flags);
