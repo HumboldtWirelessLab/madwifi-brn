@@ -57,7 +57,7 @@ COPTS	+= -DDFS_DOMAIN_ETSI -DDFS_DOMAIN_FCC
 include $(TOP)/Makefile.inc
 
 obj-m		+= ath_$(BUSNAME).o
-ath_$(BUSNAME)-objs	:= if_ath.o if_ath_radar.o if_ath_hal_extensions.o if_ath_$(BUSNAME).o if_ath_regmon.o
+ath_$(BUSNAME)-objs	:= if_ath.o if_ath_radar.o if_ath_hal_extensions.o if_ath_$(BUSNAME).o if_ath_regmon.o if_ath_txabort.o
 
 INCS += -I$(TOP) -I$(HAL) -I$(WLAN)
 
