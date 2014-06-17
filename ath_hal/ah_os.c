@@ -183,12 +183,12 @@ ath_hal_setlogging(int enable)
  */
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,8)
 #define	AH_SYSCTL_ARGS_DECL \
-	ctl_table *ctl, int write, struct file *filp, void *buffer, \
+	struct ctl_table *ctl, int write, struct file *filp, void *buffer, \
 		size_t *lenp
 #define	AH_SYSCTL_ARGS		ctl, write, filp, buffer, lenp
 #else /* LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,8) */
 #define	AH_SYSCTL_ARGS_DECL \
-	ctl_table *ctl, int write, struct file *filp, void *buffer,\
+	struct ctl_table *ctl, int write, struct file *filp, void *buffer,\
 		size_t *lenp, loff_t *ppos
 #define	AH_SYSCTL_ARGS		ctl, write, filp, buffer, lenp, ppos
 #endif /* LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,8) */
@@ -973,7 +973,7 @@ ath_hal_memcmp(const void *a, const void *b, size_t n)
 }
 EXPORT_SYMBOL(ath_hal_memcmp);
 
-static ctl_table ath_hal_sysctls[] = {
+static struct ctl_table ath_hal_sysctls[] = {
 #ifdef AH_DEBUG
 	{ ATH_INIT_CTL_NAME(CTL_AUTO)
 	  .procname	= "debug",
@@ -1027,21 +1027,21 @@ static ctl_table ath_hal_sysctls[] = {
 #endif /* AH_DEBUG_ALQ */
 	{ }
 };
-static ctl_table ath_hal_table[] = {
+static struct ctl_table ath_hal_table[] = {
 	{ ATH_INIT_CTL_NAME(CTL_AUTO)
 	  .procname	= "hal",
 	  .mode		= 0555,
 	  .child	= ath_hal_sysctls
 	}, { }
 };
-static ctl_table ath_ath_table[] = {
+static struct ctl_table ath_ath_table[] = {
 	{ ATH_INIT_CTL_NAME(DEV_ATH)
 	  .procname	= "ath",
 	  .mode		= 0555,
 	  .child	= ath_hal_table
 	}, { }
 };
-static ctl_table ath_root_table[] = {
+static struct ctl_table ath_root_table[] = {
 	{ ATH_INIT_CTL_NAME(CTL_DEV)
 	  .procname	= "dev",
 	  .mode		= 0555,

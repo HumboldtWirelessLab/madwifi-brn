@@ -1062,7 +1062,7 @@ IEEE80211_SYSCTL_DECL(ieee80211_sysctl_monitor_crc_errors, ctl, write, filp, buf
 	return ret;
 }
 
-static const ctl_table ieee80211_sysctl_template[] = {
+static const struct ctl_table ieee80211_sysctl_template[] = {
 #ifdef IEEE80211_DEBUG
 	{ ATH_INIT_CTL_NAME(CTL_AUTO)
 	  .procname	= "debug",

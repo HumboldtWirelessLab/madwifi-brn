@@ -134,13 +134,13 @@ typedef void irqreturn_t;
  */
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,32)
 #define	ATH_SYSCTL_DECL(f, ctl, write, filp, buffer, lenp, ppos) \
-	f(ctl_table *ctl, int write, struct file *filp, \
+	f(struct ctl_table *ctl, int write, struct file *filp, \
 	  void __user *buffer, size_t *lenp, loff_t *ppos)
 #define	ATH_SYSCTL_PROC_DOINTVEC(ctl, write, filp, buffer, lenp, ppos) \
 	proc_dointvec(ctl, write, filp, buffer, lenp, ppos)
 #else /* Linux 2.6.32+ */
 #define	ATH_SYSCTL_DECL(f, ctl, write, filp, buffer, lenp, ppos) \
-	f(ctl_table *ctl, int write, \
+	f(struct ctl_table *ctl, int write, \
 	  void __user *buffer, size_t *lenp, loff_t *ppos)
 #define	ATH_SYSCTL_PROC_DOINTVEC(ctl, write, filp, buffer, lenp, ppos) \
 	proc_dointvec(ctl, write, buffer, lenp, ppos)

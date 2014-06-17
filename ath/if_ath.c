@@ -12250,7 +12250,7 @@ ATH_SYSCTL_DECL(ath_sysctl_halparam, ctl, write, filp, buffer, lenp, ppos)
 	return ret;
 }
 
-static const ctl_table ath_sysctl_template[] = {
+static const struct ctl_table ath_sysctl_template[] = {
 	{ ATH_INIT_CTL_NAME(CTL_AUTO)
 	  .procname	= "distance",
 	  .mode		= 0644,
@@ -12676,7 +12676,7 @@ ath_announce(struct net_device *dev)
  * Static (i.e. global) sysctls.  Note that the HAL sysctls
  * are located under ours by sharing the setting for DEV_ATH.
  */
-static ctl_table ath_static_sysctls[] = {
+static struct ctl_table ath_static_sysctls[] = {
 #ifdef AR_DEBUG
 	{ ATH_INIT_CTL_NAME(CTL_AUTO)
 	  .procname	= "debug",
@@ -12716,14 +12716,14 @@ static ctl_table ath_static_sysctls[] = {
 	},
 	{ }
 };
-static ctl_table ath_ath_table[] = {
+static struct ctl_table ath_ath_table[] = {
 	{ ATH_INIT_CTL_NAME(DEV_ATH)
 	  .procname	= "ath",
 	  .mode		= 0555,
 	  .child	= ath_static_sysctls
 	}, { }
 };
-static ctl_table ath_root_table[] = {
+static struct ctl_table ath_root_table[] = {
 	{ ATH_INIT_CTL_NAME(CTL_DEV)
 	  .procname	= "dev",
 	  .mode		= 0555,

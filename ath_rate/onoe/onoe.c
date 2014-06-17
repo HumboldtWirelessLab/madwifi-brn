@@ -448,7 +448,7 @@ static int maxint = 0x7fffffff;		/* 32-bit big */
 /*
  * Static (i.e. global) sysctls.
  */
-static ctl_table ath_rate_static_sysctls[] = {
+static struct ctl_table ath_rate_static_sysctls[] = {
 	{ ATH_INIT_CTL_NAME(CTL_AUTO)
 	  .procname	= "interval",
 	  .mode		= 0644,
@@ -476,21 +476,21 @@ static ctl_table ath_rate_static_sysctls[] = {
 	},
 	{ }
 };
-static ctl_table ath_rate_table[] = {
+static struct ctl_table ath_rate_table[] = {
 	{ ATH_INIT_CTL_NAME(CTL_AUTO)
 	  .procname	= "rate_onoe",
 	  .mode		= 0555,
 	  .child	= ath_rate_static_sysctls
 	}, { }
 };
-static ctl_table ath_ath_table[] = {
+static struct ctl_table ath_ath_table[] = {
 	{ ATH_INIT_CTL_NAME(DEV_ATH)
 	  .procname	= "ath",
 	  .mode		= 0555,
 	  .child	= ath_rate_table
 	}, { }
 };
-static ctl_table ath_root_table[] = {
+static struct ctl_table ath_root_table[] = {
 	{ ATH_INIT_CTL_NAME(CTL_DEV)
 	  .procname	= "dev",
 	  .mode		= 0555,
