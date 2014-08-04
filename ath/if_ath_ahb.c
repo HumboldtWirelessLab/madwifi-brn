@@ -188,7 +188,8 @@ init_ath_wmac(u_int16_t devid, u_int16_t wlanNum, struct ar531x_config *config)
 
 	ahb_enable_wmac(devid, wlanNum);
 
-	dev = alloc_netdev(sizeof(struct ath_softc), "wifi%d", ether_setup);
+	dev = alloc_netdev(sizeof(struct ath_softc), "wifi%d", NET_NAME_UNKNOWN,
+			   ether_setup);
 	if (dev == NULL) {
 		printk(KERN_ERR "%s: no memory for device state\n", dev_info);
 		goto bad2;

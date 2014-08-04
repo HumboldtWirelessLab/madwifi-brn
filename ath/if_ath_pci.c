@@ -184,7 +184,8 @@ ath_pci_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 		goto bad1;
 	}
 
-	dev = alloc_netdev(sizeof(struct ath_softc), "wifi%d", ether_setup);
+	dev = alloc_netdev(sizeof(struct ath_softc), "wifi%d", NET_NAME_UNKNOWN,
+			   ether_setup);
 	if (dev == NULL) {
 		printk(KERN_ERR "%s: no memory for device state\n", dev_info);
 		goto bad2;

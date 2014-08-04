@@ -93,6 +93,20 @@
 #define ath_ha_addr(ha) ha->addr
 #endif
 
+#ifndef NET_NAME_UNKNOWN
+#undef alloc_netdev
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,23)
+#define alloc_netdev(sizeof_priv, name, name_assign_type, setup) \
+	alloc_netdev(sizeof_priv, name, setup)
+#elif LINUX_VERSION_CODE < KERNEL_VERSION(2,6,38)
+#define alloc_netdev(sizeof_priv, name, name_assign_type, setup) \
+	alloc_netdev_mq(sizeof_priv, name, setup, 1)
+#else
+#define alloc_netdev(sizeof_priv, name, name_assign_type, setup) \
+	alloc_netdev_mqs(sizeof_priv, name, setup, 1, 1)
+#endif
+#endif
+
 /*
  * BSD/Linux compatibility shims.  These are used mainly to
  * minimize differences when importing necessary BSD code.
