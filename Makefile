@@ -192,5 +192,5 @@ endif
 .PHONY: depmod
 depmod:
 ifeq ($(DESTDIR),)
-	(export KMODPATH=$(KMODPATH); /sbin/depmod -ae $(KERNELRELEASE))
+	/sbin/depmod -aeF $(KERNELPATH)/System.map $(KERNELRELEASE)
 endif
