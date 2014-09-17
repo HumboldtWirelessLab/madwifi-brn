@@ -75,18 +75,19 @@ install-modules: modules
 	for i in $(obj-y); do \
 		$(MAKE) -C $$i install || exit 1; \
 	done
-ifeq ($(DESTDIR),)
-	(export KMODPATH=$(KMODPATH); /sbin/depmod -ae $(KERNELRELEASE))
-endif
+	$(MAKE) depmod
 
 .PHONY: install-tools
 install-tools: tools
 	$(MAKE) -C $(TOOLS) install || exit 1
 
-.PHONY: uninstall ininstall-modules
+.PHONY: uninstall
 uninstall: uninstall-tools uninstall-modules
+
+.PHONY: uninstall-modules
 uninstall-modules:
 	sh scripts/find-madwifi-modules.sh -r $(KERNELRELEASE) $(DESTDIR)
+	$(MAKE) depmod
 
 .PHONY: list-modules find-modules
 list-modules: find-modules
@@ -187,3 +188,9 @@ endif
 	fi
 	
 	@echo "ok."
+
+.PHONY: depmod
+depmod:
+ifeq ($(DESTDIR),)
+	(export KMODPATH=$(KMODPATH); /sbin/depmod -ae $(KERNELRELEASE))
+endif
