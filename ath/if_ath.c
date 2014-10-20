@@ -138,6 +138,10 @@
 #include <linux/timer.h>
 #endif
 
+#ifdef BRN_TXABORT
+#include "if_ath_txabort.h"
+#endif
+
 uint8_t get_channel_utility_busy(struct ath_softc *sc);
 uint8_t get_channel_utility_rx(struct ath_softc *sc);
 uint8_t get_channel_utility_tx(struct ath_softc *sc);
@@ -11505,6 +11509,10 @@ enum {
   ATH_BRN_REGMON_FLAGS = 40,
 #endif
 #endif
+#ifdef BRN_TXABORT
+  ATH_BRN_TX_ABORT = 41,
+#endif
+
 };
 
 static inline int
@@ -12057,6 +12065,13 @@ ATH_SYSCTL_DECL(ath_sysctl_halparam, ctl, write, filp, buffer, lenp, ppos)
         break;
 #endif
 #endif
+#ifdef BRN_TXABORT
+     case ATH_BRN_TX_ABORT:
+       if ( val == 1 ) {
+         txabort(sc);
+       }
+       break;
+#endif
 			default:
 				ret = -EINVAL;
 				break;
@@ -12080,6 +12095,7 @@ ATH_SYSCTL_DECL(ath_sysctl_halparam, ctl, write, filp, buffer, lenp, ppos)
 			val = sc->sc_softled;
 			break;
 		case ATH_LEDPIN:
+
 			val = sc->sc_ledpin;
 			break;
 		case ATH_COUNTRYCODE:
@@ -12495,6 +12511,14 @@ static const ctl_table ath_sysctl_template[] = {
      .extra2 = (void *)ATH_BRN_REGMON_FLAGS,
  },
 #endif
+#endif
+#ifdef BRN_TXABORT
+ { ATH_INIT_CTL_NAME(CTL_AUTO)
+     .procname     = "txabort",
+     .mode         = 0644,
+     .proc_handler = ath_sysctl_halparam,
+     .extra2 = (void *)ATH_BRN_TX_ABORT,
+ },
 #endif
 	{ }
 };

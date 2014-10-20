@@ -1,3 +1,6 @@
+#ifndef BRN_H_INCLUDE
+#define BRN_H_INCLUDE
+
 #ifdef RELEASE_VERSION
 
 #undef RELEASE_VERSION
@@ -6,3 +9,11 @@
 
 #endif
 
+
+#ifndef CONFIG_HIGH_RES_TIMERS
+#undef BRN_REGMON_HR
+#else
+#pragma "Has HR"
+#endif
+
+#endif

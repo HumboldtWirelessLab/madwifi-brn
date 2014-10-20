@@ -100,6 +100,8 @@ typedef void *TQUEUE_ARG;
 
 #endif /* KERNEL_VERSION < 2.5.41 */
 
+#include <brn/brn.h>
+
 #ifdef CHANNEL_UTILITY
 #include "ath_channel_utility.h"
 #ifdef BRN_REGMON_DEBUGFS
