@@ -1042,17 +1042,10 @@ proc_read_nodes(struct ieee80211vap *vap, const int size, char *buf, int space)
 }
 
 static int
-proc_ratesample_open(struct inode *inode, struct file *file)
+proc_ratesample_open(struct inode *inode, struct file *file, unsigned long size)
 {
 	struct proc_ieee80211_priv *pv;
 	struct ieee80211vap *vap = PDE_DATA(inode);
-	unsigned long size;
-
-	/* Determine what size packets to get stats for based on proc filename */
-	size = simple_strtoul(file->f_dentry->d_name.name +
-			      strlen("ratestats_"), NULL, 0);
-	if (size < 250 || size > 3000)
-		return -ENOENT;
 
 	if (!(file->private_data = kzalloc(sizeof(struct proc_ieee80211_priv),
 			GFP_KERNEL)))
@@ -1081,10 +1074,42 @@ proc_ratesample_open(struct inode *inode, struct file *file)
 	return 0;
 }
 
-static struct file_operations proc_ratesample_ops = {
+static int
+proc_ratesample_open_250(struct inode *inode, struct file *file, unsigned long size)
+{
+	proc_ratesample_open(inode, file, 250);
+}
+
+static int
+proc_ratesample_open_1600(struct inode *inode, struct file *file, unsigned long size)
+{
+	proc_ratesample_open(inode, file, 1600);
+}
+
+static int
+proc_ratesample_open_3000(struct inode *inode, struct file *file, unsigned long size)
+{
+	proc_ratesample_open(inode, file, 3000);
+}
+
+static struct file_operations proc_ratesample_ops_250 = {
 	.read = NULL,
 	.write = NULL,
-	.open = proc_ratesample_open,
+	.open = proc_ratesample_open_250,
+	.release = NULL,
+};
+
+static struct file_operations proc_ratesample_ops_1600 = {
+	.read = NULL,
+	.write = NULL,
+	.open = proc_ratesample_open_1600,
+	.release = NULL,
+};
+
+static struct file_operations proc_ratesample_ops_3000 = {
+	.read = NULL,
+	.write = NULL,
+	.open = proc_ratesample_open_3000,
 	.release = NULL,
 };
 
@@ -1092,9 +1117,9 @@ static void
 ath_rate_dynamic_proc_register(struct ieee80211vap *vap)
 {
 	/* Create proc entries for the rate control algorithm */
-	ieee80211_proc_vcreate(vap, &proc_ratesample_ops, "ratestats_250");
-	ieee80211_proc_vcreate(vap, &proc_ratesample_ops, "ratestats_1600");
-	ieee80211_proc_vcreate(vap, &proc_ratesample_ops, "ratestats_3000");
+	ieee80211_proc_vcreate(vap, &proc_ratesample_ops_250, "ratestats_250");
+	ieee80211_proc_vcreate(vap, &proc_ratesample_ops_1600, "ratestats_1600");
+	ieee80211_proc_vcreate(vap, &proc_ratesample_ops_3000, "ratestats_3000");
 }
 
 static struct ieee80211_rate_ops ath_rate_ops = {
