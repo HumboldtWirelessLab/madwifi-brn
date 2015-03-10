@@ -45,3 +45,10 @@ COPTS += -DBRN_PHANTOMPACKET_TEST
 
 #COPTS += -DBRN_TXABORT
 #COPTS += -DBRN_TXABORT_DEBUG
+
+
+#POWER DROP
+# see:
+# http://madwifi-project.org/attachment/ticket/1659/madwifi.remove-power-drops-after-calibration.diff
+# http://arrow.dit.ie/cgi/viewcontent.cgi?article=1010&context=commcon
+COPTS += -DPOWER_DROP_FIX

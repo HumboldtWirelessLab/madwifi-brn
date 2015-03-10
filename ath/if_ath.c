@@ -9754,6 +9754,11 @@ ath_calibrate(unsigned long arg)
 	struct ieee80211com *ic = &sc->sc_ic;
 	/* u_int32_t nchans; */
 	HAL_BOOL isIQdone = AH_FALSE;
+#ifdef POWER_DROP_FIX
+	u_int8_t papd_probe_power;
+	u_int8_t papd_probe_power_max = 63;
+	u_int16_t crnt_power_hdBm = sc->sc_curtxpow;
+#endif
 
 	sc->sc_stats.ast_per_cal++;
 	DPRINTF(sc, ATH_DEBUG_CALIBRATE,
@@ -9806,12 +9811,30 @@ ath_calibrate(unsigned long arg)
 #endif
 	}
 	else {
+#ifdef POWER_DROP_FIX
+		ATH_TXBUF_LOCK_IRQ(sc);
+#endif
 		if (!ath_hal_calibrate(ah, &sc->sc_curchan, &isIQdone)) {
 			EPRINTF(sc, "Calibration of channel %u failed!\n",
 				sc->sc_curchan.channel);
 			sc->sc_stats.ast_per_calfail++;
 		}
-
+#ifdef POWER_DROP_FIX
+		/*
+		* After calibration is done we need to update AR5K_PHY_PAPD_PROBE
+		* register with the probe_tx_power equal to current tx_power
+		* otherwise a power drop may be observed
+		*/
+		crnt_power_hdBm = crnt_power_hdBm <= ic->ic_txpowlimit ? crnt_power_hdBm : ic->ic_txpowlimit; 
+		papd_probe_power = papd_probe_power_max - (ic->ic_txpowlimit - crnt_power_hdBm); 
+		#define AR5K_PHY_PAPD_PROBE_TX_NEXT 0x00008000
+		#define AR5K_PHY_PAPD_PROBE 0x9930
+		OS_REG_WRITE(ah, AR5K_PHY_PAPD_PROBE,
+		                 AR5K_PHY_PAPD_PROBE_TX_NEXT | (papd_probe_power << 9));
+		#undef AR5K_PHY_PAPD_PROBE_TX_NEXT
+		#undef AR5K_PHY_PAPD_PROBE
+		ATH_TXBUF_UNLOCK_IRQ(sc);
+#endif
 		/* Update calibration interval based on whether I gain and Q
 		 * gain adjustments completed. */
 		sc->sc_calinterval_sec = (isIQdone == AH_TRUE) ?
