@@ -677,7 +677,6 @@ ath_attach(u_int16_t devid, struct net_device *dev, HAL_BUS_TAG tag)
         hrtimer_init(&(sc->perf_reg_hrtimer), CLOCK_MONOTONIC, HRTIMER_MODE_ABS);
 #endif
         sc->perf_reg_hrtimer.function = &regmon_hrtimer_func;
-#endif
 
         /* Init Timer */
         sc->perf_reg_interval = usecs_to_jiffies(BRN_REGMON_DEFAULT_INTERVAL);
@@ -754,7 +753,7 @@ ath_attach(u_int16_t devid, struct net_device *dev, HAL_BUS_TAG tag)
           sc->regm_info->value.info.endian = 0x1234;
           sc->regm_info->value.info.version = 0x0001;
           if (sc->cc_update_mode == CC_UPDATE_MODE_KERNELTIMER) {
-#ifdef BRN_REGMON_HR
+
 #if LINUX_VERSION_CODE <= KERNEL_VERSION(2,6,19)
           hrtimer_start(&(sc->perf_reg_hrtimer), sc->perf_reg_hrinterval, HRTIMER_ABS);
 #else
