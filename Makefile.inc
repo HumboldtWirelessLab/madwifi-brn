@@ -49,47 +49,50 @@ endif
 # DESTDIR is used as path prefix during installation.
 DESTDIR ?=
 
-# KERNELPATH is the path to the Linux kernel build tree.  Unless a
-# separate build directory was used for the kernel build, it's the same
-# as the kernel source tree.  KERNELPATH is used to access the kernel
-# configuration, include files and the build system.  To build for
-# another kernel, set KERNELPATH manually, for example with:
-# make KERNELPATH=/path/to/kernel/source
+# By default, we try to compile the modules for the currently running
+# kernel.  But it's the first approximation, as we will re-read the
+# version from the kernel sources.
+KVERS_UNAME ?= $(shell uname -r)
 
-# The default KERNELPATH points to the directory where the currently
-# running kernel was compiled.  Note that the configuration and the
-# version of the kernel tree might have changed since then.
-ifeq ($(wildcard $(KERNELPATH)),)
-KERNELPATH = /lib/modules/$(shell uname -r)/build
-# sanity check: does KERNELPATH exist?
-ifeq ($(shell cd $(KERNELPATH) && pwd),)
-$(error $(KERNELPATH) is missing, please set KERNELPATH)
-endif
-export KERNELPATH
+# KERNELPATH is the path to the Linux kernel build tree.  It is usually the
+# same as the kernel source tree, except when the kernel was compiled in
+# a separate directory.
+KERNELPATH ?= $(shell readlink -f /lib/modules/$(KVERS_UNAME)/build)
+
+ifeq (,$(KERNELPATH))
+$(error Kernel build tree not found - please set KERNELPATH to configured kernel)
 endif
 
-# KERNELRELEASE is the target kernel's version.  It's always taken from
-# the kernel build tree.  Kernel Makefile doesn't always know the exact
-# kernel version (especially for vendor stock kernels), so we get it
-# from <linux/version.h> instead. But simply grepping it from version.h
-# doesn't work, since some distributions have multiple UTS_RELEASE
-# in that file.
-# This trick has been inspired by the lm_sensors project.
-ifndef KERNELRELEASE
-KERNELRELEASE := $(shell $(CC) -I $(KERNELPATH)/include -E $(TOP)/kernelversion.c | grep uts_release | cut -f2 -d'"')
+KERNELCONF := $(KERNELPATH)/.config
+ifeq (,$(wildcard $(KERNELCONF)))
+$(error No .config found in $(KERNELPATH), please set KERNELPATH to configured kernel)
+endif
+
+ifneq (,$(wildcard $(KERNELPATH)/include/linux/version.h))
+ifneq (,$(wildcard $(KERNELPATH)/include/generated/uapi/linux/version.h))
+$(error Multiple copies of version.h found, please clean your build tree)
+endif
+endif
+
+# Kernel Makefile doesn't always know the exact kernel version, so we
+# get it from the kernel headers instead and pass it to make.
+VERSION_H := $(KERNELPATH)/include/generated/utsrelease.h
+ifeq (,$(wildcard $(VERSION_H)))
+VERSION_H := $(KERNELPATH)/include/linux/utsrelease.h
+endif
+ifeq (,$(wildcard $(VERSION_H)))
+VERSION_H := $(KERNELPATH)/include/linux/version.h
+endif
+ifeq (,$(wildcard $(VERSION_H)))
+$(error Please run 'make modules_prepare' in $(KERNELPATH))
+endif
+
+KERNELRELEASE := $(shell sed -ne 's/"//g;s/^\#define UTS_RELEASE //p' $(VERSION_H))
+
 ifeq (,$(KERNELRELEASE))
-$(error Cannot detect kernel version - please check compiler and KERNELPATH)
-endif
+$(error Cannot find UTS_RELEASE in $(VERSION_H), please report)
 endif
 
-# KERNELCONF is the name of the file that holds the configuration
-# of the target kernel.
-KERNELCONF ?=	$(KERNELPATH)/.config
-
-# sanity check: does KERNELCONF exist?
-ifeq ($(wildcard $(KERNELCONF)),)
-$(error KERNELCONF: $(KERNELCONF) does not exist.)
-endif
 include $(KERNELCONF)
 
 include $(TOP)/Makefile.brn
