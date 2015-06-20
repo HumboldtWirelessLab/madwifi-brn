@@ -12,8 +12,8 @@
 
 #ifndef CONFIG_HIGH_RES_TIMERS
 #undef BRN_REGMON_HR
-#else
-#pragma "Has HR"
+//#else
+//#pragma "Has HR"
 #endif
 
 #endif
