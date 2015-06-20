@@ -677,8 +677,7 @@ static int
 proc_channel_utility_open(struct inode *inode, struct file *file)
 {
   struct proc_ieee80211_priv *pv = NULL;
-  struct proc_dir_entry *dp = PDE(inode);
-  struct ieee80211vap *vap = dp->data;
+  struct ieee80211vap *vap = PDE_DATA(inode);
   struct ieee80211com *ic = vap->iv_ic;
   struct net_device *dev = ic->ic_dev;
   struct ath_softc *sc = netdev_priv(dev);
@@ -793,8 +792,7 @@ static int
 proc_packet_stats_open(struct inode *inode, struct file *file)
 {
   struct proc_ieee80211_priv *pv = NULL;
-  struct proc_dir_entry *dp = PDE(inode);
-  struct ieee80211vap *vap = dp->data;
+  struct ieee80211vap *vap = PDE_DATA(inode);
   struct ieee80211com *ic = vap->iv_ic;
   struct net_device *dev = ic->ic_dev;
   struct ath_softc *sc = netdev_priv(dev);
