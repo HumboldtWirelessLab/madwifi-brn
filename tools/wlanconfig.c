@@ -782,6 +782,8 @@ list_keys(const char *ifname)
 	if ( res != 0 ) {
 	  errx(1, "unable to get key list");
 	}
+	//if (system(cmd) != 0)
+	//	puts("Failed!");
 }
 
 #define	IEEE80211_C_BITS \
@@ -902,6 +904,8 @@ ieee80211_status(const char *ifname)
 	if ( res != 0 ) {
 	  errx(1, "unable to get ieee80211 status");
 	}
+	//if (system(cmd) != 0)
+	//	puts("Failed!");
 }
 
 static int
