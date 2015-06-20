@@ -302,14 +302,9 @@ MODULE_LICENSE("Dual BSD/GPL");
 static int tests = -1;
 static int debug = 0;
 
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(2,5,52))
-MODULE_PARM(tests, "i");
-MODULE_PARM(debug, "i");
-#else
 #include <linux/moduleparam.h>
 module_param(tests, int, 0600);
 module_param(debug, int, 0600);
-#endif
 
 MODULE_PARM_DESC(tests, "Specify which tests to run");
 MODULE_PARM_DESC(debug, "Enable IEEE80211_MSG_CRYPTO");

@@ -19,17 +19,5 @@ INCS = -include $(COMPAT)/compat.h -I$(COMPAT)
 INCS += -I$(TOP) -I$(ATH) -I$(HAL)
 EXTRA_CFLAGS += $(INCS) $(COPTS)
 
-ifneq ($(VERSION).$(PATCHLEVEL),2.4)
 obj-$(CONFIG_ATHEROS) += ath_rate_minstrel.o
 ath_rate_minstrel-objs	:= minstrel.o
-endif
-
-ifeq ($(VERSION).$(PATCHLEVEL),2.4)
-obj-$(CONFIG_ATHEROS) := minstrel.o
-
-export-objs	:= minstrel.o
-list-multi	:= ath_rate_minstrel.o
-
-O_TARGET	:= ath_rate.o
-include $(TOPDIR)/Rules.make
-endif

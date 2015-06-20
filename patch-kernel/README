@@ -22,4 +22,4 @@ driver as you would normally do.  If the kernel is already configured,
 run "make oldconfig", and you'll be asked only about Atheros driver.
 
 It's possible to build Madwifi modules when the driver is integrated
-into Linux 2.6.x, but most users should not need that.
+into the Linux kernel, but most users should not need that.

@@ -100,16 +100,4 @@ ath_hal-objs += \
 	ar5312/ar5315_gpio.o
 endif
 
-ifneq ($(VERSION).$(PATCHLEVEL),2.4)
 obj-$(CONFIG_ATHEROS) += ath_hal.o
-endif
-
-ifeq ($(VERSION).$(PATCHLEVEL),2.4)
-obj-$(CONFIG_ATHEROS) += $(ath_hal-objs)
-
-O_TARGET := ath_hal.o
-include $(TOPDIR)/Rules.make
-
-export-objs	:= ah_os.o
-list-multi	:= ath_hal.o
-endif

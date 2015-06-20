@@ -79,17 +79,6 @@ typedef void *TQUEUE_ARG;
 #endif /* !DECLARE_TASKLET */
 
 #include <linux/sched.h>
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(2,5,41)) && !defined(INIT_WORK)
-#include <linux/tqueue.h>
-#define work_struct			tq_struct
-#define schedule_work(t)		schedule_task((t))
-#define flush_scheduled_work()		flush_scheduled_tasks()
-#define ATH_INIT_WORK(t, f) do { 			\
-	memset((t), 0, sizeof(struct tq_struct)); \
-	(t)->routine = (void (*)(void *)) (f); 	\
-	(t)->data = (void *)(t);		\
-} while (0)
-#else
 #include <linux/workqueue.h>
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,20)
@@ -98,7 +87,6 @@ typedef void *TQUEUE_ARG;
 #define ATH_INIT_WORK(_t, _f)	INIT_WORK((_t), (_f));
 #endif
 
-#endif /* KERNEL_VERSION < 2.5.41 */
 
 #include <brn/brn.h>
 
@@ -141,50 +129,10 @@ typedef void irqreturn_t;
 #define	SET_NETDEV_DEV(ndev, pdev)
 #endif
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,4,23)
-static inline struct net_device *_alloc_netdev(int sizeof_priv, const char *mask,
-					       void (*setup)(struct net_device *))
-{
-	struct net_device *dev;
-	int alloc_size;
-
-	/* ensure 32-byte alignment of the private area */
-	alloc_size = sizeof (*dev) + sizeof_priv + 31;
-
-	dev = (struct net_device *)kzalloc(alloc_size, GFP_KERNEL);
-	if (dev == NULL) {
-		printk(KERN_ERR "alloc_dev: Unable to allocate device memory.\n");
-		return NULL;
-	}
-
-	if (sizeof_priv)
-		dev->priv = (void *)(((long)(dev + 1) + 31) & ~31);
-
-	setup(dev);
-	strcpy(dev->name, mask);
-
-	return dev;
-}
-
-/* Avoid name collision - some vendor kernels backport alloc_netdev() */
-#undef alloc_netdev
-#define alloc_netdev(s,m,d) _alloc_netdev(s, m, d)
-
-/* Some vendors backport PDE, so make it a macro here */
-#undef PDE
-#define PDE(inode) ((struct proc_dir_entry *)(inode)->u.generic_ip)
-#endif
-
 /*
  * Deal with the sysctl handler api changing.
  */
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,8)
-#define	ATH_SYSCTL_DECL(f, ctl, write, filp, buffer, lenp, ppos) \
-	f(ctl_table *ctl, int write, struct file *filp, \
-	  void __user *buffer, size_t *lenp)
-#define	ATH_SYSCTL_PROC_DOINTVEC(ctl, write, filp, buffer, lenp, ppos) \
-	proc_dointvec(ctl, write, filp, buffer, lenp)
-#elif LINUX_VERSION_CODE < KERNEL_VERSION(2,6,32)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,32)
 #define	ATH_SYSCTL_DECL(f, ctl, write, filp, buffer, lenp, ppos) \
 	f(ctl_table *ctl, int write, struct file *filp, \
 	  void __user *buffer, size_t *lenp, loff_t *ppos)

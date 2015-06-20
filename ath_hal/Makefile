@@ -130,10 +130,6 @@ ath_hal-objs += \
 endif
 endif
 
-ifdef LINUX24
-export-objs	:= ah_os.o
-endif
-
 INCS += -I$(HAL)
 
 EXTRA_CFLAGS+= $(INCS) $(COPTS)

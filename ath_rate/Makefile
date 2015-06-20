@@ -7,13 +7,7 @@ include $(TOP)/Makefile.inc
 
 .PHONY: modules
 modules:
-ifdef LINUX24
-	for i in $(obj-y); do \
-		$(MAKE) -C $$i || exit 1; \
-	done
-else
 	$(MAKE) -C $(KERNELPATH) SUBDIRS=$(shell pwd) modules
-endif
 
 .PHONY: install
 install:

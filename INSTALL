@@ -28,11 +28,11 @@ Requirements
   was compiled by gcc 3.4.2).  Ignoring this rule will cause "Invalid
   module format" errors during module load.
 
-Linux 2.4.x kernels starting with 2.4.22 and 2.6 kernels should work
-without problems.  Due to quick pace of Linux development, there is no
-way compatibility with the future 2.6 kernels can be ensured.  However,
-the latest 2.6 kernel at the time of the release should be expected to
-work.  For AHB support, Linux 2.6.19 or newer is required.
+Linux kernels starting with version 2.6.13 should work without problems.
+Due to quick pace of Linux development, there is no way compatibility
+with the future 2.6 kernels can be ensured.  However, the latest 2.6
+kernel at the time of the release should be expected to work.  For AHB
+support, Linux 2.6.19 or newer is required.
 
 Automatic module loading support (CONFIG_KMOD) is highly recommended;
 otherwise, you'll need to load all required modules manually.
@@ -67,17 +67,17 @@ in the top-level MadWifi source directory to build all the modules for
 the currently running system.
 
 You MUST do a "make clean" before compiling for a different version of
-Linux, e.g. building for 2.6 after building for 2.4.
+Linux.
 
 If you want to compile MadWifi for a different kernel, you need to
 specify the location of the kernel build tree, e.g.:
 
-  $ make KERNELPATH=/usr/src/linux-2.6.3
+  $ make KERNELPATH=/usr/src/linux-3.12
 
 Note that you can also specify this path by setting an environment
 variable; e.g.
 
-  $ export KERNELPATH=/usr/src/linux-2.6.3
+  $ export KERNELPATH=/usr/src/linux-3.12
   $ make
 
 If the kernel was built outside the source directory, KERNELPATH should

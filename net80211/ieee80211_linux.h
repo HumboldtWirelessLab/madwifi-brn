@@ -492,60 +492,7 @@ extern	void skb_queue_drain(struct sk_buff_head *q);
 #define	_MOD_DEC_USE(_m)	MOD_DEC_USE_COUNT
 #endif
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,0)
-static __inline u_int64_t
-get_jiffies_64(void)
-{
-	return (u_int64_t) jiffies;		/* XXX not right */
-}
-#endif
-
-/* msecs_to_jiffies appeared in 2.6.7 and 2.4.29 */
-#include <linux/delay.h>
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,0) && \
-	 LINUX_VERSION_CODE < KERNEL_VERSION(2,6,7)) || \
-	LINUX_VERSION_CODE < KERNEL_VERSION(2,4,29)
-
-/* The following definitions and inline functions are
- * copied from the kernel src, include/linux/jiffies.h */
-
-#ifndef MSEC_PER_SEC
-#define MSEC_PER_SEC (1000L)
-#endif
-
-#ifndef MAX_JIFFY_OFFSET
-#define MAX_JIFFY_OFFSET ((~0UL >> 1)-1)
-#endif
-
-static __inline unsigned int jiffies_to_msecs(const unsigned long j)
-{
-#if HZ <= MSEC_PER_SEC && !(MSEC_PER_SEC % HZ)
-	return (MSEC_PER_SEC / HZ) * j;
-#elif HZ > MSEC_PER_SEC && !(HZ % MSEC_PER_SEC)
-	return (j + (HZ / MSEC_PER_SEC) - 1)/(HZ / MSEC_PER_SEC);
-#else
-	return (j * MSEC_PER_SEC) / HZ;
-#endif
-}
-
-static __inline unsigned long msecs_to_jiffies(const unsigned int m)
-{
-	if (m > jiffies_to_msecs(MAX_JIFFY_OFFSET))
-		return MAX_JIFFY_OFFSET;
-#if HZ <= MSEC_PER_SEC && !(MSEC_PER_SEC % HZ)
-	return (m + (MSEC_PER_SEC / HZ) - 1) / (MSEC_PER_SEC / HZ);
-#elif HZ > MSEC_PER_SEC && !(HZ % MSEC_PER_SEC)
-	return m * (HZ / MSEC_PER_SEC);
-#else
-	return (m * HZ + MSEC_PER_SEC - 1) / MSEC_PER_SEC;
-#endif
-}
-
-#endif
-
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,7)
 #include <linux/jiffies.h>
-#endif
 
 #ifndef CLONE_KERNEL
 /*
@@ -589,13 +536,7 @@ static __inline unsigned long msecs_to_jiffies(const unsigned int m)
 /*
  * Deal with the sysctl handler api changing.
  */
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,8)
-#define	IEEE80211_SYSCTL_DECL(f, ctl, write, filp, buffer, lenp, ppos) \
-	f(ctl_table *ctl, int write, struct file *filp, \
-	  void __user *buffer, size_t *lenp)
-#define	IEEE80211_SYSCTL_PROC_DOINTVEC(ctl, write, filp, buffer, lenp, ppos) \
-	proc_dointvec(ctl, write, filp, buffer, lenp)
-#elif LINUX_VERSION_CODE < KERNEL_VERSION(2,6,32)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,32)
 #define	IEEE80211_SYSCTL_DECL(f, ctl, write, filp, buffer, lenp, ppos) \
 	f(ctl_table *ctl, int write, struct file *filp, \
 	  void __user *buffer, size_t *lenp, loff_t *ppos)
@@ -633,11 +574,6 @@ void ieee80211_proc_cleanup(struct ieee80211vap *);
 #endif
 void ieee80211_vlan_vattach(struct ieee80211vap *);
 void ieee80211_vlan_vdetach(struct ieee80211vap *);
-
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,0)
-#define	free_netdev(dev)	kfree(dev)
-#endif
-
 int ieee80211_ioctl(struct net_device *dev, struct ifreq *ifr, int cmd);
 void ieee80211_ioctl_vattach(struct ieee80211vap *);
 void ieee80211_ioctl_vdetach(struct ieee80211vap *);

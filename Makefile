@@ -56,13 +56,7 @@ all: modules tools
 
 .PHONY: modules
 modules: configcheck
-ifdef LINUX24
-	for i in $(obj-y); do \
-		$(MAKE) -C $$i || exit 1; \
-	done
-else
 	$(MAKE) -C $(KERNELPATH) SUBDIRS=$(shell pwd) modules
-endif
 
 # conflicts with the 'tools' subdirectory
 .PHONY: tools
@@ -154,10 +148,10 @@ configcheck: sanitycheck
 	
 	@# check kernel version
 	@case $(KERNELRELEASE) in \
-	    2.[456].*) ;; \
+	    2.6.*) ;; \
 	    [3-9].*) ;; \
 	    *) echo "FAILED"; \
-	       echo "Only kernel versions 2.4.x and above are supported."; \
+	       echo "Only kernel versions 2.6.13 and above are supported."; \
 	       echo "You have $(KERNELRELEASE)."; \
 	       exit 1 ;; \
 	esac

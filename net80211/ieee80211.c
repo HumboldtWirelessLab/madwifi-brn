@@ -470,12 +470,7 @@ ieee80211_vap_setup(struct ieee80211com *ic, struct net_device *dev,
 	 * alloc_etherdev or similar so we arrange for the
 	 * space to be reclaimed accordingly.
 	 */
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,0)
-	/* In 2.4 things are done differently... */
-	dev->features |= NETIF_F_DYNALLOC;
-#else
 	dev->destructor = free_netdev;
-#endif
 
 	vap->iv_ic = ic;
 	vap->iv_dev = dev;			/* back pointer */

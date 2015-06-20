@@ -28,9 +28,6 @@ while test "$tries" != "0"; do
 		state="$6"
 		expr "$name" : "$PATTERN" >/dev/null || continue
 
-		# Compatibility for Linux 2.4.x
-		test -z "$state" && { use_name="-"; state="Live"; }
-
 		if test "$state" != "Live" || test "$use_count" != "0" || \
 		   test "$use_name" != "-"; then
 			# Don't skip unload in the last run

@@ -166,12 +166,6 @@ static inline void *_kzalloc(size_t size, gfp_t flags)
 #define ATH_REGISTER_SYSCTL_TABLE(t) register_sysctl_table(t)
 #endif
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,9)
-#define __user
-#define __kernel
-#define __iomem
-#endif
-
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,16)
 static inline int timeval_compare(struct timeval *lhs, struct timeval *rhs)
 {
@@ -189,12 +183,6 @@ typedef unsigned long resource_size_t;
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,18)
 #define IRQF_SHARED SA_SHIRQ
-#endif
-
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(2,4,27)) || \
-    ((LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,0)) && \
-     ((LINUX_VERSION_CODE < KERNEL_VERSION(2,6,3))))
-#define netdev_priv(_netdev) ((_netdev)->priv)
 #endif
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,22)
@@ -230,10 +218,6 @@ typedef unsigned long resource_size_t;
 #define __skb_queue_after(_list, _old, _new)	__skb_append(_old, _new)
 #elif LINUX_VERSION_CODE < KERNEL_VERSION(2,6,25)
 #define __skb_queue_after(_list, _old, _new)	__skb_append(_old, _new, _list)
-#endif
-
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,0)
-#define request_module(_fmt, _modname) request_module(_modname)
 #endif
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,19)

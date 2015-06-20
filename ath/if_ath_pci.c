@@ -65,13 +65,9 @@
 #include "ah_devid.h"
 #include "if_ath_pci.h"
 
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(2,4,0))
-/*
- * PCI initialization uses Linux 2.4.x version and
- * older kernels do not support this
- */
-#error Atheros PCI version requires at least Linux kernel version 2.4.0
-#endif /* kernel < 2.4.0 */
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,13))
+#error Atheros PCI version requires at least Linux kernel version 2.6.13
+#endif /* kernel < 2.6.13 */
 
 struct ath_pci_softc {
 	struct ath_softc	aps_sc;
@@ -350,7 +346,6 @@ static struct pci_driver ath_pci_driver = {
 	.suspend	= ath_pci_suspend,
 	.resume		= ath_pci_resume,
 #endif /* CONFIG_PM */
-	/* Linux 2.4.6 has save_state and enable_wake that are not used here */
 };
 
 int
@@ -364,11 +359,9 @@ ath_ioctl_ethtool(struct ath_softc *sc, int cmd, void __user *addr)
 	info.cmd = cmd;
 	strncpy(info.driver, dev_info, sizeof(info.driver) - 1);
 	strncpy(info.version, version, sizeof(info.version) - 1);
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,4,22)
 	/* include the device name so later versions of kudzu DTRT */
 	strncpy(info.bus_info, pci_name((struct pci_dev *)sc->sc_bdev),
 		sizeof(info.bus_info) - 1);
-#endif
 	return copy_to_user(addr, &info, sizeof(info)) ? -EFAULT : 0;
 }
 

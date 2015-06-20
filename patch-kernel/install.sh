@@ -54,17 +54,6 @@ test -d ${SRC_COMPAT} || die "No compat directory ${SRC_COMPAT}"
 WIRELESS=${KERNEL_PATH}/drivers/net/wireless
 test -d ${WIRELESS} || die "No wireless directory ${WIRELESS}"
 
-if test -f ${WIRELESS}/Kconfig; then
-	kbuild=2.6
-	kbuildconf=Kconfig
-else if test -f ${WIRELESS}/Config.in; then
-	kbuild=2.4
-	kbuildconf=Config.in
-else
-	die "Kernel build system is not supported"
-fi
-fi
-
 echo "Copying top-level files"
 MADWIFI=${WIRELESS}/madwifi
 rm -rf ${MADWIFI}
@@ -91,25 +80,11 @@ done
 
 
 echo "Patching the build system"
-if test "$kbuild" = 2.6; then
 cp -f Kconfig ${MADWIFI}
 sed -i '/madwifi/d;/^endmenu/i\
 source "drivers/net/wireless/madwifi/Kconfig"' ${WIRELESS}/Kconfig
 sed -i '$a\
 obj-$(CONFIG_ATHEROS) += madwifi/
 /madwifi/d;' ${WIRELESS}/Makefile
-else
-cp -f Config.in ${MADWIFI}
-sed -i '$a\
-source drivers/net/wireless/madwifi/Config.in
-/madwifi/d' ${WIRELESS}/Config.in
-sed -i '/madwifi/d;/include/i\
-subdir-$(CONFIG_ATHEROS) += madwifi\
-obj-$(CONFIG_ATHEROS) += madwifi/madwifi.o' ${WIRELESS}/Makefile
-DST_DOC=${KERNEL_PATH}/Documentation
-grep -q 'CONFIG_ATHEROS' ${DST_DOC}/Configure.help || \
-	PATCH ${DST_DOC}/Configure.help Configure.help.patch
-fi
-
 
 echo "Done"

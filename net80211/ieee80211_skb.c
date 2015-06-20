@@ -396,7 +396,6 @@ unref_skb(struct sk_buff *skb, int type,
 		untrack_skb(skb, -1, func, line);
 	}
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,0)
 	if ((in_irq() || irqs_disabled()) && 
 			(type == UNREF_USE_KFREE_SKB || 
 			 type == UNREF_USE_DEV_KFREE_SKB)) {
@@ -407,7 +406,6 @@ unref_skb(struct sk_buff *skb, int type,
 		type = UNREF_USE_DEV_KFREE_SKB_ANY;
 		dump_stack();
 	}
-#endif
 
 	switch (type) {
 	case UNREF_USE_DEV_KFREE_SKB_ANY:
@@ -655,9 +653,7 @@ int dev_queue_xmit_debug(struct sk_buff *skb,
 struct sk_buff *skb_share_check_debug(struct sk_buff *skb, gfp_t pri,
 		      const char *func, int line)
 {
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,0)
 	might_sleep_if(pri & __GFP_WAIT);
-#endif
 	if (skb_shared(skb)) {
 		struct sk_buff *nskb = track_skb(
 			clean_clone_or_copy(skb_clone(skb, pri)), 
@@ -680,9 +676,7 @@ void  kfree_skb_fast_debug(struct sk_buff *skb,
 struct sk_buff *skb_unshare_debug(struct sk_buff *skb, gfp_t pri,
 		  const char *func, int line)
 {
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,0)
 	might_sleep_if(pri & __GFP_WAIT);
-#endif
 	if (skb_cloned(skb)) {
 		struct sk_buff *nskb = track_skb(
 			clean_clone_or_copy(skb_copy(skb, pri)), 0,

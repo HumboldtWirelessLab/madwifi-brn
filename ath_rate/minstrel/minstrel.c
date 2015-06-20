@@ -156,17 +156,10 @@ static void ath_rate_ctl_reset(struct ath_softc *, struct ieee80211_node *);
  * last timer period. */
 static void ath_rate_statistics(void *arg, struct ieee80211_node *ni);
 
-
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(2,5,52))
-MODULE_PARM(ath_lookaround_rate, "i");
-MODULE_PARM(ath_ewma_level, "i");
-MODULE_PARM(ath_segment_size, "i");
-#else
 #include <linux/moduleparam.h>
 module_param(ath_lookaround_rate, 	int, 0600);
 module_param(ath_ewma_level, 		int, 0600);
 module_param(ath_segment_size, 		int, 0600);
-#endif
 MODULE_PARM_DESC(ath_lookaround_rate, " % of packets sent to fill statistics "
 		"table (10) ");
 MODULE_PARM_DESC(ath_ewma_level, " scaling % used in ewma rolloff "

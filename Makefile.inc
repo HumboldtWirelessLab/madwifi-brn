@@ -98,19 +98,7 @@ include $(TOP)/Makefile.brn
 # installed to
 KMODPATH :=	/lib/modules/$(KERNELRELEASE)/net
 
-# Recognize 2.4.x kernels to support the old build system
-ifeq ($(filter-out 2.4%,$(KERNELRELEASE)),)
-LINUX24 = y
-endif
-
-ifndef LINUX24
 KMODSUF		:= ko
-else
-export-objs	= $(foreach m, $(obj-m), $($(m:.o=-objs)))
-list-multi	= $(obj-m)
-KMODSUF		:= o
-endif
-
 NM=		nm
 
 #

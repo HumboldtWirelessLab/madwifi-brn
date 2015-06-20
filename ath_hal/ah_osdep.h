@@ -144,12 +144,10 @@ struct ath_hal_rf *const *ah_rfs_ptrs[] = {			\
  * or the replacements is that we may be byte-swapping data twice, so we try to
  * avoid it.
  *
- * We use raw access for Linux prior to 2.6.12.  For newer version, we need to
- * use ioread32() and iowrite32(), which would take care of indirect access to
- * the registers.
+ * We use use ioread32() and iowrite32(), which should take care of indirect
+ * access to the registers.
  */
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,12)) && \
-    (AH_BYTE_ORDER == AH_BIG_ENDIAN) && \
+#if (AH_BYTE_ORDER == AH_BIG_ENDIAN) && \
     !defined(CONFIG_GENERIC_IOMAP) && \
     !defined(CONFIG_PARISC) && \
     !(defined(CONFIG_PPC64) && \
@@ -184,42 +182,22 @@ struct ath_hal_rf *const *ah_rfs_ptrs[] = {			\
 #if (AH_BYTE_ORDER == AH_BIG_ENDIAN)
 # define is_reg_le(__reg) ((0x4000 <= (__reg) && (__reg) < 0x5000) || \
 			   (0x7000 <= (__reg) && (__reg) < 0x8000))
-# if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,12)
-#  define _OS_REG_WRITE(_ah, _reg, _val) do {			\
+# define _OS_REG_WRITE(_ah, _reg, _val) do {			\
 	 if (is_reg_le(_reg))					\
 	  iowrite32((_val), (_ah)->ah_sh + (_reg));		\
 	 else							\
 	  iowrite32be((_val), (_ah)->ah_sh + (_reg));		\
 	} while (0)
-#  define _OS_REG_READ(_ah, _reg)				\
+# define _OS_REG_READ(_ah, _reg)				\
 	(is_reg_le(_reg) ?					\
 	  ioread32((_ah)->ah_sh + (_reg)) :			\
 	  ioread32be((_ah)->ah_sh + (_reg)))
-# else				/* Linux < 2.6.12 */
-#  define _OS_REG_WRITE(_ah, _reg, _val) do {			\
-	 writel(is_reg_le(_reg) ?				\
-		 (_val) : cpu_to_le32(_val),			\
-		 (_ah)->ah_sh + (_reg));			\
-	} while (0)
-#  define _OS_REG_READ(_ah, _reg)				\
-	(is_reg_le(_reg) ?					\
-	  readl((_ah)->ah_sh + (_reg)) :			\
-	  cpu_to_le32(readl((_ah)->ah_sh + (_reg))))
-# endif				/* Linux < 2.6.12 */
 #else				/* Little endian */
-# if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,12)
-#  define _OS_REG_WRITE(_ah, _reg, _val) do {			\
+# define _OS_REG_WRITE(_ah, _reg, _val) do {			\
 	 iowrite32((_val), (_ah)->ah_sh + (_reg));		\
 	} while (0)
-#  define _OS_REG_READ(_ah, _reg)				\
+# define _OS_REG_READ(_ah, _reg)				\
 	ioread32((_ah)->ah_sh + (_reg))
-# else				/* Linux < 2.6.12 */
-#  define _OS_REG_WRITE(_ah, _reg, _val) do {			\
-	 writel((_val), (_ah)->ah_sh + (_reg));			\
-	} while (0)
-#  define _OS_REG_READ(_ah, _reg)				\
-	readl((_ah)->ah_sh + (_reg))
-# endif				/* Linux < 2.6.12 */
 #endif				/* Little endian */
 
 /*
