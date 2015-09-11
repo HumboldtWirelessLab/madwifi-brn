@@ -127,7 +127,10 @@ struct add_phantom_data {
 } __attribute__((packed));
 
 
+#ifdef BRN_REGMON_HR 
 void check_rm_data_for_phantom_pkt(struct regmon_data * rmd, struct ath_softc *sc);
+#endif
+
 struct sk_buff *create_phantom_pkt(struct add_phantom_data *ph_data);
 
 #endif
